@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -65,7 +65,7 @@
     { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }];
   const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop']);
   const VIEW_PERM = { mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', nkb: 'a_edit' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -221,8 +221,8 @@
     if (undo) { const b = document.createElement('button'); b.textContent = 'Deshacer'; b.onclick = () => { t.classList.remove('show'); undo(); }; t.appendChild(b); }
     t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), undo ? 6500 : 2400);
   }
-  function modal({ title, body, ok = 'Guardar', cancel = 'Cancelar', onOk, onCancel }) {
-    const dlg = $('#dlg');
+  function modal({ title, body, ok = 'Guardar', cancel = 'Cancelar', onOk, onCancel, wide }) {
+    const dlg = $('#dlg'); dlg.classList.toggle('wide', !!wide);
     dlg.innerHTML = `<form method="dialog"><div class="dlg-h"><span>${esc(title)}</span><button type="button" class="dlg-x" data-m="x" aria-label="Cerrar" title="Cerrar">✕</button></div><div class="dlg-b">${body}</div><div class="dlg-f">${cancel ? `<button type="button" class="btn" data-m="cancel">${cancel}</button>` : ''}<button type="button" class="btn pri" data-m="ok">${ok}</button></div></form>`;
     dlg.onclose = () => { if (onCancel && !dlg._ok) onCancel(); dlg._ok = false; };
     dlg.querySelector('[data-m=ok]').onclick = () => { if (onOk && onOk(dlg) === false) return; dlg._ok = true; dlg.close(); };
@@ -612,13 +612,13 @@
   /* ---- Ficha de cliente ---- */
   function fieldInput(op, f, mark) {
     const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}"`;
-    mark = mark && op.evolta && f.k !== 'observaciones'; // con estado de cuenta cargado: resalta lo que falta y lo que vino del PDF
+    mark = mark === 'siempre' || (mark && op.evolta && f.k !== 'observaciones'); // con estado de cuenta cargado: resalta lo que falta y lo que vino del PDF
     let inp;
     if (f.t === 'select') inp = `<select ${base}><option value=""></option>${[...new Set([...f.o, ...(v && !f.o.includes(v) ? [v] : [])])].map(x => `<option ${String(v) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     else if (f.t === 'owner') { const key = Object.keys(STAGE).find(s => STAGE[s].ownerKey === f.k); const names = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...(v ? [v] : [])])]; inp = `<select ${base}><option value="">Sin asignar</option>${names.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`; }
     else if (f.t === 'textarea') inp = `<textarea rows="2" ${base}>${esc(v)}</textarea>`;
     else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${f.list}"` : ''} value="${esc(v)}" ${base}>`;
-    const fromPdf = mark && (op.evolta.campos || []).includes(f.k);
+    const fromPdf = mark && op.evolta && (op.evolta.campos || []).includes(f.k);
     return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${mark && v === '' ? 'falta' : ''}"><span>${f.l}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
   function kvFor(key, o, d) {
@@ -674,6 +674,148 @@
       ${(e.pagos || []).length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Pagos registrados</th><th>Monto</th><th>Forma</th><th>N° operación</th><th>Entidad</th></tr></thead><tbody>${e.pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${money(p.monto)}</td><td>${esc(p.forma)}</td><td>${esc(p.operacion)}</td><td>${esc(p.entidad)}</td></tr>`).join('')}</tbody></table></div>` : ''}
       <details class="info"><summary>¿Qué significa cada concepto?</summary><dl class="ev-g">${EV_GLOSARIO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></details></div>`;
   }
+  /* ---- Notaría y Kardex/Banco: mismos campos que Evolta y cotejo con una captura de esa pestaña ---- */
+  const NKB_F = CRM.NKB.flatMap(g => g.f), filled = (v) => v !== undefined && v !== null && v !== '';
+  const nkbNorm = (f, v) => !filled(v) ? '' : f.t === 'number' ? String(Number(v)) : EVOLTA.fold(String(v)).replace(/\s+/g, ' ').trim();
+  function nkbStatus(o) {
+    const faltan = NKB_F.filter(f => !filled(o[f.k])).length, c = o.nkbCheck, lbl = (ks) => ks.map(k => (NKB_F.find(f => f.k === k) || {}).l).join(', ');
+    const cot = c ? `Último cotejo con Evolta: ${new Date(c.ts).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(c.por || '')}` : 'Aún no se ha cotejado con Evolta.';
+    const det = c && c.pendientes ? [c.faltaEvolta.length && `<div>📝 <b>Completar en Evolta:</b> ${esc(lbl(c.faltaEvolta))}</div>`, c.faltaAmbos.length && `<div>❗ <b>Falta en ambos:</b> ${esc(lbl(c.faltaAmbos))}</div>`, (c.faltaCrm || []).length && `<div>⬅️ <b>Está en Evolta, falta en el CRM:</b> ${esc(lbl(c.faltaCrm))}</div>`, c.difieren.length && `<div>≠ <b>Distinto en Evolta:</b> ${esc(lbl(c.difieren))}</div>`].filter(Boolean).join('') : '';
+    const ok = CRM.nkbOk(o);
+    return `<div id="nkb-st" class="${ok ? 'small nkb-ok' : 'ev-falta'}">${ok ? '✅ Completo y cotejado con Evolta.' : `${faltan ? `<b>${faltan} campo${faltan > 1 ? 's' : ''} por completar en el CRM.</b> ` : ''}${cot}`}${ok ? ' ' + cot : ''}${det}</div>`;
+  }
+  function nkbHtml(o) {
+    const card = (gs) => `<div class="nkb-card">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text' }, 'siempre')).join('')}`).join('')}</div>`;
+    const G = CRM.NKB;
+    return `<div class="nkb"><div class="nkb-h"><b>🏛️ Notaría y Kardex/Banco</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm" data-act="nkb" data-op="${o.id}">📋 Cotejar con Evolta</button></div>
+      ${nkbStatus(o)}<div class="nkb-grid">${card([G[0]])}${card([G[1], G[2]])}${card([G[3]])}</div></div>`;
+  }
+  function openNkb(op) {
+    let ev = null;
+    modal({ title: `Cotejar con Evolta · ${op.cliente}`, ok: 'Guardar cotejo', wide: true,
+      body: `<ol class="small" style="margin:0 0 10px;padding-left:18px"><li>En Evolta abre la venta y entra a la pestaña <b>Notaría y Kardex/Banco</b>.</li>
+        <li>Toma una captura (<b>Windows + Shift + S</b>) y pégala abajo con <b>Ctrl + V</b>. También puedes seleccionar el texto de la pestaña, copiarlo y pegarlo.</li></ol>
+        <div class="nkb-paste" contenteditable="true" tabindex="0" data-ph="Haz clic aquí y pega (Ctrl + V)"></div>
+        <p class="small" style="margin:8px 0"><label class="btn sm">🖼️ Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p><div id="nkb-res"></div>`,
+      onOk: () => {
+        if (!ev) { toast('Primero pega la captura o el texto de Evolta'); return false; }
+        $$('#nkb-res [data-nk]').forEach(c => { if (c.checked) setField(op.id, c.dataset.nk, ev[c.dataset.nk]); });
+        const faltaEvolta = [], faltaAmbos = [], faltaCrm = [], difieren = [];
+        NKB_F.forEach(f => { const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]); if (!a && !b) faltaAmbos.push(f.k); else if (!a) faltaEvolta.push(f.k); else if (!b) faltaCrm.push(f.k); else if (a !== b) difieren.push(f.k); });
+        const chk = { ts: Date.now(), por: S.actor, faltaEvolta, faltaAmbos, faltaCrm, difieren, pendientes: faltaEvolta.length + faltaAmbos.length + faltaCrm.length + difieren.length, evolta: ev };
+        op.nkbCheck = chk; (pendingOps[op.id] = pendingOps[op.id] || {}).nkbCheck = chk;
+        S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'nkb', antes: '', despues: chk.pendientes ? `${chk.pendientes} pendientes` : 'Todo coincide' });
+        commit(); toast(chk.pendientes ? `Cotejo guardado: ${chk.pendientes} pendientes` : 'Todo coincide con Evolta'); render(true);
+      } });
+    const dlg = $('#dlg'), res = dlg.querySelector('#nkb-res'), box = dlg.querySelector('.nkb-paste');
+    const show = (text) => {
+      const r = EVOLTA.readNkb(text);
+      if (r.found < 4) { ev = null; res.innerHTML = '<div class="ev-falta">No reconocí la pestaña <b>Notaría y Kardex/Banco</b>. Revisa que la captura muestre los tres recuadros (Notaría, Expediente y Banco).</div>'; return; }
+      ev = r.values;
+      const row = (f) => {
+        const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]), show = (v) => filled(v) ? esc(f.t === 'date' ? fdate(v) : String(v)) : '<span class="muted">—</span>';
+        let st, box = '';
+        if (!a && !b) st = '<span class="badge rojo">Falta en ambos</span>';
+        else if (!a) st = '<span class="badge amar">Completar en Evolta</span>';
+        else if (!b) { st = '<span class="badge amar">Falta en el CRM</span>'; box = `<label class="small"><input type="checkbox" data-nk="${f.k}" checked> copiar al CRM</label>`; }
+        else if (a !== b) { st = '<span class="badge rojo">Distinto</span>'; box = `<label class="small"><input type="checkbox" data-nk="${f.k}"> usar el de Evolta</label>`; }
+        else st = '<span class="badge verde">Coincide</span>';
+        return `<tr><td>${esc(f.l)}</td><td>${show(op[f.k])}</td><td>${show(ev[f.k])}</td><td>${st}</td><td>${box}</td></tr>`;
+      };
+      res.innerHTML = `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${CRM.NKB.map(g => `<tr><td colspan="5" class="nkb-gr">${g.t}</td></tr>${g.f.map(row).join('')}`).join('')}</tbody></table></div>
+        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
+    };
+    const fromImage = async (file) => {
+      res.innerHTML = '<div class="small muted">Leyendo la imagen… <b id="nkb-pg">0%</b> (la primera vez tarda un poco más)</div>';
+      try { show(await EVOLTA.ocr(file, p => { const g = $('#nkb-pg'); if (g) g.textContent = p + '%'; })); } catch (e) { res.innerHTML = `<div class="ev-falta">No se pudo leer la imagen: ${esc(e.message)}</div>`; }
+    };
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const img = [...(e.clipboardData.items || [])].find(i => i.type.startsWith('image/'));
+      if (img) { box.textContent = '🖼️ Captura pegada'; return fromImage(img.getAsFile()); }
+      const t = e.clipboardData.getData('text/plain'); box.textContent = t.slice(0, 400); show(t);
+    });
+    dlg.querySelector('#nkb-img').onchange = (e) => { const f = e.target.files[0]; if (f) { box.textContent = '🖼️ ' + f.name; fromImage(f); } };
+    setTimeout(() => box.focus(), 60);
+  }
+
+  /* ---- Cláusula adicional (desde la minuta que exporta Evolta) ---- */
+  const BANCO_LARGO = { BCP: 'BANCO DE CRÉDITO DEL PERÚ', INTERBANK: 'BANCO INTERNACIONAL DEL PERÚ - INTERBANK', BBVA: 'BBVA PERÚ', SCOTIABANK: 'SCOTIABANK PERÚ', BANBIF: 'BANCO INTERAMERICANO DE FINANZAS', PICHINCHA: 'BANCO PICHINCHA', GNB: 'BANCO GNB PERÚ' };
+  const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save(); };
+  function setPath(o, path, v) { const k = path.split('.'); let x = o; k.slice(0, -1).forEach(p => { x = x[p]; }); x[k[k.length - 1]] = v; }
+  function clauseCollect(box, D) {
+    box.querySelectorAll('[name]').forEach(el => setPath(D, el.name, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) || 0 : el.value));
+    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (el.value && el.value !== el.dataset.orig) it.texto = it.texto.replace(/a más tardar el .+? del? \d{4}/i, 'a más tardar el ' + CLAUSULA.fechaLarga(el.value)); });
+    D.pago.items.forEach(it => { if (it.sub && it.sub.length) it.monto = it.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
+  }
+  function clauseForm(D, op) {
+    const L = CLAUSULA, inp = (name, val, label, o = {}) => `<label class="f ${o.w2 ? 'w2' : ''}">${label}<input name="${name}" value="${esc(val ?? '')}" ${o.type ? `type="${o.type}"` : ''} ${o.ro ? 'readonly' : ''}></label>`;
+    const ta = (name, val) => `<textarea name="${name}" rows="2">${esc(val || '')}</textarea>`;
+    const total = D.pago.items.reduce((t, i) => t + (Number(i.monto) || 0), 0);
+    const items = D.pago.items.map((it, i) => {
+      const fd = CLAUSULA.isoDeTexto((/a más tardar el (.+? del? \d{4})/i.exec(it.texto) || [])[1]);
+      return `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}<span class="small muted cl-let">${L.montoLetras(it.monto || 0)}</span></div>${ta(`pago.items.${i}.texto`, it.texto)}
+        ${fd ? `<label class="f cl-row" style="max-width:260px">Desembolso a más tardar el<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>` : ''}
+        ${(it.sub || []).map((s, j) => `<div class="cl-sub"><div class="cl-row">– ${inp(`pago.items.${i}.sub.${j}.monto`, s.monto, 'Monto (S/)', { type: 'number' })}<span class="small muted cl-let">${L.montoLetras(s.monto || 0)}</span><button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div>${ta(`pago.items.${i}.sub.${j}.texto`, s.texto)}</div>`).join('')}
+        ${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : ''}</div>`;
+    }).join('');
+    const pagosEv = op.evolta && (op.evolta.pagos || []).length;
+    return `<div class="cl"><p class="small muted" style="margin-top:0">Datos tomados de la minuta (Anexo I). Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 Cargar otra minuta</button></p>
+      <h3>Minuta y bien</h3><div class="f-grid">${inp('fechaMinuta', D.fechaMinuta, 'Fecha de la minuta', { type: 'date' })}${inp('proyecto', D.proyecto, 'Proyecto')}${inp('inmuebles', D.inmuebles, 'Inmueble(s)', { w2: true })}</div>
+      <h3>Compradores</h3>${D.compradores.map((c, i) => `<div class="f-grid cl-block"><label class="f">Trato<select name="compradores.${i}.trat"><option value="">Elegir…</option><option ${c.trat === 'Sr.' ? 'selected' : ''}>Sr.</option><option ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label>${inp(`compradores.${i}.nombre`, c.nombre, 'Nombre completo', { w2: true })}${inp(`compradores.${i}.dni`, c.dni, 'DNI')}${inp(`compradores.${i}.ec`, c.ec, 'Estado civil')}${inp(`compradores.${i}.nac`, c.nac, 'Nacionalidad')}${inp(`compradores.${i}.domicilio`, c.domicilio, 'Domicilio', { w2: true })}</div>`).join('')}
+      <h3>Vendedora</h3><div class="f-grid">${inp('vendedora.razon', D.vendedora.razon, 'Razón social')}${inp('vendedora.ruc', D.vendedora.ruc, 'RUC')}${inp('vendedora.domicilio', D.vendedora.domicilio, 'Domicilio', { w2: true })}${inp('vendedora.rep', D.vendedora.rep, 'Representante')}${inp('vendedora.repDni', D.vendedora.repDni, 'DNI representante')}${inp('vendedora.repCargo', D.vendedora.repCargo, 'Cargo')}${inp('vendedora.partida', D.vendedora.partida, 'Partida electrónica')}</div>
+      <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Aclarar la forma de pago</label> <span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span></h3>
+      ${D.pago.incluir ? `${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}
+        <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' ⚠️ no coincide' : ' ✓'}` : ''}</div>` : ''}
+      <h3 class="cl-h"><label><input type="checkbox" name="entrega.incluir" ${D.entrega.incluir ? 'checked' : ''}> Aclarar la fecha de entrega</label> <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num"></h3>
+      ${D.entrega.incluir ? `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>` : ''}
+      <h3 class="cl-h"><label><input type="checkbox" name="poder.incluir" ${D.poder.incluir ? 'checked' : ''}> Incluir poder irrevocable</label></h3>
+      ${D.poder.incluir ? `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>` : ''}
+      <h3>Lugar y fecha de firma</h3><div class="f-grid">${inp('ciudad', D.ciudad, 'Ciudad')}${inp('fecha', D.fecha, 'Fecha', { type: 'date' })}</div></div>`;
+  }
+  function openClausula(op) {
+    const m = op.minuta, base = JSON.parse(JSON.stringify(m));
+    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
+    modal({ title: `Cláusula adicional · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true, body: clauseForm(D, op),
+      onCancel: () => { if (box.isConnected) clauseCollect(box, D); keepClause(op, D); },
+      onOk: (dlg) => {
+        clauseCollect(box, D);
+        if (D.compradores.some(c => !c.trat)) { toast('Elige el trato (Sr. / Sra.) de cada comprador'); return false; }
+        CLAUSULA.docx(D).then(blob => {
+          const name = `CLAUSULA ADICIONAL ${D.inmuebles.replace(/N\.º\s*/g, '').replace(/[.\\/:*?"<>|]/g, '').toUpperCase()} - ${D.proyecto.replace(/^EDIFICIO\s+/i, '').toUpperCase()}.docx`;
+          download(name, blob); D.generada = Date.now(); D.por = S.actor; keepClause(op, D);
+          S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'clausula', antes: '', despues: 'Word generado' }); commit();
+          toast('Cláusula descargada'); dlg._ok = true; dlg.close(); render(true);
+        }).catch(e => toast('No se pudo generar el Word: ' + e.message));
+        return false;
+      } });
+    const dlg = $('#dlg'), box = dlg.querySelector('.dlg-b');
+    const redraw = () => { const y = box.scrollTop; box.innerHTML = clauseForm(D, op); box.scrollTop = y; };
+    box.onchange = (e) => { if (/number|checkbox|date/.test(e.target.type) || e.target.tagName === 'SELECT') { clauseCollect(box, D); redraw(); } };
+    box.onclick = (e) => {
+      const b = e.target.closest('[data-cl]'); if (!b) return;
+      clauseCollect(box, D); const it = D.pago.items[+b.dataset.i];
+      if (b.dataset.cl === 'add-sub') it.sub.push({ monto: 0, texto: (it.sub[it.sub.length - 1] || {}).texto || CLAUSULA.DEP });
+      if (b.dataset.cl === 'del-sub') it.sub.splice(+b.dataset.j, 1);
+      if (b.dataset.cl === 'evolta') { const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
+      if (b.dataset.cl === 'otra') { keepClause(op, D); ui.minOp = op.id; dlg.close(); return $('#minfile').click(); }
+      D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
+      redraw();
+    };
+  }
+  async function loadMinuta(file, opId) {
+    const op = getOp(opId); if (!op) return;
+    toast('Leyendo la minuta…'); let m;
+    try { m = CLAUSULA.parseMinuta(await EVOLTA.readText(await file.arrayBuffer())); } catch (e) { console.error(e); return toast('No se pudo leer la minuta: ' + e.message); }
+    const dnis = m.compradores.map(c => c.dni);
+    if (op.dni && dnis.length && !dnis.includes(String(op.dni).trim()) && !await ask(`La minuta es de ${m.compradores.map(c => c.nombre).join(' y ')} (DNI ${dnis.join(', ')}), pero este cliente tiene DNI ${op.dni}. ¿Usarla igual?`)) return;
+    m.cargado = Date.now(); m.por = S.actor;
+    op.minuta = m; (pendingOps[op.id] = pendingOps[op.id] || {}).minuta = m;
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'minuta', antes: '', despues: 'Minuta cargada' }); commit();
+    openClausula(op);
+  }
+
   async function deleteOp(id) {
     const o = getOp(id); if (!o) return;
     const nSeg = S.seguimientos.filter(s => s.opId === id).length;
@@ -726,7 +868,7 @@
     <div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div class="ficha-grid"><div>
       ${STAGES.map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + `<div id="nkb-box">${nkbHtml(o)}</div>` : ''}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -744,6 +886,7 @@
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
+    if ($('#nkb-st')) $('#nkb-st').outerHTML = nkbStatus(o);
     STAGES.forEach(s => { $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
@@ -1053,7 +1196,7 @@
 
     // Clientes y una hoja por etapa (datos operativos)
     add('Clientes', rows().map(({ o, d }) => ({ ID: o.id, Cliente: o.cliente, DNI: o.dni, Proyecto: o.proyecto, Unidad: o.unidad, Vendedor: o.vendedor, Banco: o.banco, Precio: o.precio, 'Etapa actual': d.etapa === 'cerrado' ? 'Cerrado' : STAGE[d.etapa].name, Responsable: d.responsable, Alerta: d.alerta, 'Siguiente paso': d.siguiente, 'Cuello de botella': d.cuello, 'Días en proceso': d.diasTotal, Observaciones: o.observaciones })));
-    STAGES.forEach(s => add(`Datos ${s.n}-${s.name}`.replace('ó', 'o'), rows().map(({ o, d }) => { const r = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, 'Estado en la etapa': ESTADO[d.state[s.key]], Responsable: d.owner[s.key], 'Avance %': d.progress[s.key] }; FIELDS[s.key].forEach(f => r[f.l] = fv(f, o[f.k])); return r; })));
+    STAGES.forEach(s => add(`Datos ${s.n}-${s.name}`.replace('ó', 'o'), rows().map(({ o, d }) => { const r = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, 'Estado en la etapa': ESTADO[d.state[s.key]], Responsable: d.owner[s.key], 'Avance %': d.progress[s.key] }; (s.key === 'con' ? [...FIELDS.con, ...FIELDS.nkb] : FIELDS[s.key]).forEach(f => r[f.l] = fv(f, o[f.k])); return r; })));
 
     // Definiciones
     const per = (opts.desde || opts.hasta) ? `${opts.desde ? fdate(opts.desde) : 'inicio'} a ${opts.hasta ? fdate(opts.hasta) : fdate(iso(today()))}` : 'todo el historial';
@@ -1109,6 +1252,8 @@
     if (a === 'nav-toggle') return $('.side').classList.toggle('open');
     if (a === 'evolta') { ui.evOp = el.dataset.op || ''; return $('#evfile').click(); }
     if (a === 'op-del') return deleteOp(el.dataset.op);
+    if (a === 'nkb') return openNkb(getOp(el.dataset.op));
+    if (a === 'clausula') { const op = getOp(el.dataset.op); if (op && op.minuta) return openClausula(op); ui.minOp = el.dataset.op; return $('#minfile').click(); }
     if (a === 'chip') { flt(el.dataset.v, {})[el.dataset.k] = el.dataset.val; return refresh(el.dataset.r); }
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
@@ -1158,6 +1303,7 @@
     }
     if (t.id === 'file' && t.files[0]) { doImport(t.files[0]); t.value = ''; }
     if (t.id === 'evfile' && t.files[0]) { loadEvolta(t.files[0], ui.evOp); t.value = ''; }
+    if (t.id === 'minfile' && t.files[0]) { loadMinuta(t.files[0], ui.minOp); t.value = ''; }
   });
   document.addEventListener('submit', (e) => {
     if (e.target.id === 'login-form') { e.preventDefault(); const em = $('#lg-e').value.trim(), pw = $('#lg-p').value; CL.signIn(em, pw).catch(x => toast(AUTH_ERR[x.code] || 'No se pudo entrar: ' + x.message)); return; }

@@ -25,6 +25,17 @@
     return out.map(r => r.c.sort((a, b) => a.x - b.x).map(c => c.s));
   }
 
+  // texto corrido (para documentos largos como la minuta): conserva los espacios del PDF
+  async function readText(buf) {
+    const pdf = await (await lib()).getDocument({ data: buf }).promise; let out = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      let last = null;
+      (await (await pdf.getPage(p)).getTextContent()).items.forEach(i => { const y = i.transform[5]; if (last !== null && Math.abs(y - last) > 2) out += '\n'; out += i.str; last = y; });
+      out += '\n';
+    }
+    return out;
+  }
+
   /* ---------- utilidades ---------- */
   const isAmt = (s) => /^-?[\d,]+\.\d{2}$/.test(s || '');
   const amt = (s) => Number(String(s).replace(/,/g, ''));
@@ -98,5 +109,39 @@
     return { fields: toFields(r), info };
   }
 
-  window.EVOLTA = { fromPdf, parse, toFields };
+  /* ---------- pestaña "Notaría y Kardex/Banco": texto copiado o captura de pantalla (OCR) ---------- */
+  const TESS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  let tessLoading = null;
+  const tess = () => tessLoading || (tessLoading = new Promise((ok, ko) => {
+    if (window.Tesseract) return ok(window.Tesseract);
+    const s = document.createElement('script'); s.src = TESS; s.onload = () => ok(window.Tesseract);
+    s.onerror = () => { tessLoading = null; ko(new Error('no se pudo cargar el lector de imágenes (revisa tu conexión a internet)')); };
+    document.head.appendChild(s);
+  }));
+  async function ocr(img, onProgress) {
+    const T = await tess();
+    const r = await T.recognize(img, 'spa', { logger: m => { if (onProgress && m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); } });
+    return r.data.text;
+  }
+  // quita tildes sin cambiar el largo del texto, para buscar etiquetas y cortar en la misma posición
+  const fold = (s) => s.toLowerCase().replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n');
+  function readNkb(text) {
+    const flatT = String(text).replace(/\s+/g, ' '), low = fold(flatT), fields = window.CRM.NKB.flatMap(g => g.f), hits = [];
+    fields.forEach(f => { const m = f.ev.exec(low); if (m) hits.push({ f, start: m.index, end: m.index + m[0].length }); });
+    hits.sort((a, b) => a.start - b.start);
+    const out = {}, found = {};
+    hits.forEach((h, i) => {
+      let v = flatT.slice(h.end, i + 1 < hits.length ? hits[i + 1].start : undefined).trim();
+      // títulos de los recuadros y basura del OCR ('  |  *  -) en los bordes
+      v = v.replace(/\s*\b(Exp\w*ente|Otros|Banco|Notar[ií]a)\s*$/i, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}.)]+$/gu, '').trim();
+      found[h.f.k] = true;
+      if (!v || (v.length < 2 && !/\d/.test(v))) return; // una letra suelta es ruido del OCR
+      if (h.f.t === 'date') { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(v); v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; }
+      else if (h.f.t === 'number') { const n = Number(v.replace(/[^\d.-]/g, '')); v = v.match(/\d/) && !isNaN(n) ? n : ''; }
+      if (v !== '') out[h.f.k] = v;
+    });
+    return { values: out, found: Object.keys(found).length };
+  }
+
+  window.EVOLTA = { fromPdf, parse, toFields, readText, ocr, readNkb, fold };
 })();

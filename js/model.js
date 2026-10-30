@@ -93,6 +93,25 @@
       { k: 'pos_derivado', l: 'Derivado a postventa', t: 'select', o: YN }, { k: 'pos_entregada', l: 'Unidad entregada', t: 'select', o: YN }
     ]
   };
+  /* Pestaña "Notaría y Kardex/Banco" de Evolta: mismos campos, en el mismo orden.
+     `ev` = cómo se llama el campo en Evolta (para leer la captura). Algunos reutilizan campos que ya existían. */
+  const NKB = [
+    { t: 'Notaría', f: [
+      { k: 'con_notaria', l: 'Nombre notaría', ev: /nombre notaria\s*:/ }, { k: 'con_notResp', l: 'Responsable', ev: /responsable\s*:/ },
+      { k: 'con_notCel', l: 'Celular', ev: /celular\s*:/ }, { k: 'con_notTel', l: 'Teléfono', ev: /telefono\s*:/ },
+      { k: 'con_notEmail', l: 'E-mail', ev: /e\s*-?\s*mail\s*:/ }, { k: 'con_notDir', l: 'Dirección', ev: /direccion\s*:/ }] },
+    { t: 'Expediente', f: [
+      { k: 'con_kardexMonto', l: 'N° Kardex', ev: /n\W{0,2}\s*kardex\s*:/ }, { k: 'con_expOficina', l: 'Oficina', ev: /oficina\s*:/ },
+      { k: 'con_expRegistro', l: 'N° Registro', ev: /n\W{0,2}\s*registro\s*:/ }] },
+    { t: 'Otros', f: [
+      { k: 'con_fEscritura', l: 'Fecha de escritura pública', t: 'date', ev: /fecha de escritura publica\s*:/ }, { k: 'con_penalidad', l: 'Penalidad de entrega (S/)', t: 'number', ev: /penalidad de entrega[^:]{0,8}:/ }] },
+    { t: 'Banco', f: [
+      { k: 'con_bcoAgencia', l: 'Agencia', ev: /agencia\s*:/ }, { k: 'ejecBanco', l: 'Asesor', ev: /asesor\s*:/ },
+      { k: 'con_bcoTel', l: 'Teléfonos', ev: /telefonos\s*:/ }, { k: 'con_bcoCorreo', l: 'Correos', ev: /correos\s*:/ },
+      { k: 'cob_vencCarta', l: 'Fec. Vcto. Carta de Aprob.', t: 'date', ev: /(?:fec\W{0,2}\s*v\w{2,4}\W{0,2}\s*)?carta de aprob[^:]{0,3}:/ }] }];
+  const NKB_KEYS = NKB.flatMap(g => g.f.map(f => f.k));
+  FIELDS.nkb = NKB.flatMap(g => g.f).filter(f => !Object.values(FIELDS).flat().some(x => x.k === f.k)).map(f => ({ k: f.k, l: f.l, t: f.t || 'text' }));
+
   const FIELD_LABEL = {};
   Object.values(FIELDS).forEach(a => a.forEach(f => FIELD_LABEL[f.k] = f.l));
   const NUM_KEYS = new Set();
@@ -139,6 +158,8 @@
 
   /* Cada paso puede traer `set` (qué se registra con un toque; $today = hoy, $me = quien lo hace)
      o `choose` (el usuario elige una opción). Sin ninguno, se abre el campo para escribirlo. */
+  // Notaría y Kardex/Banco: todo lleno en el CRM y el último cotejo con Evolta sin pendientes
+  const nkbOk = (op) => NKB_KEYS.every(k => op[k] !== undefined && op[k] !== null && op[k] !== '') && !!op.nkbCheck && !op.nkbCheck.pendientes;
   function checklist(op, key, d) {
     const has = (k) => op[k] !== undefined && op[k] !== null && op[k] !== '';
     const it = (label, done, set, choose) => ({ label, done: !!done, set, choose });
@@ -152,7 +173,7 @@
         it('Actualización de documentos definida', has('con_actDocs'), { con_actDocs: 'SI APLICA' }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
         it('Documentos enviados a notaría', op.con_docsNotaria === 'ENVIADOS', { con_docsNotaria: 'ENVIADOS' }), it('Minuta enviada a firmas', has('con_fInicioFirmas'), { con_fInicioFirmas: T }),
         it('Cheque en CRM Evolta', op.con_cheque === 'SI', { con_cheque: 'SI' }), it('Kardex completo', op.con_estadoKardex === 'Completo' || op.con_estadoKardex === 'No corresponde', { con_estadoKardex: 'Completo' }),
-        it('Notaría y abogado definidos', has('con_notaria') && has('con_abogado')), it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
+        it('Notaría y abogado definidos', has('con_notaria') && has('con_abogado')), it('Notaría y Kardex/Banco completo y cotejado con Evolta', nkbOk(op)),it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
         it('Firma del representante legal', has('con_fFirmaRL'), { con_fFirmaRL: T }), it('Datos ingresados al CRM Evolta', op.con_datosCRM === 'INGRESADO', { con_datosCRM: 'INGRESADO' })];
       case 'fin':
         if (op.fin_tipo === 'No aplica') return [it('No aplica carta fianza ni minuta de levantamiento', true)];
@@ -279,6 +300,6 @@
     return ops;
   }
 
-  global.CRM = { STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
+  global.CRM = { STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
     pd, iso, today, addDays, diff, fdate, num };
 })(window);
