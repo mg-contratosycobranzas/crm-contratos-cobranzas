@@ -44,6 +44,7 @@
   const FIELDS = {
     gen: [
       { k: 'cliente', l: 'Cliente', t: 'text', w: 2 }, { k: 'dni', l: 'DNI', t: 'text' },
+      { k: 'email', l: 'Correo del cliente', t: 'text' }, { k: 'telefono', l: 'Teléfono / celular', t: 'text' },
       { k: 'proyecto', l: 'Proyecto', t: 'text', list: 'proyecto' }, { k: 'unidad', l: 'Unidad', t: 'text' },
       { k: 'fechaInicio', l: 'Fecha de inicio', t: 'date' },
       { k: 'vendedor', l: 'Vendedor', t: 'text', list: 'vendedor' }, { k: 'jefeVentas', l: 'Jefe de ventas', t: 'text', list: 'jefeVentas' },

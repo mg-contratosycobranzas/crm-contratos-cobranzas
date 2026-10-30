@@ -29,7 +29,7 @@
   C.setDoc = (coll, id, data) => db.collection(coll).doc(id).set(clean(data));
   C.updateDoc = (coll, id, f) => { const o = {}; Object.keys(f).forEach(k => o[k] = f[k] === C.DEL ? C.DEL : clean({ v: f[k] }).v); return db.collection(coll).doc(id).set(o, { merge: true }); };
   C.deleteDoc = (coll, id) => db.collection(coll).doc(id).delete();
-  C.setMeta = (d) => db.collection('meta').doc('config').set(clean(d));
+  C.setMeta =(d) => db.collection('meta').doc('config').set(clean(d));
   C.setAcl = (d) => db.collection('meta').doc('acl').set(clean(d));
   C.batchSet = async (coll, items) => {
     for (let i = 0; i < items.length; i += 400) { const b = db.batch(); items.slice(i, i + 400).forEach(x => b.set(db.collection(coll).doc(String(x.id)), clean(x))); await b.commit(); }

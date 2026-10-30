@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -62,10 +62,10 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos y marcar pasos' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }];
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import']);
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }];
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop']);
   const VIEW_PERM = { mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -223,10 +223,12 @@
   }
   function modal({ title, body, ok = 'Guardar', cancel = 'Cancelar', onOk, onCancel }) {
     const dlg = $('#dlg');
-    dlg.innerHTML = `<form method="dialog"><div class="dlg-h">${esc(title)}</div><div class="dlg-b">${body}</div><div class="dlg-f">${cancel ? `<button type="button" class="btn" data-m="cancel">${cancel}</button>` : ''}<button type="button" class="btn pri" data-m="ok">${ok}</button></div></form>`;
+    dlg.innerHTML = `<form method="dialog"><div class="dlg-h"><span>${esc(title)}</span><button type="button" class="dlg-x" data-m="x" aria-label="Cerrar" title="Cerrar">✕</button></div><div class="dlg-b">${body}</div><div class="dlg-f">${cancel ? `<button type="button" class="btn" data-m="cancel">${cancel}</button>` : ''}<button type="button" class="btn pri" data-m="ok">${ok}</button></div></form>`;
     dlg.onclose = () => { if (onCancel && !dlg._ok) onCancel(); dlg._ok = false; };
     dlg.querySelector('[data-m=ok]').onclick = () => { if (onOk && onOk(dlg) === false) return; dlg._ok = true; dlg.close(); };
     const c = dlg.querySelector('[data-m=cancel]'); if (c) c.onclick = () => dlg.close();
+    dlg.querySelector('[data-m=x]').onclick = () => dlg.close();
+    dlg.onclick = (e) => { if (e.target === dlg) dlg.close(); }; // tocar fuera de la ventana la cierra
     dlg.showModal();
   }
   const ask = (msg, ok) => new Promise(res => modal({ title: 'Confirmar', body: `<p>${esc(msg)}</p>`, ok: ok || 'Sí, continuar', onOk: () => res(true), onCancel: () => res(false) }));
@@ -324,7 +326,7 @@
   function fabMenu() {
     const b = (act, ic, l, on) => on ? `<button type="button" class="bigopt" data-act="${act}" data-close><i>${ic}</i><span>${l}</span></button>` : '';
     modal({ title: '¿Qué quieres hacer?', ok: 'Cerrar', cancel: '', body: `<div class="bigopts">${b('fab-seg', '📞', 'Anotar una gestión', can('a_seg'))}${b('newop', '➕', 'Nuevo cliente', can('a_newop'))}${b('goto" data-href="#/mi', '☀️', 'Mi día', can('v_mi'))}${b('export-xlsx', '⬇️', 'Descargar Excel', can('a_export'))}</div>` });
-    $('#dlg').querySelector('[data-m=ok]').hidden = true;
+    $('#dlg').querySelector('.dlg-f').hidden = true; // se cierra con la ✕ o tocando fuera
   }
   function pickList(q) {
     const box = $('#pk-list'); if (!box) return;
@@ -346,8 +348,8 @@
       fuera: act.filter(r => r.d.conCump === 'FUERA DE PLAZO').length, seg: S.seguimientos.filter(s => s.usuario === u.name && !s.resuelto).length, act7: activity7(u.name) };
   }
   function activity7(n) {
-    const lim = Date.now() - 7 * 86400000;
-    return S.log.filter(l => l.usuario === n && l.ts >= lim).length + S.seguimientos.filter(s => s.usuario === n && s.ts >= lim).length;
+    const lim = Date.now() - 7 * 86400000, u = user(n), ns = [n, ...((u && u.antes) || [])];
+    return S.log.filter(l => ns.includes(l.usuario) && l.ts >= lim).length + S.seguimientos.filter(s => s.usuario === n && s.ts >= lim).length;
   }
   function loadTable(id) {
     const cols = [
@@ -545,8 +547,8 @@
   }
 
   function activityOf(name) {
-    const items = [];
-    S.log.filter(l => !name || l.usuario === name).forEach(l => items.push({ ts: l.ts, op: l.opId, usuario: l.usuario, tipo: 'Cambio', etapa: l.etapa, txt: `${FIELD_LABEL[l.campo] || l.campo}: ${fmtVal(l.campo, l.antes)} → ${fmtVal(l.campo, l.despues)}` }));
+    const items = [], u = name && user(name), ns = name ? [name, ...((u && u.antes) || [])] : null;
+    S.log.filter(l => !ns || ns.includes(l.usuario)).forEach(l => items.push({ ts: l.ts, op: l.opId, usuario: l.usuario, tipo: 'Cambio', etapa: l.etapa, txt: `${FIELD_LABEL[l.campo] || l.campo}: ${fmtVal(l.campo, l.antes)} → ${fmtVal(l.campo, l.despues)}` }));
     S.seguimientos.filter(s => !name || s.usuario === name).forEach(s => items.push({ ts: s.ts, op: s.opId, usuario: s.usuario, tipo: s.tipo, etapa: s.etapa, txt: s.nota + (s.proxima ? ` — Próxima: ${s.proxima}` : '') }));
     return items.sort((a, b) => b.ts - a.ts);
   }
@@ -600,7 +602,7 @@
         { h: 'Responsable', f: r => respCell(r.d.responsable), s: r => r.d.responsable }, { h: 'Siguiente paso', f: r => esc(r.d.siguiente) }, { h: 'Alerta', f: r => alertBadge(r.d.alerta), s: r => r.d.alerta }], list);
     };
     const sel = (k, label, opts) => `<select data-f="clientes" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Clientes', 'Seguimiento de cada cliente a lo largo de las 5 etapas.', `<button class="btn pri" data-act="newop">+ Nuevo cliente</button>`, 'Busca por nombre, DNI o proyecto. La barra de colores muestra por cuáles etapas ya pasó el cliente (verde = lista, color = etapa actual, gris = falta).')}
+    return `${pageHead('Clientes', 'Seguimiento de cada cliente a lo largo de las 5 etapas.', `<button class="btn" data-act="evolta" title="Llena los datos del cliente con el estado de cuenta descargado de Evolta">📄 Cargar PDF Evolta</button> <button class="btn pri" data-act="newop">+ Nuevo cliente</button>`, 'Busca por nombre, DNI o proyecto. La barra de colores muestra por cuáles etapas ya pasó el cliente (verde = lista, color = etapa actual, gris = falta).')}
     <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, ID, proyecto…" value="${esc(F.q)}" data-f="clientes" data-k="q" data-r="${id}">
       ${sel('etapa', 'Todas las etapas', [...STAGES.map(s => [s.key, s.name]), ['cerrado', 'Cerrado']])}${sel('alerta', 'Todas las alertas', ['Inmediato', 'Por acumulación', 'Bajo control', 'Cerrado'].map(a => [a, ALERT_LABEL[a]]))}${sel('sin', 'Con o sin responsable', [['1', 'Solo sin responsable']])}
       ${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}</div>
@@ -608,14 +610,16 @@
   }
 
   /* ---- Ficha de cliente ---- */
-  function fieldInput(op, f) {
+  function fieldInput(op, f, mark) {
     const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}"`;
+    mark = mark && op.evolta && f.k !== 'observaciones'; // con estado de cuenta cargado: resalta lo que falta y lo que vino del PDF
     let inp;
     if (f.t === 'select') inp = `<select ${base}><option value=""></option>${[...new Set([...f.o, ...(v && !f.o.includes(v) ? [v] : [])])].map(x => `<option ${String(v) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     else if (f.t === 'owner') { const key = Object.keys(STAGE).find(s => STAGE[s].ownerKey === f.k); const names = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...(v ? [v] : [])])]; inp = `<select ${base}><option value="">Sin asignar</option>${names.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`; }
     else if (f.t === 'textarea') inp = `<textarea rows="2" ${base}>${esc(v)}</textarea>`;
     else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${f.list}"` : ''} value="${esc(v)}" ${base}>`;
-    return `<label class="f ${f.w === 2 ? 'w2' : ''}">${f.l}${inp}</label>`;
+    const fromPdf = mark && (op.evolta.campos || []).includes(f.k);
+    return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${mark && v === '' ? 'falta' : ''}"><span>${f.l}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
   function kvFor(key, o, d) {
     const kv = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
@@ -647,15 +651,79 @@
     ${items.length ? `<ul class="tl">${items.slice(0, 80).map(i => `<li class="${i.kind}" style="--sc:${STAGE[i.stage] ? colVar(i.stage) : 'var(--muted)'}"><div class="w">${i.day ? fdate(iso(new Date(i.ts))) : new Date(i.ts).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(i.head)}${STAGE[i.stage] ? ' · ' + STAGE[i.stage].name : ''}</div><div class="tx">${esc(i.txt)}</div>${i.extra ? `<div class="small muted">${esc(i.extra)}</div>` : ''}</li>`).join('')}</ul>` : '<div class="empty">Sin registros.</div>'}`;
   }
 
+  /* ---- Estado de cuenta del CRM Evolta (PDF) ---- */
+  const EV_GLOSARIO = [['Cuota inicial', 'Parte del precio que el cliente paga directo a la inmobiliaria. Puede estar dividida en varias cuotas.'],
+    ['Saldo a financiar', 'Lo que paga el banco con el crédito hipotecario. Se cobra con el desembolso.'],
+    ['Bono (MiVivienda / BBP / Techo Propio)', 'Aporte del Estado que se descuenta del precio.'],
+    ['Fecha programada', 'Fecha acordada para el pago. En el saldo a financiar es la fecha referencial del desembolso.'],
+    ['Cancelado / Pendiente', 'Cancelado = ya se pagó. Pendiente = falta pagar. Si la fecha programada ya pasó, se muestra como vencido.'],
+    ['Pagado / Por pagar', 'Suma de lo que el cliente ya pagó y lo que todavía falta (incluye lo que pagará el banco).']];
+  function evoltaHtml(o) {
+    const head = `<div class="ev-bar"><button class="btn sm" data-act="evolta" data-op="${o.id}">📄 ${o.evolta ? 'Actualizar con un PDF nuevo' : 'Cargar estado de cuenta (PDF Evolta)'}</button></div>`;
+    const e = o.evolta; if (!e) return head;
+    const T = iso(today());
+    const est = (c) => /CANCELAD/.test(c.estado) ? '<span class="badge verde">Cancelado</span>' : c.fProg && c.fProg < T ? '<span class="badge rojo">Vencido</span>' : `<span class="badge amar">${esc(c.estado ? c.estado[0] + c.estado.slice(1).toLowerCase() : 'Pendiente')}</span>`;
+    const kv = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
+    return `<div class="ev">${head}<div class="ev-h"><b>Estado de cuenta Evolta</b><span class="small muted">consultado el ${fdate(e.consulta) || '—'} · cargado por ${esc(e.por || '—')}</span></div>
+      <div class="kv">${kv('Forma de pago', esc([e.modalidad, e.entidad].filter(Boolean).join(' / ') || '—'))}${(e.formaPago || []).map(x => kv(esc(x.motivo), `${money(x.monto)} <span class="muted small">${esc(x.pct)}</span>`)).join('')}${kv('Pagado', money(e.pagado))}${kv('Por pagar', money(e.porPagar))}</div>
+      <div class="ev-tw"><table class="ev-t"><thead><tr><th>Cronograma</th><th>Monto</th><th>Programada</th><th>Pagada</th><th>Estado</th></tr></thead><tbody>${(e.cronograma || []).map(c => `<tr><td>${esc(c.concepto)}</td><td>${money(c.monto)}</td><td>${fdate(c.fProg) || '—'}</td><td>${fdate(c.fPago) || '—'}</td><td>${est(c)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Sin cronograma</td></tr>'}</tbody></table></div>
+      ${(e.pagos || []).length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Pagos registrados</th><th>Monto</th><th>Forma</th><th>N° operación</th><th>Entidad</th></tr></thead><tbody>${e.pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${money(p.monto)}</td><td>${esc(p.forma)}</td><td>${esc(p.operacion)}</td><td>${esc(p.entidad)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      <details class="info"><summary>¿Qué significa cada concepto?</summary><dl class="ev-g">${EV_GLOSARIO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></details></div>`;
+  }
+  async function deleteOp(id) {
+    const o = getOp(id); if (!o) return;
+    const nSeg = S.seguimientos.filter(s => s.opId === id).length;
+    if (!await ask(`Se eliminará a ${o.cliente} (${o.id}) con sus ${nSeg} seguimientos. No se puede deshacer. ¿Continuar?`, 'Sí, eliminar')) return;
+    S.ops = S.ops.filter(x => x.id !== id); delete pendingOps[id];
+    const segs = S.seguimientos.filter(s => s.opId === id); S.seguimientos = S.seguimientos.filter(s => s.opId !== id);
+    if (CL.enabled) { CL.deleteDoc('ops', id); cloudIds.delete(id); segs.forEach(s => { CL.deleteDoc('seguimientos', s.id); cloudSeg.delete(s.id); }); }
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: id, etapa: 'gen', campo: 'cliente_baja', antes: o.cliente || '', despues: '' });
+    commit(); toast('Cliente eliminado'); location.hash = '#/clientes';
+  }
+  async function loadEvolta(file, opId) {
+    let r; toast('Leyendo el estado de cuenta…');
+    try { r = await EVOLTA.fromPdf(await file.arrayBuffer()); } catch (e) { console.error(e); return toast('No se pudo leer el PDF: ' + e.message); }
+    const { fields, info } = r;
+    if (!fields.cliente && !fields.dni) return toast('No se encontraron datos del cliente en el PDF');
+    let op = opId ? getOp(opId) : S.ops.find(o => fields.dni && String(o.dni || '').trim() === fields.dni);
+    if (opId && op && fields.dni && op.dni && String(op.dni).trim() !== fields.dni && !await ask(`El PDF es del DNI ${fields.dni}, pero este cliente tiene DNI ${op.dni}. ¿Cargarlo igual?`)) return;
+    if (op && !can('a_edit')) return toast(NOPERM);
+    if (!op && !can('a_newop')) return toast(NOPERM);
+    const keys = Object.keys(fields), lbl = (k) => FIELD_LABEL[k] || k;
+    const rows = keys.map(k => ({ k, cur: op ? op[k] : undefined, nuevo: fields[k] })).filter(x => String(x.cur ?? '') !== String(x.nuevo));
+    const after = { ...(op || { fechaInicio: iso(today()) }), ...fields };
+    const faltan = [...FIELDS.gen, ...FIELDS.cob].filter(f => f.k !== 'observaciones' && (after[f.k] === undefined || after[f.k] === '')).map(f => f.l);
+    const body = `<p>${op ? `Se actualizará <b>${esc(op.cliente)}</b> (${op.id}).` : `No hay un cliente con DNI ${esc(fields.dni || '—')}: se creará <b>${esc(fields.cliente)}</b>.`} Estado de cuenta consultado el ${fdate(info.consulta) || '—'}.</p>
+      ${rows.length ? `<p class="small muted">Desmarca lo que no quieras cambiar:</p><div class="ev-tw"><table class="ev-t"><thead><tr><th></th><th>Campo</th>${op ? '<th>Ahora</th>' : ''}<th>Del PDF</th></tr></thead><tbody>${rows.map(x => `<tr><td><input type="checkbox" data-evk="${x.k}" checked></td><td>${esc(lbl(x.k))}</td>${op ? `<td class="muted">${esc(fmtVal(x.k, x.cur))}</td>` : ''}<td><b>${esc(fmtVal(x.k, x.nuevo))}</b></td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">Los datos del PDF ya coinciden con el CRM.</p>'}
+      <p class="small">Además se guardan el cronograma (${info.cronograma.length} cuotas), los pagos registrados (${info.pagos.length}) y lo pagado / por pagar.</p>
+      ${faltan.length ? `<div class="ev-falta"><b>Quedarán por completar a mano:</b> ${faltan.map(esc).join(' · ')}</div>` : ''}`;
+    modal({ title: 'Cargar estado de cuenta Evolta', ok: op ? 'Actualizar' : 'Crear cliente', body, onOk: (dlg) => {
+      const pick = keys.filter(k => { const c = dlg.querySelector(`[data-evk="${k}"]`); return !c || c.checked; });
+      const ev = { ...info, cargado: Date.now(), por: S.actor, campos: pick };
+      if (!op) {
+        const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0));
+        op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()) };
+        pick.forEach(k => op[k] = fields[k]); op.evolta = ev; S.ops.push(CRM.normalize(op));
+        S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente || '' });
+      } else {
+        pick.forEach(k => setField(op.id, k, fields[k]));
+        op.evolta = ev; (pendingOps[op.id] = pendingOps[op.id] || {}).evolta = ev;
+      }
+      S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'cob', campo: 'evolta', antes: '', despues: 'PDF consultado el ' + (fdate(info.consulta) || '—') });
+      commit(); toast('Estado de cuenta cargado');
+      const to = '#/cliente/' + op.id; if (location.hash === to) render(true); else location.hash = to;
+    } });
+  }
+
   function vCliente(id) {
     const o = getOp(id); if (!o) return `<div class="empty">Cliente no encontrado. <a href="#/clientes">Volver</a></div>`;
     const d = D.get(id);
-    return `<div class="crumb muted"><a href="#/clientes">Clientes</a> / ${o.id}</div>
+    return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><button class="btn sm danger" data-act="op-del" data-op="${o.id}">🗑️ Eliminar cliente</button></div>
     <div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div class="ficha-grid"><div>
       ${STAGES.map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><details class="fe"><summary>✏️ Editar datos a mano</summary><div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f)).join('')}</div></details></div></details>`).join('')}
-      <details class="sc" style="--sc:var(--c-jef)"><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f)).join('')}</div></div></details>
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div>${s.key === 'cob' ? evoltaHtml(o) : ''}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+      <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
       <div class="qs">${['Llamada', 'WhatsApp', 'Correo', 'Reunión', 'Trámite', 'Nota'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div>
@@ -786,13 +854,15 @@
     modal({ title: 'Editar usuario', body: userForm(u) + `<p class="small muted">Si cambias el nombre, se actualiza en los expedientes y en el historial. Si cambias la etapa, sus expedientes de la etapa anterior siguen a su nombre.</p>`, ok: 'Guardar', onOk: (dlg) => {
       const n = dlg.querySelector('#u-n').value.trim(), s = dlg.querySelector('#u-s').value;
       if (!n) { toast('Escribe el nombre'); return false; } if (n !== u.name && user(n)) { toast('Ya existe un usuario con ese nombre'); return false; }
-      if (CL.enabled && n !== u.name) { toast('En modo nube no se puede cambiar el nombre. Crea un usuario nuevo.'); return false; }
       const em2 = dlg.querySelector('#u-e').value.trim().toLowerCase(); if (CL.enabled && !/^\S+@\S+\.\S+$/.test(em2)) { toast('Escribe un correo válido'); return false; }
       if (n !== u.name) {
-        STAGES.forEach(st => { if (st.ownerKey) S.ops.forEach(o => { if (o[st.ownerKey] === u.name) o[st.ownerKey] = n; }); });
-        S.seguimientos.forEach(x => { if (x.usuario === u.name) x.usuario = n; }); S.log.forEach(x => { if (x.usuario === u.name) x.usuario = n; });
+        STAGES.forEach(st => { if (st.ownerKey) S.ops.forEach(o => { if (o[st.ownerKey] === u.name) { o[st.ownerKey] = n; (pendingOps[o.id] = pendingOps[o.id] || {})[st.ownerKey] = n; } }); });
+        S.seguimientos.forEach(x => { if (x.usuario === u.name) { x.usuario = n; if (CL.enabled) CL.updateDoc('seguimientos', x.id, { usuario: n }); } });
+        S.log.forEach(x => { if (x.usuario === u.name) x.usuario = n; });
+        u.antes = [...new Set([...(u.antes || []), u.name])]; // en la nube el historial no se reescribe: se reconoce por el nombre anterior
         if (S.perms[u.name]) { S.perms[n] = S.perms[u.name]; delete S.perms[u.name]; }
         if (S.actor === u.name) S.actor = n;
+        S.log.push({ ts: Date.now(), usuario: n, opId: '—', etapa: 'gen', campo: 'usuario_nombre', antes: u.name, despues: n });
       }
       const adm = dlg.querySelector('#u-a').checked; if (u.admin && !adm && S.users.filter(x => x.admin).length < 2) { toast('Debe quedar al menos un administrador'); return false; }
       u.name = n; u.stage = s; u.rol = dlg.querySelector('#u-r').value.trim(); u.admin = adm || undefined; u.email = em2 || undefined; commit(); toast('Usuario actualizado'); render(true); } });
@@ -1032,6 +1102,8 @@
     if (a === 'pin-set') return setPin();
     if (a === 'pin-clear') { if (await ask('¿Quitar el PIN de administrador?')) { S.adminPin = ''; save(); toast('PIN quitado'); render(true); } return; }
     if (a === 'nav-toggle') return $('.side').classList.toggle('open');
+    if (a === 'evolta') { ui.evOp = el.dataset.op || ''; return $('#evfile').click(); }
+    if (a === 'op-del') return deleteOp(el.dataset.op);
     if (a === 'chip') { flt(el.dataset.v, {})[el.dataset.k] = el.dataset.val; return refresh(el.dataset.r); }
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
@@ -1053,10 +1125,11 @@
     if (a === 'user-del') return removeUser(el.dataset.u);
     if (a === 'user-edit') return editUser(el.dataset.u);
     if (a === 'user-add') return addUser();
-    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor"></label><label>Banco<input id="n-banco" list="dl-banco"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
+    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>📄 Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
       onOk: (dlg) => { const v = (i) => dlg.querySelector('#n-' + i).value.trim(); if (!v('cliente')) { toast('Escribe el nombre del cliente'); return false; }
         const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()), cliente: v('cliente') };
         ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k))); if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
+        if (op.precio != null) op.cob_porRecibir = Math.max(0, op.precio - (op.montoBanco || 0)); // la inicial empieza pendiente, no cobrada
         S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); commit(); location.hash = '#/cliente/' + op.id; } });
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('.side').classList.remove('open'); });
@@ -1070,7 +1143,7 @@
   document.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.perm) { setPerm(t.dataset.u, t.dataset.perm, t.checked); return toast('Permiso guardado'); }
-    if (t.dataset.fk) { if (!can('a_edit')) { toast(NOPERM); return render(true); } if (setField(t.dataset.op, t.dataset.fk, t.value)) { refreshFicha(t.dataset.op); $('#nav').innerHTML = navHtml(route()); toast('Guardado'); } return; }
+    if (t.dataset.fk) { if (!can('a_edit')) { toast(NOPERM); return render(true); } if (setField(t.dataset.op, t.dataset.fk, t.value)) { const mk = t.closest('.f.mk'); if (mk) mk.classList.toggle('falta', !t.value); refreshFicha(t.dataset.op); $('#nav').innerHTML = navHtml(route()); toast('Guardado'); } return; }
     if (t.dataset.pk) { if (!can('a_params')) { toast(NOPERM); return render(true); } S.params[t.dataset.pk] = Math.max(0, Number(t.value) || 0); commit(); return toast('Plazo actualizado'); }
     if (t.id === 'gproy') { ui.proy = t.value; return render(true); }
     if (t.id === 'actor') {
@@ -1079,6 +1152,7 @@
       return go();
     }
     if (t.id === 'file' && t.files[0]) { doImport(t.files[0]); t.value = ''; }
+    if (t.id === 'evfile' && t.files[0]) { loadEvolta(t.files[0], ui.evOp); t.value = ''; }
   });
   document.addEventListener('submit', (e) => {
     if (e.target.id === 'login-form') { e.preventDefault(); const em = $('#lg-e').value.trim(), pw = $('#lg-p').value; CL.signIn(em, pw).catch(x => toast(AUTH_ERR[x.code] || 'No se pudo entrar: ' + x.message)); return; }
