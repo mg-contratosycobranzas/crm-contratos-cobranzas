@@ -1,9 +1,9 @@
-/* Pega aquí la configuración de tu proyecto Firebase (ver NUBE.md, paso 3).
-   Mientras sea null, el CRM funciona en modo local (datos en el navegador). */
-window.FIREBASE_CONFIG = null;
-/* Ejemplo:
+/* Configuración del proyecto Firebase (crm-mg). Con esto el CRM trabaja en la nube y en tiempo real. */
 window.FIREBASE_CONFIG = {
-  apiKey: "AIza...", authDomain: "mi-proyecto.firebaseapp.com", projectId: "mi-proyecto",
-  storageBucket: "mi-proyecto.appspot.com", messagingSenderId: "123", appId: "1:123:web:abc"
+  apiKey: "AIzaSyC78x81gcIuTCHFDlmXgiezkqvoMujgl9I",
+  authDomain: "crm-mg-4faf9.firebaseapp.com",
+  projectId: "crm-mg-4faf9",
+  storageBucket: "crm-mg-4faf9.firebasestorage.app",
+  messagingSenderId: "869020548867",
+  appId: "1:869020548867:web:4d3fb0582fb0fe102bf336"
 };
-*/
