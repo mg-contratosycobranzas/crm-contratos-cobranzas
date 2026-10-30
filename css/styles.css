@@ -160,7 +160,9 @@ ul.plain{margin:0;padding-left:18px} ul.plain li{margin:3px 0}
 /* modal / toast */
 dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--surface);color:var(--ink);width:min(640px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 dialog::backdrop{background:rgba(10,20,20,.45)}
-.dlg-h{padding:16px 20px;border-bottom:1px solid var(--line2);font-weight:650;font-size:16px}
+.dlg-h{padding:16px 20px;border-bottom:1px solid var(--line2);font-weight:650;font-size:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dlg-x{flex:none;width:34px;height:34px;border:0;border-radius:50%;background:var(--gris-bg);color:var(--ink);font-size:16px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.dlg-x:hover{background:var(--line)}
 .dlg-b{padding:16px 20px;max-height:70vh;overflow:auto} .dlg-f{padding:12px 20px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:8px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:9px 16px;border-radius:9px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
 #toast.show{opacity:1}
@@ -404,3 +406,20 @@ details.info>summary{padding:12px 16px}
 .gcard h1{font-size:20px;margin:10px 0 6px}.gcard .form{text-align:left;margin-top:14px;display:grid;gap:12px}.gcard .btn.pri{justify-content:center}
 .logo.big{width:56px;height:56px;margin:0 auto;font-size:20px;display:grid;place-items:center;background:var(--hdr);color:#fff;border-radius:14px;font-weight:800}
 body.gated .fab{display:none}
+
+/* ===== estado de cuenta Evolta (PDF) ===== */
+.ficha-grid>*{min-width:0}
+.ev-bar{margin:12px 0 4px}
+.ev{margin-top:4px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface2)}
+.ev .ev-bar{margin:0 0 10px}
+.ev-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.ev-tw{overflow-x:auto;margin-top:10px}
+.ev-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.ev-t th{text-align:left;font-weight:600;padding:6px 8px;white-space:nowrap}
+.ev-t td{padding:6px 8px;border-top:1px solid var(--line2);white-space:nowrap}
+.ev-g{margin:4px 0 0;font-size:12.5px}.ev-g dt{font-weight:650;margin-top:8px}.ev-g dd{margin:2px 0 0;color:var(--muted)}
+.ev-falta{background:var(--amar-bg);color:var(--amar);padding:8px 10px;border-radius:8px;font-size:12.5px}
+.f.falta input,.f.falta select,.f.falta textarea{border-color:var(--amar);background:var(--amar-bg)}
+em.pdf{font-style:normal;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+.ev-leg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sw-falta{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--amar);background:var(--amar-bg)}
