@@ -664,7 +664,11 @@
     const T = iso(today());
     const est = (c) => /CANCELAD/.test(c.estado) ? '<span class="badge verde">Cancelado</span>' : c.fProg && c.fProg < T ? '<span class="badge rojo">Vencido</span>' : `<span class="badge amar">${esc(c.estado ? c.estado[0] + c.estado.slice(1).toLowerCase() : 'Pendiente')}</span>`;
     const kv = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
-    return `<div class="ev">${head}<div class="ev-h"><b>Estado de cuenta Evolta</b><span class="small muted">consultado el ${fdate(e.consulta) || '—'} · cargado por ${esc(e.por || '—')}</span></div>
+    // el cronograma es una foto de Evolta: si lo registrado a mano ya no coincide, se pide bajar el PDF actualizado
+    const ini = (e.cronograma || []).filter(c => /inicial/i.test(c.concepto)), pdfFalta = ini.filter(c => !/CANCELAD/.test(c.estado)).reduce((t, c) => t + c.monto, 0);
+    const crmFalta = num(o.cob_porRecibir), difiere = ini.length && crmFalta != null && crmFalta !== pdfFalta;
+    const aviso = difiere ? `<div class="ev-falta" style="margin-top:10px">⚠️ En el CRM figura <b>inicial por recibir ${money(crmFalta)}</b>, pero este estado de cuenta (del ${fdate(e.consulta) || '—'}) dice <b>${money(pdfFalta)}</b>. Verifica el pago en Evolta, descarga el PDF actualizado y cárgalo con el botón de arriba.</div>` : '';
+    return `<div class="ev">${head}<div class="ev-h"><b>Estado de cuenta Evolta</b><span class="small muted">foto del ${fdate(e.consulta) || '—'} · cargado por ${esc(e.por || '—')} · no cambia al editar a mano</span></div>${aviso}
       <div class="kv">${kv('Forma de pago', esc([e.modalidad, e.entidad].filter(Boolean).join(' / ') || '—'))}${(e.formaPago || []).map(x => kv(esc(x.motivo), `${money(x.monto)} <span class="muted small">${esc(x.pct)}</span>`)).join('')}${kv('Pagado', money(e.pagado))}${kv('Por pagar', money(e.porPagar))}</div>
       <div class="ev-tw"><table class="ev-t"><thead><tr><th>Cronograma</th><th>Monto</th><th>Programada</th><th>Pagada</th><th>Estado</th></tr></thead><tbody>${(e.cronograma || []).map(c => `<tr><td>${esc(c.concepto)}</td><td>${money(c.monto)}</td><td>${fdate(c.fProg) || '—'}</td><td>${fdate(c.fPago) || '—'}</td><td>${est(c)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Sin cronograma</td></tr>'}</tbody></table></div>
       ${(e.pagos || []).length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Pagos registrados</th><th>Monto</th><th>Forma</th><th>N° operación</th><th>Entidad</th></tr></thead><tbody>${e.pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${money(p.monto)}</td><td>${esc(p.forma)}</td><td>${esc(p.operacion)}</td><td>${esc(p.entidad)}</td></tr>`).join('')}</tbody></table></div>` : ''}
@@ -722,7 +726,7 @@
     <div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div class="ficha-grid"><div>
       ${STAGES.map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div>${s.key === 'cob' ? evoltaHtml(o) : ''}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -739,6 +743,7 @@
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); $('#tl').innerHTML = timelineHtml(o);
+    if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     STAGES.forEach(s => { $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
