@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', cliente_baja: 'Cliente eliminado', permiso: 'Permiso' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -62,10 +62,10 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos y marcar pasos' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }];
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop']);
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }];
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import']);
   const VIEW_PERM = { mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', 'op-del': 'a_delop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -666,8 +666,7 @@
         <label>Próxima acción<input name="proxima" placeholder="Ej.: Enviar minuta a notaría"></label>
         <div class="row2"><label>Fecha compromiso<input type="date" name="fCompromiso"></label><label>Registra<input value="${esc(S.actor)}" disabled></label></div>
         <button class="btn pri" type="submit">Registrar seguimiento</button>
-      </form></details><hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div id="tl">${timelineHtml(o)}</div></div></div></div>
-    <div style="margin-top:22px"><button class="btn danger sm" data-act="op-del" data-op="${o.id}">🗑️ Eliminar este cliente</button></div>`;
+      </form></details><hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div id="tl">${timelineHtml(o)}</div></div></div></div>`;
   }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
@@ -1017,16 +1016,6 @@
     const a = el.dataset.act;
     if (ACT_PERM[a] && !can(ACT_PERM[a])) return toast(NOPERM);
     if (el.hasAttribute('data-close') && $('#dlg').open) $('#dlg').close();
-    if (a === 'op-del') {
-      const o = getOp(el.dataset.op); if (!o) return;
-      if (!await ask(`¿Eliminar a ${o.cliente} (${o.id}) con todos sus seguimientos? ${CL.enabled ? 'Esta acción no se puede deshacer.' : ''}`, 'Sí, eliminar')) return;
-      const segs = S.seguimientos.filter(s => s.opId === o.id), id = o.id;
-      S.ops = S.ops.filter(x => x.id !== id); S.seguimientos = S.seguimientos.filter(s => s.opId !== id); delete pendingOps[id];
-      S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'cliente_baja', antes: `${o.cliente} (${id})`, despues: '' });
-      if (CL.enabled) { cloudIds.delete(id); CL.deleteDoc('ops', id); segs.forEach(s => { cloudSeg.delete(s.id); CL.deleteDoc('seguimientos', s.id); }); }
-      commit(); location.hash = '#/clientes';
-      return toast('Cliente eliminado', CL.enabled ? null : () => { S.ops.push(o); segs.forEach(s => S.seguimientos.push(s)); commit(); render(true); });
-    }
     if (a === 'logout') return CL.signOut();
     if (a === 'seed') return seedCloud();
     if (a === 'login-reset') { const e = ($('#lg-e') || {}).value; if (!e) return toast('Escribe tu correo arriba y vuelve a tocar'); return CL.reset(e.trim()).then(() => toast('Te enviamos un correo para crear o cambiar tu contraseña')).catch(x => toast(AUTH_ERR[x.code] || x.message)); }
@@ -1070,6 +1059,8 @@
         ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k))); if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
         S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); commit(); location.hash = '#/cliente/' + op.id; } });
   });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('.side').classList.remove('open'); });
+  matchMedia('(max-width:820px)').addEventListener('change', () => $('.side').classList.remove('open'));
   document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role=button]')) { e.preventDefault(); e.target.click(); } });
   document.addEventListener('input', (e) => {
     if (e.target.id === 'pk-q') return pickList(e.target.value);
