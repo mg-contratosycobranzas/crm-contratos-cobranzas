@@ -437,8 +437,12 @@ em.pdf{font-style:normal;font-size:10px;font-weight:700;color:var(--accent);back
 /* ===== resumen de operaciones ===== */
 .ops-kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px}
 .ops-kpis .kpi{display:block;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}.ops-kpis .kpi .n{font-size:19px}
-.ops-tw .tw{overflow-x:auto}.ops-tw table{min-width:1700px}.ops-tw td,.ops-tw th{white-space:nowrap}
-@media (max-width:820px){.ops-tw table{min-width:0}.ops-tw td{white-space:normal}}
+/* la tabla tiene su propio alto: la barra para deslizar a los lados queda siempre a la vista */
+.ops-tw .tw{overflow:auto;max-height:68vh}.ops-tw td,.ops-tw th{white-space:nowrap}.ops-tw.full table{min-width:2400px}
+.ops-tw thead th{position:sticky;top:0;z-index:1}
+.pager{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}.pager>span:first-child{margin-right:auto}
+.ops-opts{align-items:center;margin-top:-4px}.ops-opts select{width:auto}
+@media (max-width:820px){.ops-tw .tw{max-height:none}.ops-tw.full table{min-width:0}.ops-tw td{white-space:normal}}
 
 .proy{margin-bottom:14px}.proy>summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
 .proy tbody tr{cursor:pointer}.proy tbody tr:hover{background:var(--accent-soft)}.proy-hoy{background:var(--accent-soft)}
