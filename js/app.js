@@ -52,7 +52,7 @@
     saveT = setTimeout(() => { if (CL.enabled) return syncLocal(); try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { /* sin almacenamiento */ } }, 150);
   }
   function recompute() { D = new Map(S.ops.map(o => [o.id, derive(o, S.params)])); }
-  function commit() { recompute(); save(); }
+  function commit() { const antes = D; recompute(); save(); if (S.actor) autoAsignarLlegadas(antes); }
   const getOp = (id) => S.ops.find(o => o.id === id);
   const user = (n) => S.users.find(u => u.name === n);
 
@@ -306,22 +306,53 @@
     const pick = (box, set) => box && box.querySelectorAll('.chipb').forEach(b => b.onclick = () => { box.querySelectorAll('.chipb').forEach(x => x.classList.remove('on')); b.classList.add('on'); set(b.dataset.v); });
     pick(dlg.querySelector('#q-out'), v => out = v); pick(dlg.querySelector('#q-when'), v => when = v);
   }
-  function planAssign() {
-    const plan = [], all = S.ops.map(o => ({ o, d: D.get(o.id) }));
+  /* Reparto. En Contratos: 1) cartera — el expediente va a quien tiene ese proyecto a cargo, salvo que ya tenga
+     `topeCarga` expedientes más que el menos cargado; 2) si no, al de menos carga; 3) se reparte primero lo más urgente
+     (desembolso más cercano). En las demás etapas: al de menos carga, empezando por el más antiguo. */
+  const SMART = new Set(['con']);
+  const urgencia = (r) => desembolsoEsperado(r.o, null, r.d).fecha || '9999';
+  function elegir(us, load, o, k) {
+    const min = Math.min(...us.map(u => load[u.name])), menos = us.reduce((m, u) => load[u.name] < load[m.name] ? u : m);
+    if (!SMART.has(k)) return { u: menos, por: 'menor carga' };
+    const duenos = us.filter(u => (u.proyectos || []).includes(o.proyecto));
+    if (duenos.length) {
+      const d = duenos.reduce((m, u) => load[u.name] < load[m.name] ? u : m);
+      if (load[d.name] - min < (S.params.topeCarga || 5)) return { u: d, por: `cartera ${o.proyecto}` };
+      return { u: menos, por: `${d.name} superó el tope de carga` };
+    }
+    return { u: menos, por: 'menor carga (proyecto sin responsable)' };
+  }
+  function cargaDe(k, us) { const load = {}; us.forEach(u => load[u.name] = 0); S.ops.forEach(o => { const d = D.get(o.id); if (d && d.state[k] === 'actual' && load[d.owner[k]] !== undefined) load[d.owner[k]]++; }); return load; }
+  function planAssign(soloIds) {
+    const plan = [], all = S.ops.filter(o => !soloIds || soloIds.has(o.id)).map(o => ({ o, d: D.get(o.id) }));
     STAGES.filter(s => s.ownerKey).forEach(s => {
       const us = S.users.filter(u => u.stage === s.key); if (!us.length) return;
-      const load = {}; us.forEach(u => load[u.name] = 0);
-      all.forEach(r => { if (r.d.state[s.key] === 'actual' && load[r.d.owner[s.key]] !== undefined) load[r.d.owner[s.key]]++; });
-      all.filter(r => r.d.state[s.key] === 'actual' && r.d.owner[s.key] === 'Sin asignar').sort((x, y) => (y.d.diasTotal || 0) - (x.d.diasTotal || 0)).forEach(r => {
-        const n = us.reduce((m, u) => load[u.name] < load[m.name] ? u : m); load[n.name]++; plan.push({ op: r.o.id, key: s.ownerKey, who: n.name, stage: s.key }); });
+      const load = cargaDe(s.key, us);
+      const pend = all.filter(r => r.d.state[s.key] === 'actual' && r.d.owner[s.key] === 'Sin asignar');
+      pend.sort(SMART.has(s.key) ? (x, y) => urgencia(x) < urgencia(y) ? -1 : urgencia(x) > urgencia(y) ? 1 : (y.d.diasTotal || 0) - (x.d.diasTotal || 0) : (x, y) => (y.d.diasTotal || 0) - (x.d.diasTotal || 0));
+      pend.forEach(r => { const e = elegir(us, load, r.o, s.key); load[e.u.name]++; plan.push({ op: r.o.id, key: s.ownerKey, who: e.u.name, stage: s.key, por: e.por }); });
     });
     return plan;
+  }
+  const applyPlan = (plan) => plan.forEach(p => { setField(p.op, p.key, p.who); if (p.stage === 'con' && !getOp(p.op).con_fAsignacion) setField(p.op, 'con_fAsignacion', iso(today())); });
+  /* Al llegar a Contratos (por un cambio hecho aquí) el expediente se asigna solo */
+  let autoBusy = false;
+  function autoAsignarLlegadas(antes) {
+    if (autoBusy || !S.params.autoAsignar) return;
+    const llegan = new Set(S.ops.filter(o => { const d = D.get(o.id), a = antes.get(o.id); return d && a && SMART.has(d.etapa) && a.etapa !== d.etapa && d.owner[d.etapa] === 'Sin asignar'; }).map(o => o.id));
+    if (!llegan.size) return;
+    autoBusy = true;
+    try { const plan = planAssign(llegan).filter(p => SMART.has(p.stage)); applyPlan(plan); const msg = plan.map(p => `📥 ${getOp(p.op).cliente} pasó a ${STAGE[p.stage].name} y se asignó a ${p.who} (${p.por})`).join(' · ');
+      if (msg) setTimeout(() => toast(msg), 300); } // después del "Guardado" para que se alcance a leer
+    finally { autoBusy = false; }
   }
   function autoAssign() {
     const plan = planAssign(); if (!plan.length) return toast('No hay expedientes sin responsable 🎉');
     const by = {}; plan.forEach(p => { (by[p.stage] = by[p.stage] || {})[p.who] = (by[p.stage][p.who] || 0) + 1; });
-    modal({ title: `Repartir ${plan.length} expedientes`, ok: 'Repartir ahora', body: `<p class="muted" style="margin-top:0">Se asignan al colaborador con menos carga en cada etapa, empezando por los más antiguos.</p>${Object.keys(by).map(k => `<div style="margin:8px 0">${sbadge(k)}<div class="small" style="margin-top:4px">${Object.entries(by[k]).map(([n, c]) => `<b>${esc(n)}</b> +${c}`).join(' · ')}</div></div>`).join('')}`,
-      onOk: () => { const prevAll = plan.map(p => ({ id: p.op, k: p.key })); plan.forEach(p => setField(p.op, p.key, p.who)); toast(`✓ ${plan.length} expedientes repartidos`, () => { prevAll.forEach(x => setField(x.id, x.k, '')); render(true); }); render(true); } });
+    const det = plan.filter(p => SMART.has(p.stage)).map(p => `<tr><td>${esc(getOp(p.op).cliente)}</td><td>${esc(getOp(p.op).proyecto || '')}</td><td><b>${esc(p.who)}</b></td><td class="small muted">${esc(p.por)}</td></tr>`).join('');
+    modal({ title: `Repartir ${plan.length} expedientes`, ok: 'Repartir ahora', wide: !!det, body: `<p class="muted" style="margin-top:0"><b>Contratos:</b> cada expediente va a quien tiene su proyecto a cargo (salvo que ya tenga ${S.params.topeCarga || 5} o más expedientes que el otro), y se reparte primero lo de desembolso más cercano. <b>Otras etapas:</b> al de menos carga, empezando por los más antiguos.</p>${Object.keys(by).map(k => `<div style="margin:8px 0">${sbadge(k)}<div class="small" style="margin-top:4px">${Object.entries(by[k]).map(([n, c]) => `<b>${esc(n)}</b> +${c}`).join(' · ')}</div></div>`).join('')}
+      ${det ? `<details><summary class="small">Ver detalle de Contratos</summary><div class="ev-tw"><table class="ev-t"><thead><tr><th>Cliente</th><th>Proyecto</th><th>Asignado a</th><th>Motivo</th></tr></thead><tbody>${det}</tbody></table></div></details>` : ''}`,
+      onOk: () => { const prevAll = plan.map(p => ({ id: p.op, k: p.key })); applyPlan(plan); toast(`✓ ${plan.length} expedientes repartidos`, () => { prevAll.forEach(x => setField(x.id, x.k, '')); render(true); }); render(true); } });
   }
   function fabMenu() {
     const b = (act, ic, l, on) => on ? `<button type="button" class="bigopt" data-act="${act}" data-close><i>${ic}</i><span>${l}</span></button>` : '';
@@ -462,16 +493,21 @@
     const ord = { Inmediato: 0, 'Por acumulación': 1, 'Bajo control': 2 };
     const all = rows().filter(r => r.d.etapa !== 'cerrado');
     const mine = (k === JEFATURA ? all.filter(r => r.d.alerta !== 'Bajo control') : all.filter(r => r.d.state[k] === 'actual' && r.d.owner[k] === S.actor))
-      .sort((x, y) => (ord[x.d.alerta] ?? 3) - (ord[y.d.alerta] ?? 3) || (y.d.diasTotal || 0) - (x.d.diasTotal || 0));
+      .sort(SMART.has(k) ? (x, y) => urgencia(x) < urgencia(y) ? -1 : urgencia(x) > urgencia(y) ? 1 : (ord[x.d.alerta] ?? 3) - (ord[y.d.alerta] ?? 3) // Contratos: primero el desembolso más cercano
+        : (x, y) => (ord[x.d.alerta] ?? 3) - (ord[y.d.alerta] ?? 3) || (y.d.diasTotal || 0) - (x.d.diasTotal || 0));
+    const desTxt = (r) => { const e = desembolsoEsperado(r.o, null, r.d); if (!e.fecha) return '';
+      if (e.orig) return ` · <span class="cl-wait">⏰ pasó la fecha estimada de desembolso (${fdate(e.orig)})</span>`;
+      const n = diff(pd(e.fecha), today());
+      return ` · <span class="${n <= 15 ? 'cl-wait' : ''}">⏰ desembolso ${n < 0 ? `vencido hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} días`} (${e.tipo.toLowerCase()})</span>`; };
     const ag = agenda(S.actor).filter(x => x.cat === 'vencido' || x.cat === 'hoy');
     const st = k !== JEFATURA && STAGE[k].ownerKey ? STAGE[k] : null;
     const pool = st ? all.filter(r => r.d.state[k] === 'actual' && r.d.owner[k] === 'Sin asignar') : [];
     const meta = S.params.metaDia || 8, pct = Math.min(100, hoy / meta * 100), R = 38, C = 2 * Math.PI * R;
     const card = (r) => { const sk = k === JEFATURA ? r.d.etapa : k, items = r.d.check[sk] || [], i = items.findIndex(x => !x.done), it = items[i];
       const main = it && (it.set || it.choose) ? `<button class="btn pri" data-act="step" data-op="${r.o.id}" data-s="${sk}" data-i="${i}">✓ ${esc(it.label)}</button>` : `<a class="btn pri" href="#/cliente/${r.o.id}">${it ? esc(it.label) : 'Abrir'} ›</a>`;
-      return `<div class="card midia" style="--sc:${colVar(sk)}"><div class="u-top">${sbadge(sk)}${alertBadge(r.d.alerta)}</div><a href="#/cliente/${r.o.id}"><b>${esc(r.o.cliente)}</b></a><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.diasTotal ?? '—'} días${k === JEFATURA ? ' · ' + esc(r.d.responsable) : ''}</div>
+      return `<div class="card midia" style="--sc:${colVar(sk)}"><div class="u-top">${sbadge(sk)}${alertBadge(r.d.alerta)}</div><a href="#/cliente/${r.o.id}"><b>${esc(r.o.cliente)}</b></a><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.diasTotal ?? '—'} días${k === JEFATURA ? ' · ' + esc(r.d.responsable) : ''}${SMART.has(k) ? desTxt(r) : ''}</div>
         <div class="m-act">${main}<button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="Llamada" title="Anotar llamada">📞</button><button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="WhatsApp" title="Anotar WhatsApp">💬</button></div></div>`; };
-    return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
+    return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
       <div class="gauge mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="${pct / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${pct >= 100 ? 'var(--f-verde)' : 'var(--accent)'}"/><text x="50" y="57" text-anchor="middle" class="g-big">${hoy}</text></svg><div><b>Acciones de hoy</b><span class="small muted">Meta: ${meta}</span></div></div></div>
     ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : 'Hoy · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div><button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button></div>`; }).join('')}</div></div>` : ''}
     ${(() => { // jefatura: cierres firmados que esperan V°B° · responsable: sus cierres observados
@@ -548,6 +584,7 @@
     return tbl('rg-users', [
       { h: 'Nombre', f: u => userLink(u.name), s: u => u.name }, { h: 'Rol', f: u => esc(u.rol || '') },
       { h: 'Etapa', f: u => u.stage === JEFATURA ? 'Jefatura' : sbadge(u.stage), s: u => u.stage },
+      { h: 'Proyectos a cargo', f: u => (u.proyectos || []).length ? esc(u.proyectos.join(', ')) : '<span class="muted">—</span>' },
       { h: 'En cartera', cls: 'r', f: u => userStats(u).cartera, s: u => userStats(u).cartera },
       { h: '', cls: 'r nowrap', f: u => `<button class="btn sm" data-act="user-edit" data-u="${esc(u.name)}">Editar</button> <button class="btn sm danger" data-act="user-del" data-u="${esc(u.name)}">Quitar</button>` }], S.users);
   }
@@ -623,7 +660,7 @@
     if (f.t === 'select') inp = `<select ${base}><option value=""></option>${[...new Set([...f.o, ...(v && !f.o.includes(v) ? [v] : [])])].map(x => `<option ${String(v) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     else if (f.t === 'owner') { const key = Object.keys(STAGE).find(s => STAGE[s].ownerKey === f.k); const names = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...(v ? [v] : [])])]; inp = `<select ${base}><option value="">Sin asignar</option>${names.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`; }
     else if (f.t === 'textarea') inp = `<textarea rows="2" ${base}>${esc(v)}</textarea>`;
-    else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${f.list}"` : ''} value="${esc(v)}" ${base}>`;
+    else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${f.list}"` : ''} value="${esc(v)}" ${f.k === 'empresa' && !v && empresaDe(op) ? `placeholder="${esc(empresaDe(op))} (del proyecto)"` : ''} ${base}>`;
     const fromPdf = mark && op.evolta && (op.evolta.campos || []).includes(f.k);
     return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${mark && v === '' ? 'falta' : ''}"><span>${f.l}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
@@ -681,8 +718,10 @@
       <details class="info"><summary>¿Qué significa cada concepto?</summary><dl class="ev-g">${EV_GLOSARIO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></details></div>`;
   }
   /* ---- Resumen de operaciones (administración): lo más importante de cada venta, en pantalla y en Excel ---- */
-  // la empresa se escribe en la ficha; si falta, se toma de la minuta cargada; si no, de otro cliente del mismo proyecto
-  const empresaDe = (o) => o.empresa || (o.minuta && o.minuta.vendedora && o.minuta.vendedora.razon) || '';
+  // empresa: la del cliente; si no, la configurada para su proyecto (Configurar → Empresa por proyecto); si no, la de la minuta
+  const empEnProy = (p) => ((S.params.empresas || {})[p]) || '';
+  const empresaDe = (o) => o.empresa || empEnProy(o.proyecto) || (o.minuta && o.minuta.vendedora && o.minuta.vendedora.razon) || '';
+  function setEmpresaProyecto(p, e) { if (!p) return; S.params.empresas = { ...(S.params.empresas || {}), [p]: e || undefined }; if (!e) delete S.params.empresas[p]; save(); }
   const empresaProy = () => { const m = {}; S.ops.forEach(o => { const e = empresaDe(o); if (e && o.proyecto && !m[o.proyecto]) m[o.proyecto] = e; }); return m; };
   // `s: 1` = columna de la vista simple (la completa y el Excel llevan todas)
   const OPS_COLS = [
@@ -728,7 +767,7 @@
     const p = desembolsoProg(o); if (p) return { fecha: p, tipo: 'Programado' };
     const b = fechaBase(o); if (!b) return { fecha: '', tipo: '' };
     const est = iso(CRM.addDays(pd(b), (tip || diasTipicos()).dias)), hoy = iso(today());
-    return est < hoy ? { fecha: hoy, tipo: 'Estimado (retrasado)' } : { fecha: est, tipo: 'Estimado' }; // si la estimación ya pasó, se espera este mes
+    return est < hoy ? { fecha: hoy, tipo: 'Estimado (retrasado)', orig: est } : { fecha: est, tipo: 'Estimado' }; // si la estimación ya pasó, se espera este mes
   }
   const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
   const mesDe = (f) => f ? f.slice(0, 7) : '', mesTxt = (m) => m ? `${MESES_C[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}` : '—';
@@ -1152,7 +1191,9 @@
     return `${pageHead('Configuración', 'Permisos, plazos, equipo y datos.')}
     ${isAdmin() ? permsPanel() : ''}
     <div class="grid two" style="margin-top:14px">
-      <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}</div></div>
+      <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}</div></div>
+      <div class="card"><div class="card-h"><h2>🏢 Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
+        <div class="f-grid" style="grid-template-columns:1fr 1.6fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input list="dl-empresa" data-emp="${esc(p)}" value="${esc(empEnProy(p))}" placeholder="Ej.: MG PROYECTO 22 S.A.C." ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
         <div><button class="btn pri" data-act="export-xlsx">Exportar a Excel (por etapa y por usuario)</button></div>
         <div><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
@@ -1216,9 +1257,11 @@
   }
 
   /* ---- Gestión de usuarios ---- */
+  const proyDe = (dlg) => { const p = $$('[data-proy]', dlg).filter(c => c.checked).map(c => c.value); return p.length ? p : undefined; };
   function userForm(u) {
     return `<div class="form"><label>Nombre (cómo aparece en el CRM)<input id="u-n" value="${esc(u ? u.name : '')}"></label><label>Nombre completo (para firmas y constancias)<input id="u-fn" value="${esc(u ? u.full || '' : '')}" placeholder="Nombres y apellidos"></label><label>Rol / cargo<input id="u-r" value="${esc(u ? u.rol || '' : '')}" placeholder="Ej.: Asistente Legal"></label>
       <label>Etapa en la que trabaja<select id="u-s">${STAGES.map(s => `<option value="${s.key}" ${u && u.stage === s.key ? 'selected' : ''}>${s.n}. ${s.name}</option>`).join('')}<option value="${JEFATURA}" ${u && u.stage === JEFATURA ? 'selected' : ''}>Jefatura (supervisa todo)</option></select></label>
+      <div class="f"><span>Proyectos a cargo <span class="muted">(reparto automático: estos proyectos se le asignan primero)</span></span><div class="chips" style="flex-wrap:wrap">${uniq(o => o.proyecto).map(p => `<label class="chipb"><input type="checkbox" data-proy value="${esc(p)}" ${u && (u.proyectos || []).includes(p) ? 'checked' : ''}> ${esc(p)}</label>`).join('')}</div></div>
       <label>Correo de acceso${CL.enabled ? ' (obligatorio)' : ' (opcional)'}<input id="u-e" type="email" value="${esc(u ? u.email || '' : '')}" placeholder="nombre@correo.com"></label>
       <label class="swrow"><input type="checkbox" id="u-a" ${u && u.admin ? 'checked' : ''}> Es administrador (da y quita permisos)</label></div>`;
   }
@@ -1229,7 +1272,7 @@
       const em = dlg.querySelector('#u-e').value.trim().toLowerCase();
       if (CL.enabled && !/^\S+@\S+\.\S+$/.test(em)) { toast('Escribe un correo válido'); return false; }
       if (em && S.users.some(x => (x.email || '').toLowerCase() === em)) { toast('Ese correo ya está en el equipo'); return false; }
-      S.users.push({ name: n, full: dlg.querySelector('#u-fn').value.trim() || undefined, stage: s, rol: dlg.querySelector('#u-r').value.trim() || (STAGE[s] ? STAGE[s].rol : 'Jefatura'), admin: dlg.querySelector('#u-a').checked || undefined, email: em || undefined });
+      S.users.push({ name: n, full: dlg.querySelector('#u-fn').value.trim() || undefined, proyectos: proyDe(dlg), stage: s, rol: dlg.querySelector('#u-r').value.trim() || (STAGE[s] ? STAGE[s].rol : 'Jefatura'), admin: dlg.querySelector('#u-a').checked || undefined, email: em || undefined });
       if (CL.enabled) { const pw = Math.random().toString(36).slice(2) + 'Aa1!' + Math.random().toString(36).slice(2); CL.createAccount(em, pw).catch(x => { if (x.code !== 'auth/email-already-in-use') throw x; }).then(() => CL.reset(em)).then(() => toast('📧 Se envió un correo a ' + em + ' para crear su contraseña')).catch(x => toast('Usuario agregado, pero no se pudo crear la cuenta: ' + (x.code || x.message))); }
       S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'usuario_alta', antes: '', despues: n }); save(); toast('Usuario agregado'); render(true); } });
   }
@@ -1249,7 +1292,7 @@
         S.log.push({ ts: Date.now(), usuario: n, opId: '—', etapa: 'gen', campo: 'usuario_nombre', antes: u.name, despues: n });
       }
       const adm = dlg.querySelector('#u-a').checked; if (u.admin && !adm && S.users.filter(x => x.admin).length < 2) { toast('Debe quedar al menos un administrador'); return false; }
-      u.name = n; u.full = dlg.querySelector('#u-fn').value.trim() || undefined; u.stage = s; u.rol = dlg.querySelector('#u-r').value.trim(); u.admin = adm || undefined; u.email = em2 || undefined; commit(); toast('Usuario actualizado'); render(true); } });
+      u.name = n; u.full = dlg.querySelector('#u-fn').value.trim() || undefined; u.proyectos = proyDe(dlg); u.stage = s; u.rol = dlg.querySelector('#u-r').value.trim(); u.admin = adm || undefined; u.email = em2 || undefined; commit(); toast('Usuario actualizado'); render(true); } });
   }
   function removeUser(name) {
     const u = user(name); if (!u) return;
@@ -1518,10 +1561,11 @@
     if (a === 'user-del') return removeUser(el.dataset.u);
     if (a === 'user-edit') return editUser(el.dataset.u);
     if (a === 'user-add') return addUser();
-    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>📄 Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
+    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>📄 Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Empresa (razón social)<input id="n-empresa" list="dl-empresa" placeholder="Se completa sola según el proyecto"></label><span></span></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
       onOk: (dlg) => { const v = (i) => dlg.querySelector('#n-' + i).value.trim(); if (!v('cliente')) { toast('Escribe el nombre del cliente'); return false; }
         const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()), cliente: v('cliente') };
-        ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k))); if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
+        ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k)));
+        if (v('empresa') && v('empresa') !== empEnProy(op.proyecto)) { if (op.proyecto && !empEnProy(op.proyecto)) setEmpresaProyecto(op.proyecto, v('empresa')); else op.empresa = v('empresa'); } // la primera vez queda como la empresa del proyecto if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
         if (op.precio != null) op.cob_porRecibir = Math.max(0, op.precio - (op.montoBanco || 0)); // la inicial empieza pendiente, no cobrada
         S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); commit(); location.hash = '#/cliente/' + op.id; } });
   });
@@ -1538,6 +1582,8 @@
     const t = e.target;
     if (t.dataset.perm) { setPerm(t.dataset.u, t.dataset.perm, t.checked); return toast('Permiso guardado'); }
     if (t.dataset.fk) { if (!can('a_edit')) { toast(NOPERM); return render(true); } if (setField(t.dataset.op, t.dataset.fk, t.value)) { const mk = t.closest('.f.mk'); if (mk) mk.classList.toggle('falta', !t.value); refreshFicha(t.dataset.op); $('#nav').innerHTML = navHtml(route()); toast('Guardado'); } return; }
+    if (t.dataset.emp !== undefined) { if (!can('a_params')) { toast(NOPERM); return render(true); } setEmpresaProyecto(t.dataset.emp, t.value.trim()); return toast(`Empresa de ${t.dataset.emp} guardada`); }
+    if (t.id === 'n-proyecto') { const e = $('#n-empresa'); if (e && !e.value) e.value = empEnProy(t.value.trim()); return; }
     if (t.dataset.pk) { if (!can('a_params')) { toast(NOPERM); return render(true); } S.params[t.dataset.pk] = Math.max(0, Number(t.value) || 0); commit(); return toast('Plazo actualizado'); }
     if (t.id === 'gproy') { ui.proy = t.value; return render(true); }
     if (t.id === 'actor') {

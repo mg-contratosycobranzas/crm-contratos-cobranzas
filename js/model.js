@@ -131,12 +131,12 @@
   const NUM_KEYS = new Set();
   Object.values(FIELDS).forEach(a => a.forEach(f => { if (f.t === 'number') NUM_KEYS.add(f.k); }));
 
-  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90 };
+  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, topeCarga: 5, autoAsignar: 1 };
   const DEFAULT_USERS = [
     { name: 'Milagros Valles', stage: JEFATURA, rol: 'Jefa de Administración de Contratos y Cobranzas', admin: true },
     { name: 'Jonathan', stage: 'cob', rol: 'Asistente de Cobranza' },
     { name: 'Roxana Murga', stage: 'con', rol: 'Asistente Legal' },
-    { name: 'Camila Huerta', stage: 'con', rol: 'Asistente Legal' },
+    { name: 'Marilu Sandoval', stage: 'con', rol: 'Asistente Legal' },
     { name: 'Juan Pablo Humala', stage: 'fin', rol: 'Responsable de Valorados' },
     { name: 'Kiara Sandoval', stage: 'for', rol: 'Asistente de Formalización' },
     { name: 'Victoria Mayorga', stage: 'pos', rol: 'Postventa (Arq.)' }
