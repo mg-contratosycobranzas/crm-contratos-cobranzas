@@ -118,30 +118,59 @@
     s.onerror = () => { tessLoading = null; ko(new Error('no se pudo cargar el lector de imágenes (revisa tu conexión a internet)')); };
     document.head.appendChild(s);
   }));
+  // las capturas de pantalla tienen letra chica: ampliarlas 3x (sin filtros, que empeoran los números) evita que el OCR confunda 9 con 0
+  async function enlarge(img) {
+    try {
+      const bmp = await createImageBitmap(img), k = Math.max(1, Math.min(3, Math.floor(6000 / Math.max(bmp.width, bmp.height)))); // factor entero: los intermedios leen peor
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, c.width, c.height);
+      return c;
+    } catch (e) { return img; }
+  }
   async function ocr(img, onProgress) {
     const T = await tess();
-    const r = await T.recognize(img, 'spa', { logger: m => { if (onProgress && m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); } });
+    const r = await T.recognize(await enlarge(img), 'spa', { logger: m => { if (onProgress && m.status === 'recognizing text') onProgress(Math.round(m.progress * 100)); } });
     return r.data.text;
   }
   // quita tildes sin cambiar el largo del texto, para buscar etiquetas y cortar en la misma posición
   const fold = (s) => s.toLowerCase().replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n');
-  function readNkb(text) {
-    const flatT = String(text).replace(/\s+/g, ' '), low = fold(flatT), fields = window.CRM.NKB.flatMap(g => g.f), hits = [];
+  const DMY = /(\d{1,2})\/(\d{1,2})\/(\d{4})/;
+  const isoDmy = (s) => { const m = DMY.exec(s || ''); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+  // tabla "Pagado Por" de Carta Fianza: Año | Tipo | Fecha Activación | Fecha Vigencia | Cliente | Inmobiliaria
+  function readCfRows(text) {
+    const flatT = String(text).replace(/\s+/g, ' '), i = fold(flatT).search(/pagado por/);
+    if (i < 0) return [];
+    const rows = [], re = /\b(\d{4})\s+(.+?)\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\S+)\s+(\S+)/g; let m;
+    while ((m = re.exec(flatT.slice(i)))) rows.push({ anio: m[1], tipo: m[2].replace(/^[^\p{L}]+/u, '').trim(), fAct: isoDmy(m[3]), fVig: isoDmy(m[4]), cliente: m[5], inmob: m[6] });
+    return rows;
+  }
+  function readTab(text, tk) {
+    const tab = window.CRM.EV_TABS[tk], r = readFields(text, tab.groups.flatMap(g => g.f).filter(f => f.ev));
+    if (tab.table) {
+      const rows = readCfRows(text), last = rows[rows.length - 1];
+      r.rows = rows; if (fold(String(text)).includes('pagado por')) r.found++;
+      if (last) tab.groups.flatMap(g => g.f).filter(f => f.col && last[f.col]).forEach(f => { r.values[f.k] = last[f.col]; });
+    }
+    return r;
+  }
+  const readNkb = (text) => readTab(text, 'nkb');
+  function readFields(text, fields) {
+    const flatT = String(text).replace(/\s+/g, ' '), low = fold(flatT), hits = [];
     fields.forEach(f => { const m = f.ev.exec(low); if (m) hits.push({ f, start: m.index, end: m.index + m[0].length }); });
     hits.sort((a, b) => a.start - b.start);
     const out = {}, found = {};
     hits.forEach((h, i) => {
       let v = flatT.slice(h.end, i + 1 < hits.length ? hits[i + 1].start : undefined).trim();
       // títulos de los recuadros y basura del OCR ('  |  *  -) en los bordes
-      v = v.replace(/\s*\b(Exp\w*ente|Otros|Banco|Notar[ií]a)\s*$/i, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}.)]+$/gu, '').trim();
+      v = v.replace(/\s*\bPagado Por\b.*$/i, '').replace(/\s*\b(Exp\w*ente|Otros|Banco|Notar[ií]a)\s*$/i, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}.)]+$/gu, '').trim();
       found[h.f.k] = true;
       if (!v || (v.length < 2 && !/\d/.test(v))) return; // una letra suelta es ruido del OCR
       if (h.f.t === 'date') { const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(v); v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; }
-      else if (h.f.t === 'number') { const n = Number(v.replace(/[^\d.-]/g, '')); v = v.match(/\d/) && !isNaN(n) ? n : ''; }
+      else if (h.f.t === 'number') { const m = /-?\d[\d,]*(?:\.\d+)?/.exec(v); v = m ? Number(m[0].replace(/,/g, '')) : ''; }
       if (v !== '') out[h.f.k] = v;
     });
     return { values: out, found: Object.keys(found).length };
   }
 
-  window.EVOLTA = { fromPdf, parse, toFields, readText, ocr, readNkb, fold };
+  window.EVOLTA = { fromPdf, parse, toFields, readText, ocr, readNkb, readTab, fold };
 })();

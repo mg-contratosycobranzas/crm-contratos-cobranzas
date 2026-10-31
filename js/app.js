@@ -772,7 +772,7 @@
   const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
   const mesDe = (f) => f ? f.slice(0, 7) : '', mesTxt = (m) => m ? `${MESES_C[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}` : '—';
   const aRecibir = (o) => (Number(o.montoBanco) || 0) + (Number(o.bono) || 0);
-  const opsFilter = () => flt('operaciones', { q: '', proy: '', banco: '', etapa: '', mesIng: '', mes: '', vista: 'simple', size: '20', page: 1 });
+  const opsFilter = () => flt('operaciones', { q: '', emp: '', proy: '', banco: '', etapa: '', mesIng: '', mes: '', vista: 'simple', size: '20', page: 1 });
   // proyección mensual: cuánto se recibirá por desembolsos (financiamiento + bono) en cada mes
   function proyeccion(list) {
     const m = {};
@@ -796,7 +796,7 @@
   }
   function opsRows(todosLosMeses) {
     const F = opsFilter(), ep = empresaProy(), tip = diasTipicos();
-    return rows().filter(r => match(r, F.q) && (!F.proy || r.o.proyecto === F.proy) && (!F.banco || r.o.banco === F.banco) && (!F.etapa || r.d.etapa === F.etapa)
+    return rows().filter(r => match(r, F.q) && (!F.emp || (empresaDe(r.o) || ep[r.o.proyecto] || '') === F.emp) && (!F.proy || r.o.proyecto === F.proy) && (!F.banco || r.o.banco === F.banco) && (!F.etapa || r.d.etapa === F.etapa)
       && (!F.mesIng || mesDe(fechaBase(r.o)) === F.mesIng)).map(r => ({ ...r, ep, esp: desembolsoEsperado(r.o, tip, r.d) }))
       .filter(r => todosLosMeses || !F.mes || mesDe(r.esp.fecha) === F.mes);
   }
@@ -827,7 +827,10 @@
     const tip = diasTipicos();
     return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-ops">⬇️ Exportar a Excel</button>`, 'Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
       <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
-        ${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}
+        ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
+          // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
+          const proys = uniq(o => o.proyecto).filter(p => !F.emp || S.ops.some(o => o.proyecto === p && (empresaDe(o) || ep[o.proyecto]) === F.emp));
+          return sel('emp', 'Todas las empresas', emps.map(e => [e, e])) + sel('proy', 'Todos los proyectos', proys.map(p => [p, p])); })()}
         ${sel('mesIng', 'Mes de ingreso: todos', meses(o => mesDe(fechaBase(o))))}
         ${sel('mes', 'Se recibe en: todos', meses(o => mesDe(desembolsoEsperado(o, tip).fecha)))}
         ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}
@@ -1576,7 +1579,9 @@
   document.addEventListener('input', (e) => {
     if (e.target.id === 'pk-q') return pickList(e.target.value);
     const el = e.target.closest('[data-f]'); if (!el) return;
-    const F = flt(el.dataset.f, {}); F[el.dataset.k] = el.value; if ('page' in F) F.page = 1; refresh(el.dataset.r); // al cambiar un filtro se vuelve a la página 1
+    const F = flt(el.dataset.f, {}); F[el.dataset.k] = el.value; if ('page' in F) F.page = 1; // al cambiar un filtro se vuelve a la página 1
+    if (el.dataset.f === 'operaciones' && el.dataset.k === 'emp') { F.proy = ''; return render(true); } // la lista de proyectos depende de la empresa
+    refresh(el.dataset.r);
   });
   document.addEventListener('change', (e) => {
     const t = e.target;
