@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
     // Cambia este correo por el de la administradora principal:
-    function owner() { return request.auth != null && request.auth.token.email == 'TU_CORREO@gmail.com'; }
+    function owner() { return request.auth != null && request.auth.token.email == 'contratosycobranzas.mg@gmail.com'; }
     function acl() { return get(/databases/$(db)/documents/meta/acl).data; }
     function member() { return owner() || (request.auth != null && request.auth.token.email in acl().members); }
     function admin() { return owner() || (request.auth != null && request.auth.token.email in acl().admins); }

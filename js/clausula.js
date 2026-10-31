@@ -80,6 +80,7 @@
     return {
       vendedora, compradores, inmuebles, proyecto: get(/denominado\s*[“"](.+?)[”"]/i),
       precio: amt(get(/es de S\/\.?\s*([\d,]+\.\d{2})/i) || 0),
+      areaOcupada: get(/[ÁA]rea Ocupada aproximada\s*:\s*([\d.,]+)/i), areaTechada: get(/[ÁA]rea Techada aproximada\s*:\s*([\d.,]+)/i), // para el acta de entrega
       fechaMinuta: isoDeTexto(get(/Fecha de celebraci[oó]n del Contrato\s*(.{0,40})/i)),
       pago: { incluir: true, num: fpNum || 'VI', items },
       entrega: { incluir: true, num: get(/\b([IVX]+)\.\s*Fecha de entrega/i) || 'VII', fecha: isoDeTexto(get(/Fecha de entrega[^.]*?ser[aá] el\s*(.{0,40})/i)) }

@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -561,7 +561,7 @@
       return `<div class="chips" style="margin-bottom:12px">${chip('actual', 'En curso en esta etapa')}${chip('culminada', 'Culminadas')}${chip('porllegar', 'Por llegar')}${chip('todas', 'Todas')}</div>${tbl(id, cols, list)}`;
     };
     return `<div class="crumb muted"><a href="#/resumen">Resumen</a> / Etapas</div>
-    ${pageHead(`<span style="color:${colVar(key)}">Etapa ${st.n}</span> · ${st.name}`, esc(st.desc), '', `Cada fila es un cliente. <b>En curso</b> = está en esta etapa ahora; <b>Culminadas</b> = ya la cerró; <b>Por llegar</b> = aún no llega. La barra de avance muestra cuántos pasos de la etapa están hechos. Toca el nombre para abrir su ficha.`)}
+    ${pageHead(`<span style="color:${colVar(key)}">Etapa ${st.n}</span> · ${st.name}`, esc(st.desc), key === 'pos' ? `<a class="btn" href="${ACTAS_URL}" target="_blank" rel="noopener">📝 Generador de actas ↗</a>` : '', `${key === 'pos' ? 'Para un acta con los datos ya llenos, ábrela desde la ficha del cliente → 5 Postventa → "Generar acta de entrega". ' : ''}Cada fila es un cliente. <b>En curso</b> = está en esta etapa ahora; <b>Culminadas</b> = ya la cerró; <b>Por llegar</b> = aún no llega. La barra de avance muestra cuántos pasos de la etapa están hechos. Toca el nombre para abrir su ficha.`)}
     <div class="filters">
       <input type="search" placeholder="Buscar cliente, DNI, proyecto, unidad…" value="${esc(F.q)}" data-f="etapa-${key}" data-k="q" data-r="${id}">
       <select data-f="etapa-${key}" data-k="resp" data-r="${id}"><option value="">Todos los responsables</option><option value="Sin asignar" ${F.resp === 'Sin asignar' ? 'selected' : ''}>Sin asignar</option>${owners.map(n => `<option ${F.resp === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
@@ -1161,6 +1161,56 @@
     setTimeout(() => box.focus(), 60);
   }
 
+  /* ---- Acta de entrega (Postventa): el Generador de Actas se abre dentro del CRM y se llena con los datos del cliente.
+     Está en el mismo sitio de GitHub Pages, por eso el CRM puede escribir en sus campos. ---- */
+  const ACTAS_URL = '/GENERADOR-ACTAS/';
+  const ACTA_PROY = ['direccion', 'urbanizacion', 'distrito', 'provincia', 'razon_social', 'ruc']; // datos del edificio: se recuerdan por proyecto
+  const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+  const partes = (f) => { const [y, m, d] = f.split('-'); return { d: String(+d), m: MESES_L[+m - 1], y }; };
+  const actaBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="acta" data-op="${o.id}">📝 Generar acta de entrega</button>${o.acta ? ` <span class="small muted">Última: ${fechaHora(o.acta.ts)} · ${esc(o.acta.por)}</span>` : ''}</div>`;
+  function openActa(o) {
+    modal({ title: `Acta de entrega · ${o.cliente}`, ok: 'Cerrar', cancel: '', wide: true, onOk: () => render(true),
+      body: `<p class="small muted" style="margin-top:0">El generador ya tiene los datos del cliente. <b>Revisa lo resaltado en amarillo</b> (falta o hay que confirmar) y toca "Generar y descargar Acta (Word)". <a href="${ACTAS_URL}" target="_blank" rel="noopener">Abrir en otra pestaña ↗</a></p>
+        <iframe id="acta-fr" class="acta-fr" src="${ACTAS_URL}" title="Generador de actas de entrega"></iframe>` });
+    const fr = $('#acta-fr');
+    fr.onload = () => { try { llenarActa(fr.contentDocument, o); } catch (e) { console.error(e); toast('No se pudo llenar el acta automáticamente: complétala a mano'); } };
+  }
+  function llenarActa(doc, o) {
+    const f = (id) => doc.getElementById(id);
+    const put = (id, v, ev = 'input') => { const el = f(id); if (!el || v == null) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = v; el.dispatchEvent(new Event(ev, { bubbles: true })); };
+    const mark = (id) => { const el = f(id); if (!el) return; el.style.outline = '2px solid #e0a21b'; el.style.outlineOffset = '1px'; el.addEventListener('input', () => { el.style.outline = ''; }, { once: true }); };
+    const fill = (id, v) => { put(id, v || ''); if (!v) mark(id); };
+    const m = o.minuta || {}, cl = o.clausula || {}, comps = (cl.compradores && cl.compradores.length ? cl.compradores : m.compradores) || [];
+    const proyEjemplo = (f('proyecto').value || '').toUpperCase(), guardado = (S.params.actaProy || {})[o.proyecto];
+    // unidad
+    const esEst = /^\s*EST/i.test(o.unidad || ''), num = ((o.unidad || '').toUpperCase().match(/[A-Z]?-?\d{2,4}/) || [''])[0];
+    f(esEst ? 'tab_est' : 'tab_dpto').click();
+    fill(esEst ? 'num_estacionamiento' : 'departamento', num);
+    put('proyecto', o.proyecto || '');
+    fill('area_ocupada', m.areaOcupada); fill('area_techada', m.areaTechada);
+    // edificio y vendedora: lo recordado del proyecto; si es el proyecto del ejemplo se deja; si no, queda vacío para llenar
+    const mismo = (o.proyecto || '').toUpperCase() === proyEjemplo;
+    ACTA_PROY.forEach(k => { if (guardado && guardado[k]) put(k, guardado[k]); else if (!mismo) fill(k, ''); });
+    if (empresaDe(o)) put('razon_social', empresaDe(o)); if (m.vendedora && m.vendedora.ruc) put('ruc', m.vendedora.ruc);
+    // compradores (de la cláusula o de la minuta; si no hay, los del CRM)
+    const c1 = comps[0] || { nombre: o.cliente, dni: o.dni }, TR = { 'Sr.': 'Sr.|o', 'Sra.': 'Sra.|a', 'Srta.': 'Srta.|a' };
+    if (TR[c1.trat]) put('tratamiento', TR[c1.trat], 'change'); else mark('tratamiento');
+    fill('estado_civil', c1.ec); fill('nombre_cliente', (c1.nombre || o.cliente || '').toUpperCase()); fill('dni_cliente', c1.dni || o.dni);
+    const c2 = comps[1];
+    put('tiene_segundo', !!c2, 'change');
+    if (c2) { fill('nombre_cliente2', (c2.nombre || '').toUpperCase()); fill('dni_cliente2', c2.dni); if (c2.trat) put('tratamiento2', c2.trat === 'Sr.' ? 'o' : 'a', 'change'); else mark('tratamiento2'); }
+    // fecha del contrato (minuta), cláusula adicional generada en el CRM y fecha del acta (hoy)
+    if (m.fechaMinuta) { const p = partes(m.fechaMinuta); put('fc_dia', p.d); put('fc_mes', p.m); put('fc_anio', p.y); } else ['fc_dia', 'fc_mes', 'fc_anio'].forEach(k => fill(k, ''));
+    if (cl.generada && cl.fecha) { f('btn_add_clausula').click(); const p = partes(cl.fecha); ['dia', 'mes', 'anio'].forEach((k, i) => { const el = doc.querySelector(`#clausulas_lista [data-field="${k}"]`); if (el) { el.value = [p.d, p.m, p.y][i]; el.dispatchEvent(new Event('input', { bubbles: true })); } }); }
+    const h = partes(iso(today())); put('fa_dia', h.d); put('fa_mes', h.m[0].toUpperCase() + h.m.slice(1)); put('fa_anio', h.y); mark('fa_dia');
+    // al generar: se recuerda la dirección del edificio para el proyecto y queda registrado en el CRM
+    f('form').addEventListener('submit', () => {
+      S.params.actaProy = { ...(S.params.actaProy || {}), [o.proyecto]: Object.fromEntries(ACTA_PROY.map(k => [k, (f(k).value || '').trim()])) };
+      const a = { ts: Date.now(), por: S.actor }; o.acta = a; (pendingOps[o.id] = pendingOps[o.id] || {}).acta = a;
+      S.log.push({ ts: a.ts, usuario: S.actor, opId: o.id, etapa: 'pos', campo: 'acta', antes: '', despues: 'Acta de entrega generada' }); commit();
+    });
+  }
+
   /* ---- Cláusula adicional (desde la minuta que exporta Evolta) ---- */
   const BANCO_LARGO = { BCP: 'BANCO DE CRÉDITO DEL PERÚ', INTERBANK: 'BANCO INTERNACIONAL DEL PERÚ - INTERBANK', BBVA: 'BBVA PERÚ', SCOTIABANK: 'SCOTIABANK PERÚ', BANBIF: 'BANCO INTERAMERICANO DE FINANZAS', PICHINCHA: 'BANCO PICHINCHA', GNB: 'BANCO GNB PERÚ' };
   const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
@@ -1314,7 +1364,7 @@
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div class="ficha-grid"><div>
       ${STAGES.map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -1708,6 +1758,7 @@
     if (a === 'ing-obs') return ingresoObs(getOp(el.dataset.op));
     if (a === 'ing-reenviar') return ingresoReenviar(getOp(el.dataset.op));
     if (a === 'evtab') return openTab(getOp(el.dataset.op), el.dataset.tab);
+    if (a === 'acta') return openActa(getOp(el.dataset.op));
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
     if (a === 'export-cf') return exportCf();
