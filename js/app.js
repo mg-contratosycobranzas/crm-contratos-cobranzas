@@ -684,19 +684,20 @@
   // la empresa se escribe en la ficha; si falta, se toma de la minuta cargada; si no, de otro cliente del mismo proyecto
   const empresaDe = (o) => o.empresa || (o.minuta && o.minuta.vendedora && o.minuta.vendedora.razon) || '';
   const empresaProy = () => { const m = {}; S.ops.forEach(o => { const e = empresaDe(o); if (e && o.proyecto && !m[o.proyecto]) m[o.proyecto] = e; }); return m; };
+  // `s: 1` = columna de la vista simple (la completa y el Excel llevan todas)
   const OPS_COLS = [
-    { h: 'ID', v: r => r.o.id }, { h: 'Proyecto', v: r => r.o.proyecto }, { h: 'Empresa', v: r => empresaDe(r.o) || r.ep[r.o.proyecto] || '' },
-    { h: 'Unidad / Dpto.', v: r => r.o.unidad }, { h: 'Cliente', v: r => r.o.cliente }, { h: 'DNI', v: r => r.o.dni },
-    { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n' },
-    { h: 'Ejecutivo de ventas', v: r => r.o.vendedor }, { h: 'Jefe de ventas', v: r => r.o.jefeVentas }, { h: 'Banco', v: r => r.o.banco }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
+    { h: 'ID', v: r => r.o.id }, { h: 'Proyecto', v: r => r.o.proyecto, s: 1 }, { h: 'Empresa', v: r => empresaDe(r.o) || r.ep[r.o.proyecto] || '' },
+    { h: 'Unidad / Dpto.', v: r => r.o.unidad, s: 1 }, { h: 'Cliente', v: r => r.o.cliente, s: 1 }, { h: 'DNI', v: r => r.o.dni },
+    { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n', s: 1 },
+    { h: 'Ejecutivo de ventas', v: r => r.o.vendedor }, { h: 'Jefe de ventas', v: r => r.o.jefeVentas }, { h: 'Banco', v: r => r.o.banco, s: 1 }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
     { h: 'Kardex', v: r => r.o.con_kardexMonto }, { h: 'Abogado a cargo', v: r => r.o.con_abogado },
     { h: 'Firma cliente', v: r => r.o.con_fFirmaCliente, t: 'd' }, { h: 'Firma inmobiliaria', v: r => r.o.con_fFirmaRL, t: 'd' },
-    { h: 'Fecha base (ingreso)', v: r => fechaBase(r.o), t: 'd' }, { h: 'Mes de la operación', v: r => mesTxt(mesDe(fechaBase(r.o))) },
+    { h: 'Fecha base (ingreso)', v: r => fechaBase(r.o), t: 'd' }, { h: 'Mes de ingreso', v: r => mesTxt(mesDe(fechaBase(r.o))), s: 1 },
     { h: 'Desembolso programado', v: r => desembolsoProg(r.o), t: 'd' }, { h: 'Fecha de desembolso', v: r => r.o.fin_fDesembolso, t: 'd' },
-    { h: 'Desembolso esperado', v: r => r.esp.fecha, t: 'd' }, { h: 'Tipo de fecha', v: r => r.esp.tipo }, { h: 'Mes en que se recibe', v: r => mesTxt(mesDe(r.esp.fecha)) },
-    { h: 'Monto a recibir (financ. + bono)', v: r => aRecibir(r.o), t: 'n' },
+    { h: 'Desembolso esperado', v: r => r.esp.fecha, t: 'd' }, { h: 'Tipo de fecha', v: r => r.esp.tipo, s: 1 }, { h: 'Mes en que se recibe', v: r => mesTxt(mesDe(r.esp.fecha)), s: 1 },
+    { h: 'Monto a recibir (financ. + bono)', v: r => aRecibir(r.o), t: 'n', s: 1 },
     { h: 'Días base → desembolso', v: r => diasDesembolso(r.o).dias, t: 'i', x: r => diasDesembolso(r.o) },
-    { h: 'Etapa actual', v: r => r.d.etapa === 'cerrado' ? 'Cerrado' : STAGE[r.d.etapa].name }];
+    { h: 'Etapa actual', v: r => r.d.etapa === 'cerrado' ? 'Cerrado' : STAGE[r.d.etapa].name, s: 1 }];
   // fecha comprometida para el desembolso: la última cláusula generada manda; si no, el cronograma de Evolta (saldo a financiar)
   function desembolsoProg(o) {
     const it = o.clausula && o.clausula.pago && (o.clausula.pago.items || []).find(i => /a más tardar el/i.test(i.texto || ''));
@@ -732,7 +733,7 @@
   const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
   const mesDe = (f) => f ? f.slice(0, 7) : '', mesTxt = (m) => m ? `${MESES_C[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}` : '—';
   const aRecibir = (o) => (Number(o.montoBanco) || 0) + (Number(o.bono) || 0);
-  const opsFilter = () => flt('operaciones', { q: '', proy: '', banco: '', etapa: '', firma: '', mes: '' });
+  const opsFilter = () => flt('operaciones', { q: '', proy: '', banco: '', etapa: '', mesIng: '', mes: '', vista: 'simple', size: '20', page: 1 });
   // proyección mensual: cuánto se recibirá por desembolsos (financiamiento + bono) en cada mes
   function proyeccion(list) {
     const m = {};
@@ -744,37 +745,55 @@
     const P = proyeccion(list), hoy = mesDe(iso(today())), max = Math.max(1, ...P.map(x => x.total));
     const sf = list.filter(r => r.esp.tipo === 'Recibido sin fecha'), ret = list.filter(r => r.esp.tipo === 'Estimado (retrasado)');
     if (!P.length && !sf.length) return '';
-    return `<details class="card proy" open><summary class="card-h"><h2>📅 Proyección de ingresos por mes</h2><span class="small muted">desembolsos de financiamiento + bono · días típicos: ${tip.dias} (${tip.fuente})</span></summary>
+    const sig = (n) => { const d = new Date(today()); d.setMonth(d.getMonth() + n); return iso(d).slice(0, 7); }, totMes = (m) => (P.find(x => x.mes === m) || { total: 0 }).total;
+    return `<details class="card proy"><summary class="card-h"><h2>📅 Proyección de ingresos</h2><span class="small">Este mes: <b>${money(totMes(hoy))}</b> · ${mesTxt(sig(1))}: <b>${money(totMes(sig(1)))}</b> · ${mesTxt(sig(2))}: <b>${money(totMes(sig(2)))}</b></span><span class="small muted">ver detalle ▾</span></summary>
       <div class="card-b"><div class="ev-tw"><table class="ev-t"><thead><tr><th>Mes</th><th class="r">Operaciones</th><th class="r">Recibido (real)</th><th class="r">Programado</th><th class="r">Estimado</th><th class="r">Total del mes</th><th></th></tr></thead><tbody>
       ${P.map(x => `<tr class="${x.mes === hoy ? 'proy-hoy' : ''}" data-act="proy-mes" data-mes="${x.mes}" title="Ver las operaciones de este mes"><td><b>${mesTxt(x.mes)}</b>${x.mes === hoy ? ' <span class="badge plain">este mes</span>' : x.mes < hoy && (x.prog || x.est) ? ' <span class="badge rojo plain">atrasado</span>' : ''}</td><td class="r">${x.n}</td><td class="r">${x.real ? money(x.real) : '—'}</td><td class="r">${x.prog ? money(x.prog) : '—'}</td><td class="r">${x.est ? money(x.est) : '—'}</td><td class="r"><b>${money(x.total)}</b></td>
         <td style="min-width:120px"><div class="proy-bar"><span style="width:${x.real / max * 100}%;background:var(--f-verde)"></span><span style="width:${x.prog / max * 100}%;background:var(--accent)"></span><span style="width:${x.est / max * 100}%;background:var(--f-gris)"></span></div></td></tr>`).join('')}
       </tbody></table></div>
       ${sf.length ? `<div class="ev-falta" style="margin-top:10px">📌 <b>${sf.length} operaciones ya pasaron Finanzas</b> (${money(sf.reduce((t, r) => t + aRecibir(r.o), 0))}): se cuentan como recibidas, pero no tienen la <b>fecha de desembolso</b> registrada, por eso no aparecen en ningún mes. Regístrala en Finanzas para que sumen en su mes real.</div>` : ''}
       ${ret.length ? `<p class="small" style="margin:8px 0 0">⏰ ${ret.length} operaciones ya superaron los ${tip.dias} días estimados sin desembolso: se proyectan en el mes actual.</p>` : ''}
-      <p class="small muted">🟢 Real: ya desembolsado · 🔵 Programado: fecha de la cláusula adicional o del cronograma de Evolta · ⚪ Estimado: fecha base (ingreso o inicio de cobranza) + ${tip.dias} días. "Atrasado": el mes ya pasó y el desembolso programado no se registró. Toca un mes para filtrar la tabla.</p></div></details>`;
+      <p class="small muted">🟢 Real: ya desembolsado · 🔵 Programado: fecha de la cláusula adicional o del cronograma de Evolta · ⚪ Estimado: fecha de ingreso + ${tip.dias} días (${tip.fuente}). Montos: financiamiento + bono. Toca un mes para ver sus operaciones.</p></div></details>`;
   }
   function opsRows(todosLosMeses) {
     const F = opsFilter(), ep = empresaProy(), tip = diasTipicos();
     return rows().filter(r => match(r, F.q) && (!F.proy || r.o.proyecto === F.proy) && (!F.banco || r.o.banco === F.banco) && (!F.etapa || r.d.etapa === F.etapa)
-      && (!F.firma || (F.firma === 'si' ? (r.o.con_fFirmaCliente && r.o.con_fFirmaRL) : !(r.o.con_fFirmaCliente && r.o.con_fFirmaRL)))).map(r => ({ ...r, ep, esp: desembolsoEsperado(r.o, tip, r.d) }))
+      && (!F.mesIng || mesDe(fechaBase(r.o)) === F.mesIng)).map(r => ({ ...r, ep, esp: desembolsoEsperado(r.o, tip, r.d) }))
       .filter(r => todosLosMeses || !F.mes || mesDe(r.esp.fecha) === F.mes);
   }
   function vOperaciones() {
     const F = opsFilter(), id = 'rg-ops';
     const build = () => {
-      const list = opsRows(), sum = (c) => list.reduce((t, r) => t + (Number(c.v(r)) || 0), 0);
-      const cols = OPS_COLS.map(c => ({ h: c.h, cls: c.t === 'n' || c.t === 'i' ? 'r' : '', s: r => c.v(r) ?? '', f: r => { const v = c.v(r); return !filled(v) ? '<span class="muted">—</span>' : c.t === 'n' ? money(v) : c.t === 'd' ? fdate(v)
-        : c.t === 'i' ? (c.x(r).enCurso ? `<span class="muted">${v} en curso</span>` : `<b>${v}</b>`) : c.h === 'Cliente' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>` : esc(v); } }));
-      const con = list.map(r => diasDesembolso(r.o)).filter(x => x.dias != null && !x.enCurso), prom = con.length ? Math.round(con.reduce((t, x) => t + x.dias, 0) / con.length) : null;
-      const tot = OPS_COLS.filter(c => c.t === 'n').map(c => `<div class="kpi"><div class="n">${money(sum(c))}</div><div class="small muted">${c.h}</div></div>`).join('');
-      const mesChip = F.mes ? `<div class="small" style="margin-bottom:8px">Mostrando las operaciones que se reciben en <b>${mesTxt(F.mes)}</b> <button class="btn sm" data-act="proy-mes" data-mes="">✕ Ver todos los meses</button></div>` : '';
-      return `${proyHtml(opsRows(true), diasTipicos())}${mesChip}<div class="kpis ops-kpis"><div class="kpi"><div class="n">${list.length}</div><div class="small muted">Operaciones</div></div>${tot}<div class="kpi"><div class="n">${prom ?? '—'} días</div><div class="small muted">Promedio fecha base → desembolso (${con.length} desembolsadas)</div></div></div><div class="ops-tw">${tbl(id + '-t', cols, list)}</div>`;
+      const all = opsRows(), size = +F.size || 20, pages = Math.max(1, Math.ceil(all.length / size));
+      F.page = Math.min(Math.max(1, F.page || 1), pages);
+      // ordenar todo antes de cortar la página, para que el orden no sea solo dentro de la página
+      const st = ui.sort[id + '-t'], vis = OPS_COLS.filter(c => F.vista === 'completa' || c.s);
+      if (st && vis[st.i]) { const g = vis[st.i].v; all.sort((a, b) => { const x = g(a) ?? '', y = g(b) ?? ''; return (x > y ? 1 : x < y ? -1 : 0) * st.dir; }); }
+      const page = all.slice((F.page - 1) * size, F.page * size);
+      const cols = vis.map(c => ({ h: c.h, cls: c.t === 'n' || c.t === 'i' ? 'r' : '', s: r => c.v(r) ?? '', f: r => { const v = c.v(r); return !filled(v) ? '<span class="muted">—</span>' : c.t === 'n' ? money(v) : c.t === 'd' ? fdate(v)
+        : c.t === 'i' ? (c.x(r).enCurso ? `<span class="muted">${v} en curso</span>` : `<b>${v}</b>`) : c.h === 'Cliente' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>`
+        : c.h === 'Tipo de fecha' ? `<span class="badge plain ${{ Real: 'verde', Programado: '', 'Recibido sin fecha': 'verde' }[v] ?? 'gris'}">${esc(v)}</span>` : esc(v); } }));
+      const sum = (fn) => all.reduce((t, r) => t + (Number(fn(r)) || 0), 0);
+      const con = all.map(r => diasDesembolso(r.o)).filter(x => x.dias != null && !x.enCurso), prom = con.length ? Math.round(con.reduce((t, x) => t + x.dias, 0) / con.length) : null;
+      const kpi = (n, l) => `<div class="kpi"><div class="n">${n}</div><div class="small muted">${l}</div></div>`;
+      const pager = `<div class="pager"><span class="small muted">${all.length ? `${(F.page - 1) * size + 1}–${Math.min(F.page * size, all.length)} de ${all.length}` : '0 operaciones'}</span>
+        <button class="btn sm" data-act="ops-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="ops-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
+      const mesChip = F.mes ? `<div class="small" style="margin-bottom:8px">Mostrando lo que se recibe en <b>${mesTxt(F.mes)}</b> <button class="btn sm" data-act="proy-mes" data-mes="">✕ Quitar</button></div>` : '';
+      return `${proyHtml(opsRows(true), diasTipicos())}${mesChip}
+        <div class="kpis ops-kpis">${kpi(all.length, 'Operaciones')}${kpi(money(sum(r => aRecibir(r.o))), 'A recibir (financiamiento + bono)')}${kpi(money(sum(r => r.d.cobRecibido)), 'Inicial cobrada')}${kpi((prom ?? '—') + ' días', 'Promedio ingreso → desembolso')}</div>
+        ${pager}<div class="ops-tw ${F.vista === 'completa' ? 'full' : ''}">${tbl(id + '-t', cols, page)}</div>${all.length > size ? pager : ''}`;
     };
-    const sel = (k, label, opts) => `<select data-f="operaciones" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Resumen de operaciones', 'Lo principal de cada venta: proyecto, cliente, financiamiento, equipo comercial, banco, kardex, firmas y desembolso.', `<button class="btn pri" data-act="export-ops">⬇️ Exportar a Excel</button>`, 'Usa los filtros y descarga el Excel con lo que ves en pantalla. Toca un título de columna para ordenar. La empresa se completa en "Datos generales" de la ficha (o sale de la minuta cargada). Fecha base: la primera fecha del cliente (ingreso o inicio de cobranza); define el mes de la operación. Desembolso esperado: el real si ya se registró; si no, el programado (cláusula adicional o cronograma de Evolta); si no, la fecha base + los días típicos. Con eso se arma la proyección de lo que se recibirá cada mes.')}
-      <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad, vendedor…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
-        ${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}
-        ${sel('etapa', 'Todas las etapas', [...STAGES.map(s => [s.key, s.name]), ['cerrado', 'Cerrado']])}${sel('firma', 'Con o sin firmas', [['si', 'Firmas completas'], ['no', 'Falta alguna firma']])}</div>
+    const sel = (k, label, opts, noAll) => `<select data-f="operaciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
+    const tip = diasTipicos();
+    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-ops">⬇️ Exportar a Excel</button>`, 'Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
+      <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
+        ${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}
+        ${sel('mesIng', 'Mes de ingreso: todos', meses(o => mesDe(fechaBase(o))))}
+        ${sel('mes', 'Se recibe en: todos', meses(o => mesDe(desembolsoEsperado(o, tip).fecha)))}
+        ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}
+        ${sel('etapa', 'Todas las etapas', [...STAGES.map(s => [s.key, s.name]), ['cerrado', 'Cerrado']])}</div>
+      <div class="filters ops-opts"><span class="small muted">Vista</span>${sel('vista', '', [['simple', 'Simple (lo principal)'], ['completa', 'Completa (todas las columnas)']], true)}<span class="small muted">Mostrar</span>${sel('size', '', [['20', '20 por página'], ['30', '30 por página'], ['50', '50 por página']], true)}</div>
       ${region(id, build)}`;
   }
   // fecha al mediodía: así el huso horario de Perú no la corre al día anterior al pasar a Excel
@@ -1472,7 +1491,8 @@
     if (a === 'evtab') return openTab(getOp(el.dataset.op), el.dataset.tab);
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
-    if (a === 'proy-mes') { opsFilter().mes = el.dataset.mes; refresh('rg-ops'); const t = $('.ops-kpis'); if (t && el.dataset.mes) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (a === 'proy-mes') { const F = opsFilter(); F.mes = el.dataset.mes; F.page = 1; const s = $('[data-f=operaciones][data-k=mes]'); if (s) s.value = F.mes; refresh('rg-ops'); const t = $('.ops-kpis'); if (t && el.dataset.mes) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (a === 'ops-page') { opsFilter().page = +el.dataset.p; refresh('rg-ops'); const t = $('.pager'); if (t) t.scrollIntoView({ block: 'start' }); return; }
     if (a === 'cierre-firmar') return cierreFirmar(getOp(el.dataset.op), el.dataset.s);
     if (a === 'cierre-vb') return cierreVB(getOp(el.dataset.op), el.dataset.s);
     if (a === 'cierre-obs') return cierreObs(getOp(el.dataset.op), el.dataset.s);
@@ -1512,7 +1532,7 @@
   document.addEventListener('input', (e) => {
     if (e.target.id === 'pk-q') return pickList(e.target.value);
     const el = e.target.closest('[data-f]'); if (!el) return;
-    flt(el.dataset.f, {})[el.dataset.k] = el.value; refresh(el.dataset.r);
+    const F = flt(el.dataset.f, {}); F[el.dataset.k] = el.value; if ('page' in F) F.page = 1; refresh(el.dataset.r); // al cambiar un filtro se vuelve a la página 1
   });
   document.addEventListener('change', (e) => {
     const t = e.target;
