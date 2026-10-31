@@ -62,10 +62,10 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos y marcar pasos' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }];
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }];
   const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops']);
-  const VIEW_PERM = { operaciones: 'v_ops', mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops' };
+  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -858,6 +858,86 @@
     XLSX.writeFile(wb, `Resumen_operaciones_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${list.length} operaciones`);
   }
 
+  /* ---- Cartas fianza: seguimiento de vencimientos, renovaciones y devoluciones (Finanzas) ---- */
+  const esCarta = (o) => o.fin_tipo !== 'No aplica' && o.fin_tipoSolicitud !== 'MINUTA DE LEVANTAMIENTO' && !!(o.fin_nCarta || o.fin_cfMonto || o.fin_fEmision || o.fin_tipoSolicitud === 'CARTA FIANZA');
+  // cadena de vencimientos: el primero y luego cada renovación (op.cfRenov guarda { anterior, nuevo, ts, por })
+  const vencimientos = (o) => { const R = o.cfRenov || []; return R.length ? [R[0].anterior, ...R.map(r => r.nuevo)].filter(Boolean) : (o.fin_fVenc ? [o.fin_fVenc] : []); };
+  const DIAS_AVISO_CF = 15;
+  function cfEstado(o) {
+    if (o.fin_cfEstado === 'Devuelta') return { k: 'dev', t: 'Devuelta', c: 'verde' };
+    if (!o.fin_fVenc) return { k: 'sin', t: 'Sin vencimiento', c: 'gris' };
+    const n = diff(pd(o.fin_fVenc), today());
+    if (n < 0) return { k: 'venc', t: `Vencida hace ${-n} d`, c: 'rojo', n };
+    if (n <= DIAS_AVISO_CF) return { k: 'pronto', t: `Vence en ${n} d`, c: 'amar', n };
+    return { k: 'vig', t: (o.cfRenov || []).length ? 'Vigente (renovada)' : 'Vigente', c: '', n };
+  }
+  const cfFilter = () => flt('cartas', { q: '', emp: '', proy: '', bco: '', est: '', page: 1, size: '20' });
+  const CF_COLS = [
+    { h: 'Proyecto', v: r => r.o.proyecto }, { h: 'Empresa', v: r => empresaDe(r.o) || r.ep[r.o.proyecto] || '' }, { h: 'Unidad', v: r => r.o.unidad },
+    { h: 'Cliente', v: r => r.o.cliente }, { h: 'DNI', v: r => r.o.dni }, { h: 'Monto fianza', v: r => r.o.fin_cfMonto, t: 'n' },
+    { h: 'Banco promotor (emite)', v: r => r.o.fin_cfBanco }, { h: 'Banco que financia', v: r => r.o.banco }, { h: 'Carta N°', v: r => r.o.fin_nCarta },
+    { h: 'Emisión', v: r => r.o.fin_fEmision, t: 'd' }, { h: 'Vencimiento actual', v: r => r.o.fin_cfEstado === 'Devuelta' ? '' : r.o.fin_fVenc, t: 'd' },
+    { h: 'Renovaciones', v: r => Math.max(0, vencimientos(r.o).length - 1) }, { h: 'Estado', v: r => r.st.t }, { h: 'Devolución', v: r => r.o.fin_fDevolucion, t: 'd' }];
+  function cfRows() {
+    const F = cfFilter(), ep = empresaProy(), ord = { venc: 0, pronto: 1, vig: 2, sin: 3, dev: 4 };
+    return rows().filter(r => esCarta(r.o)).map(r => ({ ...r, ep, st: cfEstado(r.o) }))
+      .filter(r => match(r, F.q) && (!F.emp || (empresaDe(r.o) || ep[r.o.proyecto]) === F.emp) && (!F.proy || r.o.proyecto === F.proy) && (!F.bco || r.o.fin_cfBanco === F.bco) && (!F.est || r.st.k === F.est))
+      .sort((a, b) => ord[a.st.k] - ord[b.st.k] || String(a.o.fin_fVenc || '9').localeCompare(String(b.o.fin_fVenc || '9'))); // lo más urgente arriba
+  }
+  function vCartas() {
+    const F = cfFilter(), id = 'rg-cf';
+    const build = () => {
+      const all = cfRows(), size = +F.size || 20, pages = Math.max(1, Math.ceil(all.length / size)); F.page = Math.min(Math.max(1, F.page || 1), pages);
+      const page = all.slice((F.page - 1) * size, F.page * size), cnt = (k) => all.filter(r => r.st.k === k), sum = (L) => money(L.reduce((t, r) => t + (Number(r.o.fin_cfMonto) || 0), 0));
+      const vivas = all.filter(r => r.st.k !== 'dev');
+      const kpi = (n, l, k, c) => `<div class="kpi ${F.est === k ? 'on' : ''}" ${k !== undefined ? `data-act="cf-est" data-k="${k}" role="button" tabindex="0"` : ''}><div class="n ${c || ''}">${n}</div><div class="small muted">${l}</div></div>`;
+      const cols = [...CF_COLS.map(c => ({ h: c.h, cls: c.t === 'n' ? 'r' : '', s: r => c.v(r) ?? '', f: r => { const v = c.v(r);
+        if (c.h === 'Estado') return `<span class="badge ${r.st.c}">${esc(v)}</span>`;
+        if (c.h === 'Renovaciones') return v ? `<span title="${esc(vencimientos(r.o).map(fdate).join(' → '))}">${v} · ${vencimientos(r.o).slice(1).map(fdate).join(', ')}</span>` : '<span class="muted">—</span>';
+        return !filled(v) ? '<span class="muted">—</span>' : c.t === 'n' ? money(v) : c.t === 'd' ? fdate(v) : c.h === 'Cliente' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>` : esc(v); } })),
+        { h: '', cls: 'nowrap', f: r => r.st.k === 'dev' ? '' : `<button class="btn sm" data-act="cf-renovar" data-op="${r.o.id}">🔄 Renovar</button> <button class="btn sm" data-act="cf-devolver" data-op="${r.o.id}">↩️ Devuelta</button>` }];
+      const pager = `<div class="pager"><span class="small muted">${all.length ? `${(F.page - 1) * size + 1}–${Math.min(F.page * size, all.length)} de ${all.length}` : '0 cartas'}</span><button class="btn sm" data-act="cf-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="cf-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
+      return `<div class="kpis ops-kpis">${kpi(vivas.length, `Cartas vigentes · ${sum(vivas)}`, '')}${kpi(cnt('venc').length, 'Vencidas: renovar o devolver ya', 'venc', 'txt-rojo')}${kpi(cnt('pronto').length, `Vencen en ${DIAS_AVISO_CF} días o menos`, 'pronto', 'txt-amar')}${kpi(cnt('dev').length, `Devueltas · ${sum(cnt('dev'))}`, 'dev')}</div>
+        ${pager}<div class="ops-tw full cf-tw">${tbl(id + '-t', cols, page, 'No hay cartas fianza con estos filtros.')}</div>${all.length > size ? pager : ''}`;
+    };
+    const sel = (k, label, opts, noAll) => `<select data-f="cartas" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    const base = S.ops.filter(esCarta), ep = empresaProy();
+    return `${pageHead('Cartas fianza', 'Seguimiento de cada carta: vencimiento, renovaciones y devolución. Lo más urgente aparece primero.', `<button class="btn pri" data-act="export-cf">⬇️ Exportar a Excel</button>`, 'Se listan los clientes con carta fianza (Finanzas). <b>Renovar</b> registra el nuevo vencimiento y guarda el anterior en el historial. <b>Devuelta</b> la marca como devuelta con su fecha y deja de alertar. Toca un recuadro de arriba para filtrar. Los datos de la carta (banco, monto, N°) se llenan en la ficha → Finanzas → Carta Fianza, o cotejando con Evolta.')}
+      <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="cartas" data-k="q" data-r="${id}">
+        ${sel('emp', 'Todas las empresas', [...new Set(base.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort().map(e => [e, e]))}
+        ${sel('proy', 'Todos los proyectos', [...new Set(base.map(o => o.proyecto).filter(Boolean))].sort().map(p => [p, p]))}
+        ${sel('bco', 'Todos los bancos promotores', [...new Set(base.map(o => o.fin_cfBanco).filter(Boolean))].sort().map(b => [b, b]))}
+        ${sel('est', 'Todos los estados', [['venc', 'Vencidas'], ['pronto', 'Por vencer'], ['vig', 'Vigentes'], ['sin', 'Sin vencimiento'], ['dev', 'Devueltas']])}
+        ${sel('size', '', [['20', '20 por página'], ['30', '30 por página'], ['50', '50 por página']], true)}</div>
+      ${region(id, build)}`;
+  }
+  function cfRenovar(o) {
+    modal({ title: `${o.fin_fVenc ? 'Renovar' : 'Registrar vencimiento de'} carta fianza · ${o.cliente}`, ok: o.fin_fVenc ? '🔄 Registrar renovación' : 'Guardar vencimiento', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b> · vence <b>${fdate(o.fin_fVenc) || 'sin fecha'}</b>${(o.cfRenov || []).length ? ` · renovada ${o.cfRenov.length} vez(es)` : ''}</p>
+      <div class="form"><label>${o.fin_fVenc ? 'Nuevo vencimiento' : 'Fecha de vencimiento'}<input type="date" id="cf-nv"></label><label>N° de carta (si cambió con la renovación)<input id="cf-nc" value="${esc(o.fin_nCarta || '')}"></label></div>`,
+      onOk: (dlg) => { const nv = dlg.querySelector('#cf-nv').value, nc = dlg.querySelector('#cf-nc').value.trim(); if (!nv) { toast('Elige el nuevo vencimiento'); return false; }
+        if (o.fin_fVenc && nv <= o.fin_fVenc) { toast('El nuevo vencimiento debe ser posterior al actual'); return false; }
+        if (o.fin_fVenc) { // sin vencimiento previo no es renovación: solo se registra el vencimiento
+          const R = [...(o.cfRenov || []), { anterior: o.fin_fVenc, nuevo: nv, ts: Date.now(), por: S.actor }];
+          o.cfRenov = R; (pendingOps[o.id] = pendingOps[o.id] || {}).cfRenov = R;
+        }
+        setField(o.id, 'fin_fVenc', nv); if (nc && nc !== o.fin_nCarta) setField(o.id, 'fin_nCarta', nc); setField(o.id, 'fin_cfEstado', 'Vigente');
+        toast(`Renovada hasta el ${fdate(nv)}`); render(true); } });
+  }
+  function cfDevolver(o) {
+    modal({ title: `Carta fianza devuelta · ${o.cliente}`, ok: '↩️ Marcar como devuelta', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b>. Al marcarla como devuelta deja de generar alertas de vencimiento.</p><div class="form"><label>Fecha de devolución<input type="date" id="cf-fd" value="${iso(today())}"></label></div>`,
+      onOk: (dlg) => { const fd = dlg.querySelector('#cf-fd').value; if (!fd) { toast('Elige la fecha'); return false; }
+        setField(o.id, 'fin_fDevolucion', fd); setField(o.id, 'fin_cfEstado', 'Devuelta'); toast('Carta marcada como devuelta'); render(true); } });
+  }
+  function exportCf() {
+    const list = cfRows(), maxR = Math.max(0, ...list.map(r => vencimientos(r.o).length - 1));
+    const data = list.map((r, i) => { const x = { Item: i + 1 }; CF_COLS.forEach(c => { if (c.h === 'Renovaciones' || c.h === 'Vencimiento actual') return; const v = c.v(r); x[c.h] = !filled(v) ? '' : c.t === 'n' ? Number(v) : c.t === 'd' ? xlDate(v) : v; });
+      const V = vencimientos(r.o); x['Vcto'] = V[0] ? xlDate(V[0]) : ''; for (let k = 1; k <= maxR; k++) x[`Vcto renovación ${k}`] = V[k] ? xlDate(V[k]) : ''; x['Estado'] = r.st.t; return x; });
+    const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' });
+    if (data.length) { const keys = Object.keys(data[0]), ci = keys.indexOf('Monto fianza'), rg = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= rg.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: ci })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
+      ws['!cols'] = keys.map(k => ({ wch: k === 'Cliente' || k === 'Empresa' ? 34 : Math.max(11, k.length + 2) })); ws['!autofilter'] = { ref: ws['!ref'] }; }
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cartas fianza'); XLSX.writeFile(wb, `Cartas_fianza_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${list.length} cartas fianza`);
+  }
+
   /* ---- Constancia de cierre de etapa (etiqueta PDF A6) ---- */
   const STAGE_HEX = { cob: '#2c6db4', con: '#7448b0', fin: '#b86e12', for: '#1c8658', pos: '#be3f76' };
   const fechaCulm = (o, k) => k === 'cob' ? o.cob_fCulm : k === 'con' ? (o.con_fCulm || [o.con_fFirmaCliente, o.con_fFirmaRL].filter(Boolean).sort().pop())
@@ -1343,8 +1423,9 @@
     const all = rows();
     const item = (href, label, extra, on, dot) => `<a href="${href}" class="${on ? 'on' : ''}">${dot ? `<span class="dot" style="background:${dot}"></span>` : ''}${label}${extra || ''}</a>`;
     const venc = agenda().filter(a => a.cat === 'vencido').length;
-    const I = { ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
+    const I = { cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${can('v_etapas') ? `<div class="nav-h">Gestión por etapa</div>${STAGES.map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -1371,7 +1452,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'actividad' ? vActividad() : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'actividad' ? vActividad() : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -1537,6 +1618,11 @@
     if (a === 'evtab') return openTab(getOp(el.dataset.op), el.dataset.tab);
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
+    if (a === 'export-cf') return exportCf();
+    if (a === 'cf-renovar') return cfRenovar(getOp(el.dataset.op));
+    if (a === 'cf-devolver') return cfDevolver(getOp(el.dataset.op));
+    if (a === 'cf-page') { cfFilter().page = +el.dataset.p; return refresh('rg-cf'); }
+    if (a === 'cf-est') { const F = cfFilter(); F.est = F.est === el.dataset.k ? '' : el.dataset.k; F.page = 1; const s = $('[data-f=cartas][data-k=est]'); if (s) s.value = F.est; return refresh('rg-cf'); }
     if (a === 'proy-mes') { const F = opsFilter(); F.mes = el.dataset.mes; F.page = 1; const s = $('[data-f=operaciones][data-k=mes]'); if (s) s.value = F.mes; refresh('rg-ops'); const t = $('.ops-kpis'); if (t && el.dataset.mes) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (a === 'ops-page') { opsFilter().page = +el.dataset.p; refresh('rg-ops'); const t = $('.pager'); if (t) t.scrollIntoView({ block: 'start' }); return; }
     if (a === 'cierre-firmar') return cierreFirmar(getOp(el.dataset.op), el.dataset.s);

@@ -78,7 +78,8 @@
       { k: 'fin_tipoSolicitud', l: 'Tipo de solicitud', t: 'select', o: ['CARTA FIANZA', 'MINUTA DE LEVANTAMIENTO'] },
       { k: 'fin_responsable', l: 'Responsable de valorados', t: 'owner' }, { k: 'fin_nCarta', l: 'N° de carta fianza', t: 'text' },
       { k: 'fin_fSolicitud', l: 'Fecha solicitud', t: 'date' }, { k: 'fin_fEmision', l: 'Fecha emisión carta fianza', t: 'date' },
-      { k: 'fin_fVenc', l: 'Vencimiento / renovación', t: 'date' }, { k: 'fin_fDesembolso', l: 'Fecha de desembolso', t: 'date' }
+      { k: 'fin_fVenc', l: 'Vencimiento / renovación', t: 'date' }, { k: 'fin_fDesembolso', l: 'Fecha de desembolso', t: 'date' },
+      { k: 'fin_cfEstado', l: 'Estado de la carta fianza', t: 'select', o: ['Vigente', 'Devuelta'] }, { k: 'fin_fDevolucion', l: 'Fecha de devolución de la carta', t: 'date' }
     ],
     for: [
       { k: 'for_asistente', l: 'Asistente de formalización', t: 'owner' }, { k: 'for_fInicio', l: 'Fecha inicio formalización', t: 'date' },
@@ -245,7 +246,7 @@
     D.diasTotal = op.fechaInicio ? Math.max(0, diff(D.etapa === 'cerrado' ? T : T, pd(op.fechaInicio))) : null;
 
     // Alerta
-    const venc = op.fin_fVenc ? pd(op.fin_fVenc) : null;
+    const venc = op.fin_fVenc && op.fin_cfEstado !== 'Devuelta' ? pd(op.fin_fVenc) : null; // una carta devuelta ya no vence
     if (D.etapa === 'cerrado') D.alerta = 'Cerrado';
     else if (op.fin_tipo === 'Aplica - Bloqueada' || D.responsable === 'Sin asignar' || (venc && T > venc)) D.alerta = 'Inmediato';
     else if ((D.etapa === 'con' && D.conCump === 'FUERA DE PLAZO') || D.semCF === 'ROJO' || D.semMin === 'ROJO' || D.semNot === 'ROJO' || (venc && T >= addDays(venc, -P.anticipo))) D.alerta = 'Por acumulación';
