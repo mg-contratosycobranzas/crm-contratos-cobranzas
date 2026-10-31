@@ -45,7 +45,7 @@
     gen: [
       { k: 'cliente', l: 'Cliente', t: 'text', w: 2 }, { k: 'dni', l: 'DNI', t: 'text' },
       { k: 'email', l: 'Correo del cliente', t: 'text' }, { k: 'telefono', l: 'Teléfono / celular', t: 'text' },
-      { k: 'proyecto', l: 'Proyecto', t: 'text', list: 'proyecto' }, { k: 'unidad', l: 'Unidad', t: 'text' },
+      { k: 'proyecto', l: 'Proyecto', t: 'text', list: 'proyecto' }, { k: 'empresa', l: 'Empresa (razón social)', t: 'text', list: 'empresa' }, { k: 'unidad', l: 'Unidad', t: 'text' },
       { k: 'fechaInicio', l: 'Fecha de inicio', t: 'date' },
       { k: 'vendedor', l: 'Vendedor', t: 'text', list: 'vendedor' }, { k: 'jefeVentas', l: 'Jefe de ventas', t: 'text', list: 'jefeVentas' },
       { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo de banco', t: 'text' },
@@ -109,15 +109,29 @@
       { k: 'con_bcoAgencia', l: 'Agencia', ev: /agencia\s*:/ }, { k: 'ejecBanco', l: 'Asesor', ev: /asesor\s*:/ },
       { k: 'con_bcoTel', l: 'Teléfonos', ev: /telefonos\s*:/ }, { k: 'con_bcoCorreo', l: 'Correos', ev: /correos\s*:/ },
       { k: 'cob_vencCarta', l: 'Fec. Vcto. Carta de Aprob.', t: 'date', ev: /(?:fec\W{0,2}\s*v\w{2,4}\W{0,2}\s*)?carta de aprob[^:]{0,3}:/ }] }];
+  /* Pestaña "Carta Fianza" de Evolta. Los campos con `col` salen de la tabla "Pagado Por" (último registro). */
+  const CF = [
+    { t: 'Carta Fianza (S/)', f: [
+      { k: 'fin_cfBanco', l: 'Banco', ev: /banco\s*:/ }, { k: 'fin_cfMonto', l: 'Monto (S/)', t: 'number', ev: /monto[^:]{0,8}:/ },
+      { k: 'fin_nCarta', l: 'N° Carta Fianza', ev: /n\W{0,2}\s*carta fianza\s*:/ }] },
+    { t: 'Pagado por (último registro)', f: [
+      { k: 'fin_cfTipo', l: 'Tipo', col: 'tipo' }, { k: 'fin_fEmision', l: 'Fecha activación', t: 'date', col: 'fAct' }, { k: 'fin_fVenc', l: 'Fecha vigencia', t: 'date', col: 'fVig' },
+      { k: 'fin_cfPagaCliente', l: 'Cliente', col: 'cliente' }, { k: 'fin_cfPagaInmob', l: 'Inmobiliaria', col: 'inmob' }] }];
+
+  /* Pestañas de Evolta que se cotejan con una captura: en qué etapa van y cómo se reparten en columnas */
+  const EV_TABS = {
+    nkb: { t: 'Notaría y Kardex/Banco', ic: '🏛️', stage: 'con', groups: NKB, cols: [[0], [1, 2], [3]], min: 4 },
+    cf: { t: 'Carta Fianza', ic: '✉️', stage: 'fin', groups: CF, cols: [[0], [1]], min: 2, table: true }
+  };
   const NKB_KEYS = NKB.flatMap(g => g.f.map(f => f.k));
-  FIELDS.nkb = NKB.flatMap(g => g.f).filter(f => !Object.values(FIELDS).flat().some(x => x.k === f.k)).map(f => ({ k: f.k, l: f.l, t: f.t || 'text' }));
+  Object.keys(EV_TABS).forEach(tk => { FIELDS[tk] = EV_TABS[tk].groups.flatMap(g => g.f).filter(f => !Object.values(FIELDS).flat().some(x => x.k === f.k)).map(f => ({ k: f.k, l: f.l, t: f.t || 'text' })); });
 
   const FIELD_LABEL = {};
   Object.values(FIELDS).forEach(a => a.forEach(f => FIELD_LABEL[f.k] = f.l));
   const NUM_KEYS = new Set();
   Object.values(FIELDS).forEach(a => a.forEach(f => { if (f.t === 'number') NUM_KEYS.add(f.k); }));
 
-  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8 };
+  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90 };
   const DEFAULT_USERS = [
     { name: 'Milagros Valles', stage: JEFATURA, rol: 'Jefa de Administración de Contratos y Cobranzas', admin: true },
     { name: 'Jonathan', stage: 'cob', rol: 'Asistente de Cobranza' },
@@ -158,8 +172,9 @@
 
   /* Cada paso puede traer `set` (qué se registra con un toque; $today = hoy, $me = quien lo hace)
      o `choose` (el usuario elige una opción). Sin ninguno, se abre el campo para escribirlo. */
-  // Notaría y Kardex/Banco: todo lleno en el CRM y el último cotejo con Evolta sin pendientes
-  const nkbOk = (op) => NKB_KEYS.every(k => op[k] !== undefined && op[k] !== null && op[k] !== '') && !!op.nkbCheck && !op.nkbCheck.pendientes;
+  // Pestaña de Evolta: todo lleno en el CRM y el último cotejo sin pendientes
+  const tabOk = (op, tk) => EV_TABS[tk].groups.every(g => g.f.every(f => op[f.k] !== undefined && op[f.k] !== null && op[f.k] !== '')) && !!op[tk + 'Check'] && !op[tk + 'Check'].pendientes;
+  const nkbOk = (op) => tabOk(op, 'nkb');
   function checklist(op, key, d) {
     const has = (k) => op[k] !== undefined && op[k] !== null && op[k] !== '';
     const it = (label, done, set, choose) => ({ label, done: !!done, set, choose });
@@ -182,7 +197,8 @@
           it('Responsable de valorados asignado', has('fin_responsable'), { fin_responsable: ME }),
           it('Solicitud registrada', has('fin_fSolicitud'), { fin_fSolicitud: T }),
           it(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? 'Minuta de levantamiento firmada' : 'Carta fianza emitida', d.done.fin, op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? { for_fFirmaMinuta: T } : { fin_fEmision: T }),
-          it('Desembolso registrado', has('fin_fDesembolso'), { fin_fDesembolso: T })];
+          it('Desembolso registrado', has('fin_fDesembolso'), { fin_fDesembolso: T }),
+          ...(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? [] : [it('Carta fianza completa y cotejada con Evolta', tabOk(op, 'cf'))])];
       case 'for': return [
         it('Asistente de formalización asignado', has('for_asistente'), { for_asistente: ME }), it('Formalización iniciada', has('for_fInicio'), { for_fInicio: T }),
         it('Definir si aplica levantamiento de hipoteca', has('for_aplicaLev'), null, { k: 'for_aplicaLev', opts: [['Sí', '📄', 'Sí aplica'], ['No', '✅', 'No aplica']] }),
@@ -300,6 +316,6 @@
     return ops;
   }
 
-  global.CRM = { STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
+  global.CRM = { STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
     pd, iso, today, addDays, diff, fdate, num };
 })(window);
