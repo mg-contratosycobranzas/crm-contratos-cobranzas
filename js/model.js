@@ -41,6 +41,8 @@
 
   /* ---------- campos editables por etapa ---------- */
   const YN = ['SI', 'NO'];
+  // estados de la inscripción registral, en el orden en que avanza el trámite (como en el seguimiento de Formalización)
+  const ESTADOS_INS = ['Pendiente', 'Docs enviados a notaría', 'Ingresado a notaría', 'Pendiente conformidad de notaría (adenda)', 'Email enviado', 'Sin respuesta', 'En calificación (SUNARP)', 'Observado', 'Inscrito'];
   const FIELDS = {
     gen: [
       { k: 'cliente', l: 'Cliente', t: 'text', w: 2 }, { k: 'dni', l: 'DNI', t: 'text' },
@@ -88,6 +90,9 @@
       { k: 'for_fIngresoNotaria', l: 'Fecha ingreso a notaría', t: 'date' }, { k: 'for_fInscripcion', l: 'Fecha inscripción registral (SUNARP)', t: 'date' },
       { k: 'for_gastoNotarial', l: 'Gasto notarial (S/)', t: 'number' }, { k: 'for_gastoRegistral', l: 'Gasto registral (S/)', t: 'number' },
       { k: 'for_estado', l: 'Estado de formalización', t: 'select', o: ['Pendiente', 'En Proceso', 'Completo'] },
+      { k: 'for_estadoIns', l: 'Estado de la inscripción', t: 'select', o: ESTADOS_INS }, { k: 'for_codigo', l: 'Código de inscripción', t: 'text' },
+      { k: 'for_titulo', l: 'N° de título (SUNARP)', t: 'text' }, { k: 'for_obsIns', l: 'Observación de la inscripción', t: 'text' },
+      { k: 'for_copiaEvolta', l: 'Copia simple SUNARP cargada en Evolta', t: 'select', o: ['CARGADA', 'PENDIENTE'] },
       { k: 'for_fIndep', l: 'Fecha de independización', t: 'date' }
     ],
     pos: [
@@ -199,12 +204,15 @@
           it('Solicitud registrada', has('fin_fSolicitud'), { fin_fSolicitud: T }),
           it(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? 'Minuta de levantamiento firmada' : 'Carta fianza emitida', d.done.fin, op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? { for_fFirmaMinuta: T } : { fin_fEmision: T }),
           it('Desembolso registrado', has('fin_fDesembolso'), { fin_fDesembolso: T }),
-          ...(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? [] : [it('Carta fianza completa y cotejada con Evolta', tabOk(op, 'cf'))])];
+          ...(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? [] : [it('Carta fianza completa y cotejada con Evolta', tabOk(op, 'cf')),
+            // saneado: la carta no puede estar vencida (o se renovó o ya se devolvió)
+            it('Carta fianza al día (vigente o devuelta)', op.fin_cfEstado === 'Devuelta' || (op.fin_fVenc && op.fin_fVenc >= iso(today())))])];
       case 'for': return [
         it('Asistente de formalización asignado', has('for_asistente'), { for_asistente: ME }), it('Formalización iniciada', has('for_fInicio'), { for_fInicio: T }),
         it('Definir si aplica levantamiento de hipoteca', has('for_aplicaLev'), null, { k: 'for_aplicaLev', opts: [['Sí', '📄', 'Sí aplica'], ['No', '✅', 'No aplica']] }),
         ...(op.for_aplicaLev === 'Sí' ? [it('Minuta de levantamiento firmada', has('for_fFirmaMinuta'), { for_fFirmaMinuta: T })] : []),
-        it('Ingreso a notaría', has('for_fIngresoNotaria'), { for_fIngresoNotaria: T }), it('Inscripción registral (SUNARP)', has('for_fInscripcion'), { for_fInscripcion: T }), it('Independización', has('for_fIndep'), { for_fIndep: T })];
+        it('Ingreso a notaría', has('for_fIngresoNotaria'), { for_fIngresoNotaria: T }), it('Inscripción registral (SUNARP)', has('for_fInscripcion'), { for_fInscripcion: T }), it('Independización', has('for_fIndep'), { for_fIndep: T }),
+        it('Copia simple SUNARP cargada en Evolta con su N° de título', has('for_titulo') && op.for_copiaEvolta === 'CARGADA')];
       case 'pos': return [it('Derivado a postventa', op.pos_derivado === 'SI', { pos_derivado: 'SI' }), it('Unidad entregada', op.pos_entregada === 'SI', { pos_entregada: 'SI' })];
     }
     return [];
@@ -317,6 +325,6 @@
     return ops;
   }
 
-  global.CRM = { STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
+  global.CRM = { ESTADOS_INS, STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
     pd, iso, today, addDays, diff, fdate, num };
 })(window);
