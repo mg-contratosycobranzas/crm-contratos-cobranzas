@@ -225,7 +225,7 @@
   }
   function modal({ title, body, ok = 'Guardar', cancel = 'Cancelar', onOk, onCancel, wide }) {
     const dlg = $('#dlg'); dlg.classList.toggle('wide', !!wide);
-    dlg.innerHTML = `<form method="dialog"><div class="dlg-h"><span>${esc(title)}</span><button type="button" class="dlg-x" data-m="x" aria-label="Cerrar" title="Cerrar">✕</button></div><div class="dlg-b">${body}</div><div class="dlg-f">${cancel ? `<button type="button" class="btn" data-m="cancel">${cancel}</button>` : ''}<button type="button" class="btn pri" data-m="ok">${ok}</button></div></form>`;
+    dlg.innerHTML = `<form method="dialog" autocomplete="off"><div class="dlg-h"><span>${esc(title)}</span><button type="button" class="dlg-x" data-m="x" aria-label="Cerrar" title="Cerrar">✕</button></div><div class="dlg-b">${body}</div><div class="dlg-f">${cancel ? `<button type="button" class="btn" data-m="cancel">${cancel}</button>` : ''}<button type="button" class="btn pri" data-m="ok">${ok}</button></div></form>`;
     dlg.onclose = () => { if (onCancel && !dlg._ok) onCancel(); dlg._ok = false; };
     dlg.querySelector('[data-m=ok]').onclick = () => { if (onOk && onOk(dlg) === false) return; dlg._ok = true; dlg.close(); };
     const c = dlg.querySelector('[data-m=cancel]'); if (c) c.onclick = () => dlg.close();
@@ -658,7 +658,7 @@
 
   /* ---- Ficha de cliente ---- */
   function fieldInput(op, f, mark) {
-    const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}"`;
+    const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}" autocomplete="off"`; // sin autocompletar: evita que el navegador ofrezca guardar "pasaporte" o direcciones
     mark = mark === 'siempre' || (mark && op.evolta && f.k !== 'observaciones'); // con estado de cuenta cargado: resalta lo que falta y lo que vino del PDF
     let inp;
     if (f.t === 'select') inp = `<select ${base}><option value=""></option>${[...new Set([...f.o, ...(v && !f.o.includes(v) ? [v] : [])])].map(x => `<option ${String(v) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
@@ -1108,14 +1108,12 @@
   }
   function tabHtml(o, tk) {
     const T = CRM.EV_TABS[tk], G = T.groups;
-    const card = (gs) => `<div class="nkb-card">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text' }, 'siempre')).join('')}`).join('')}</div>`;
-    const rows = (o[tk + 'Check'] && o[tk + 'Check'].rows) || [];
+    const card = (gs) => `<div class="nkb-card ${T.wide ? 'nkb-row' : ''}">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text' }, 'siempre')).join('')}`).join('')}</div>`;
     return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm" data-act="evtab" data-tab="${tk}" data-op="${o.id}">📋 Cotejar con Evolta</button></div>
-      ${tabStatus(o, tk)}<div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div>
-      ${rows.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Año</th><th>Tipo</th><th>Fecha activación</th><th>Fecha vigencia</th><th>Cliente</th><th>Inmobiliaria</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.anio)}</td><td>${esc(r.tipo)}</td><td>${fdate(r.fAct)}</td><td>${fdate(r.fVig)}</td><td>${esc(r.cliente)}</td><td>${esc(r.inmob)}</td></tr>`).join('')}</tbody></table><p class="small muted">Tabla "Pagado Por" del último cotejo.</p></div>` : ''}</div>`;
+      ${tabStatus(o, tk)}<div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></div>`;
   }
   function openTab(op, tk) {
-    let ev = null, evRows = [];
+    let ev = null;
     const T = CRM.EV_TABS[tk], F = TAB_F(tk);
     modal({ title: `Cotejar ${T.t} con Evolta · ${op.cliente}`, ok: 'Guardar cotejo', wide: true,
       body: `<ol class="small" style="margin:0 0 10px;padding-left:18px"><li>En Evolta abre la venta y entra a la pestaña <b>${T.t}</b>.</li>
@@ -1127,7 +1125,7 @@
         $$('#nkb-res [data-nk]').forEach(c => { if (c.checked) setField(op.id, c.dataset.nk, ev[c.dataset.nk]); });
         const faltaEvolta = [], faltaAmbos = [], faltaCrm = [], difieren = [];
         F.forEach(f => { const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]); if (!a && !b) faltaAmbos.push(f.k); else if (!a) faltaEvolta.push(f.k); else if (!b) faltaCrm.push(f.k); else if (a !== b) difieren.push(f.k); });
-        const chk = { ts: Date.now(), por: S.actor, faltaEvolta, faltaAmbos, faltaCrm, difieren, pendientes: faltaEvolta.length + faltaAmbos.length + faltaCrm.length + difieren.length, evolta: ev, rows: evRows };
+        const chk = { ts: Date.now(), por: S.actor, faltaEvolta, faltaAmbos, faltaCrm, difieren, pendientes: faltaEvolta.length + faltaAmbos.length + faltaCrm.length + difieren.length, evolta: ev };
         op[tk + 'Check'] = chk; (pendingOps[op.id] = pendingOps[op.id] || {})[tk + 'Check'] = chk;
         S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: T.stage, campo: 'cotejo_' + tk, antes: '', despues: chk.pendientes ? `${chk.pendientes} pendientes` : 'Todo coincide' });
         commit(); toast(chk.pendientes ? `Cotejo guardado: ${chk.pendientes} pendientes` : 'Todo coincide con Evolta'); render(true);
@@ -1136,7 +1134,7 @@
     const show = (text) => {
       const r = EVOLTA.readTab(text, tk);
       if (r.found < T.min) { ev = null; res.innerHTML = `<div class="ev-falta">No reconocí la pestaña <b>${T.t}</b>. Revisa que la captura muestre todos sus recuadros (${G_TITLES(tk)}).</div>`; return; }
-      ev = r.values; evRows = r.rows || [];
+      ev = r.values;
       const row = (f) => {
         const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]), show = (v) => filled(v) ? esc(f.t === 'date' ? fdate(v) : String(v)) : '<span class="muted">—</span>';
         let st, box = '';
@@ -1147,9 +1145,7 @@
         else st = '<span class="badge verde">Coincide</span>';
         return `<tr><td>${esc(f.l)}</td><td>${show(op[f.k])}</td><td>${show(ev[f.k])}</td><td>${st}</td><td>${box}</td></tr>`;
       };
-      res.innerHTML = `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${T.groups.map(g => `<tr><td colspan="5" class="nkb-gr">${g.t}</td></tr>${g.f.map(row).join('')}`).join('')}</tbody></table></div>
-        ${T.table ? `<p class="small muted">Tabla "Pagado Por": ${evRows.length ? `${evRows.length} registro(s) leído(s); se compara el último.` : 'sin registros en la captura.'}</p>` : ''}
-        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
+      res.innerHTML = `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${T.groups.map(g => `<tr><td colspan="5" class="nkb-gr">${g.t}</td></tr>${g.f.map(row).join('')}`).join('')}</tbody></table></div>        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
     };
     const fromImage = async (file) => {
       res.innerHTML = '<div class="small muted">Leyendo la imagen… <b id="nkb-pg">0%</b> (la primera vez tarda un poco más)</div>';

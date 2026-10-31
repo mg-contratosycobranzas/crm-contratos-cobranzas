@@ -134,25 +134,7 @@
   }
   // quita tildes sin cambiar el largo del texto, para buscar etiquetas y cortar en la misma posición
   const fold = (s) => s.toLowerCase().replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n');
-  const DMY = /(\d{1,2})\/(\d{1,2})\/(\d{4})/;
-  const isoDmy = (s) => { const m = DMY.exec(s || ''); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
-  // tabla "Pagado Por" de Carta Fianza: Año | Tipo | Fecha Activación | Fecha Vigencia | Cliente | Inmobiliaria
-  function readCfRows(text) {
-    const flatT = String(text).replace(/\s+/g, ' '), i = fold(flatT).search(/pagado por/);
-    if (i < 0) return [];
-    const rows = [], re = /\b(\d{4})\s+(.+?)\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+(\S+)\s+(\S+)/g; let m;
-    while ((m = re.exec(flatT.slice(i)))) rows.push({ anio: m[1], tipo: m[2].replace(/^[^\p{L}]+/u, '').trim(), fAct: isoDmy(m[3]), fVig: isoDmy(m[4]), cliente: m[5], inmob: m[6] });
-    return rows;
-  }
-  function readTab(text, tk) {
-    const tab = window.CRM.EV_TABS[tk], r = readFields(text, tab.groups.flatMap(g => g.f).filter(f => f.ev));
-    if (tab.table) {
-      const rows = readCfRows(text), last = rows[rows.length - 1];
-      r.rows = rows; if (fold(String(text)).includes('pagado por')) r.found++;
-      if (last) tab.groups.flatMap(g => g.f).filter(f => f.col && last[f.col]).forEach(f => { r.values[f.k] = last[f.col]; });
-    }
-    return r;
-  }
+  const readTab = (text, tk) => readFields(text, window.CRM.EV_TABS[tk].groups.flatMap(g => g.f));
   const readNkb = (text) => readTab(text, 'nkb');
   function readFields(text, fields) {
     const flatT = String(text).replace(/\s+/g, ' '), low = fold(flatT), hits = [];

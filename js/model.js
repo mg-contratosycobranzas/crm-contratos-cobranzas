@@ -115,19 +115,16 @@
       { k: 'con_bcoAgencia', l: 'Agencia', ev: /agencia\s*:/ }, { k: 'ejecBanco', l: 'Asesor', ev: /asesor\s*:/ },
       { k: 'con_bcoTel', l: 'Teléfonos', ev: /telefonos\s*:/ }, { k: 'con_bcoCorreo', l: 'Correos', ev: /correos\s*:/ },
       { k: 'cob_vencCarta', l: 'Fec. Vcto. Carta de Aprob.', t: 'date', ev: /(?:fec\W{0,2}\s*v\w{2,4}\W{0,2}\s*)?carta de aprob[^:]{0,3}:/ }] }];
-  /* Pestaña "Carta Fianza" de Evolta. Los campos con `col` salen de la tabla "Pagado Por" (último registro). */
+  /* Pestaña "Carta Fianza" de Evolta: solo se cotejan banco, monto y N° de carta (el recuadro "Carta Fianza (S/)") */
   const CF = [
     { t: 'Carta Fianza (S/)', f: [
       { k: 'fin_cfBanco', l: 'Banco', ev: /banco\s*:/ }, { k: 'fin_cfMonto', l: 'Monto (S/)', t: 'number', ev: /monto[^:]{0,8}:/ },
-      { k: 'fin_nCarta', l: 'N° Carta Fianza', ev: /n\W{0,2}\s*carta fianza\s*:/ }] },
-    { t: 'Pagado por (último registro)', f: [
-      { k: 'fin_cfTipo', l: 'Tipo', col: 'tipo' }, { k: 'fin_fEmision', l: 'Fecha activación', t: 'date', col: 'fAct' }, { k: 'fin_fVenc', l: 'Fecha vigencia', t: 'date', col: 'fVig' },
-      { k: 'fin_cfPagaCliente', l: 'Cliente', col: 'cliente' }, { k: 'fin_cfPagaInmob', l: 'Inmobiliaria', col: 'inmob' }] }];
+      { k: 'fin_nCarta', l: 'N° Carta Fianza', ev: /n\W{0,2}\s*carta fianza\s*:/ }] }];
 
   /* Pestañas de Evolta que se cotejan con una captura: en qué etapa van y cómo se reparten en columnas */
   const EV_TABS = {
     nkb: { t: 'Notaría y Kardex/Banco', ic: '🏛️', stage: 'con', groups: NKB, cols: [[0], [1, 2], [3]], min: 4 },
-    cf: { t: 'Carta Fianza', ic: '✉️', stage: 'fin', groups: CF, cols: [[0], [1]], min: 2, table: true }
+    cf: { t: 'Carta Fianza', ic: '✉️', stage: 'fin', groups: CF, cols: [[0]], min: 2, wide: true }
   };
   const NKB_KEYS = NKB.flatMap(g => g.f.map(f => f.k));
   Object.keys(EV_TABS).forEach(tk => { FIELDS[tk] = EV_TABS[tk].groups.flatMap(g => g.f).filter(f => !Object.values(FIELDS).flat().some(x => x.k === f.k)).map(f => ({ k: f.k, l: f.l, t: f.t || 'text' })); });
