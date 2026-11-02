@@ -58,7 +58,7 @@
 
   /* ================= permisos (el administrador activa o desactiva pantallas y botones) ================= */
   const PERMS = [
-    { g: 'v', k: 'v_mi', l: 'Mi día' }, { g: 'v', k: 'v_etapas', l: 'Etapas' }, { g: 'v', k: 'v_clientes', l: 'Clientes' }, { g: 'v', k: 'v_equipo', l: 'Equipo' },
+    { g: 'v', k: 'v_mi', l: 'Mi día' }, { g: 'v', k: 'v_clientes', l: 'Clientes' }, { g: 'v', k: 'v_equipo', l: 'Equipo' },
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
@@ -68,7 +68,9 @@
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
   const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos']);
   const verEtapa = (k, n) => can('e_' + k, n);
-  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
+  const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
+  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -491,7 +493,7 @@
   function homeApps(nCrit, nVenc) {
     const t = (href, ic, l, n, cls) => `<a class="tile ${cls || ''}" href="${href}"><i>${ic}</i><span>${l}</span>${n ? `<em>${n}</em>` : ''}</a>`;
     const bt = (act, ic, l) => `<button class="tile" data-act="${act}"><i>${ic}</i><span>${l}</span></button>`;
-    return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/clientes', '🗂️', 'Clientes'), can('v_etapas') && t('#/etapa/cob', '🧭', 'Etapas'), can('v_agenda') && t('#/agenda', '📅', 'Agenda', nVenc || '', 'hot'),
+    return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/clientes', '🗂️', 'Clientes'), primeraEtapa() && t('#/etapa/' + primeraEtapa(), '🧭', 'Etapas'), can('v_agenda') && t('#/agenda', '📅', 'Agenda', nVenc || '', 'hot'),
       can('v_equipo') && t('#/usuarios', '👥', 'Equipo'), can('v_actividad') && t('#/actividad', '📈', 'Actividad'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente'), can('a_export') && bt('export-xlsx', '⬇️', 'Excel'), t('#/ayuda', '💡', 'Ayuda')].filter(Boolean).join('');
   }
   function insights(all, abiertos, venc, Pm) {
@@ -1594,7 +1596,7 @@
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
     const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
-      ${can('v_etapas') ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
+      ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
       <div class="nav-h">Más</div>${item('#/ayuda', I.help + 'Ayuda', '', r.view === 'ayuda')}${can('v_config') ? item('#/config', I.cfg + 'Configurar', '', r.view === 'config') : ''}`;
   }
@@ -1779,7 +1781,7 @@
       S.perms[u] = S.perms[u] || {}; STAGES.forEach(s => { S.perms[u]['e_' + s.key] = !solo || s.key === st; });
       S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: solo ? 'Ve solo su etapa' : 'Ve todas las etapas' }); save(); toast('Etapas actualizadas'); return render(true);
     }
-    if (a === 'perm-tpl') { const u = ui.permU, v = el.dataset.val; PERMS.filter(p => p.g !== 'e').forEach(p => { S.perms[u] = S.perms[u] || {}; /* las plantillas no tocan las etapas visibles */ S.perms[u][p.k] = v === 'all' ? true : v === 'ops' ? !PERM_OFF.has(p.k) : (p.g === 'v' && p.k !== 'v_config'); }); S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: 'Plantilla: ' + el.textContent.trim() }); save(); toast('Permisos aplicados'); return render(true); }
+    if (a === 'perm-tpl') { const u = ui.permU, v = el.dataset.val; PERMS.filter(p => p.g !== 'e').forEach(p => { S.perms[u] = S.perms[u] || {}; /* las plantillas no tocan las etapas visibles */ S.perms[u][p.k] = v === 'all' ? true : v === 'ops' ? !PERM_OFF.has(p.k) : (p.g === 'v' && !PERM_OFF.has(p.k)); }); S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: 'Plantilla: ' + el.textContent.trim() }); save(); toast('Permisos aplicados'); return render(true); }
     if (a === 'perm-back') { ui.previewReal = null; S.actor = actorOf(); toast('Volviste a tu usuario'); location.hash = '#/config'; return render(); }
     if (a === 'perm-try') { if (CL.enabled) ui.previewReal = S.actor; S.actor = ui.permU; if (!CL.enabled) save(); toast('Ahora ves el CRM como ' + S.actor); location.hash = '#/resumen'; return render(); }
     if (a === 'pin-set') return setPin();
