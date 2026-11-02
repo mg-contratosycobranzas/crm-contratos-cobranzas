@@ -7,6 +7,7 @@
   const lib = () => loading || (loading = new Promise((ok, ko) => {
     if (window.jspdf) return ok(window.jspdf);
     const s = document.createElement('script'); s.src = JSPDF; s.onload = () => ok(window.jspdf);
+    s.integrity = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk'; s.crossOrigin = 'anonymous';
     s.onerror = () => { loading = null; ko(new Error('no se pudo cargar el generador de PDF (revisa tu conexión a internet)')); };
     document.head.appendChild(s);
   }));

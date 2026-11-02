@@ -79,7 +79,9 @@
   }
 
   /* ================= nube: sincronización en tiempo real ================= */
-  const aclOf = (users) => ({ members: users.map(u => (u.email || '').toLowerCase()).filter(Boolean), admins: users.filter(u => u.admin).map(u => (u.email || '').toLowerCase()).filter(Boolean) });
+  // lista de correos que Firebase usa para dar acceso: miembros, administradores y jefatura (quien puede dar V°B°)
+  const aclOf = (users) => { const em = (L) => L.map(u => (u.email || '').toLowerCase()).filter(Boolean);
+    return { members: em(users), admins: em(users.filter(u => u.admin)), jefes: em(users.filter(u => u.admin || u.stage === JEFATURA)) }; };
   const metaOf = () => ({ params: S.params, users: S.users, perms: S.perms });
   function syncLocal() {
     if (!CL.enabled || cloudState !== 'ready') return;
@@ -112,6 +114,7 @@
     else if (!S.actor) { st = 'denied'; denyMsg = `Tu correo (${authEmail}) no figura en el equipo. Pide a la administradora que te agregue en Equipo.`; }
     else st = 'ready';
     const was = cloudState; cloudState = st;
+    if (st === 'ready' && was !== 'ready' && isAdmin()) CL.setAcl(aclOf(S.users)); // mantiene al día quién es jefatura para las reglas de Firebase
     if (st === 'ready' && was !== 'ready') { recompute(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
     render(was === 'ready');
   }
@@ -140,7 +143,7 @@
   const AUTH_ERR = { 'auth/invalid-credential': 'Correo o contraseña incorrectos', 'auth/wrong-password': 'Correo o contraseña incorrectos', 'auth/user-not-found': 'Ese correo no tiene cuenta', 'auth/invalid-email': 'Correo no válido', 'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.', 'auth/network-request-failed': 'Sin conexión a internet' };
   function gateHtml() {
     const logo = '<h1>CRM</h1>';
-    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p><form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label><button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
+    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p><form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label>${idleMsg ? `<p class="small cl-wait" style="margin:0">⏱️ ${esc(idleMsg)}</p>` : ''}<button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
     if (cloudState === 'seed') return `<div class="gcard">${logo}<p>Todavía no hay datos en la nube.</p><p class="muted small">Si eres la administradora, sube ahora los 139 expedientes iniciales. Quedarás como administradora con el correo <b>${esc(authEmail)}</b>.</p><button class="btn pri" data-act="seed">Subir datos iniciales</button> <button class="btn" data-act="logout">Salir</button></div>`;
     if (cloudState === 'denied') return `<div class="gcard">${logo}<p>🔒 ${esc(denyMsg)}</p><button class="btn" data-act="logout">Cerrar sesión</button></div>`;
     return `<div class="gcard">${logo}<p class="muted">Conectando…</p></div>`;
@@ -1166,6 +1169,7 @@
   const ACTAS_URL = '/GENERADOR-ACTAS/';
   const ACTA_PROY = ['direccion', 'urbanizacion', 'distrito', 'provincia', 'razon_social', 'ruc']; // datos del edificio: se recuerdan por proyecto
   const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+  const actaLocal = () => { try { return JSON.parse(localStorage.getItem('crm-mg-acta') || '{}'); } catch (e) { return {}; } };
   const partes = (f) => { const [y, m, d] = f.split('-'); return { d: String(+d), m: MESES_L[+m - 1], y }; };
   const actaBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="acta" data-op="${o.id}">📝 Generar acta de entrega</button>${o.acta ? ` <span class="small muted">Última: ${fechaHora(o.acta.ts)} · ${esc(o.acta.por)}</span>` : ''}</div>`;
   function openActa(o) {
@@ -1181,7 +1185,7 @@
     const mark = (id) => { const el = f(id); if (!el) return; el.style.outline = '2px solid #e0a21b'; el.style.outlineOffset = '1px'; el.addEventListener('input', () => { el.style.outline = ''; }, { once: true }); };
     const fill = (id, v) => { put(id, v || ''); if (!v) mark(id); };
     const m = o.minuta || {}, cl = o.clausula || {}, comps = (cl.compradores && cl.compradores.length ? cl.compradores : m.compradores) || [];
-    const proyEjemplo = (f('proyecto').value || '').toUpperCase(), guardado = (S.params.actaProy || {})[o.proyecto];
+    const proyEjemplo = (f('proyecto').value || '').toUpperCase(), guardado = { ...actaLocal()[o.proyecto], ...(S.params.actaProy || {})[o.proyecto] };
     // unidad
     const esEst = /^\s*EST/i.test(o.unidad || ''), num = ((o.unidad || '').toUpperCase().match(/[A-Z]?-?\d{2,4}/) || [''])[0];
     f(esEst ? 'tab_est' : 'tab_dpto').click();
@@ -1205,7 +1209,9 @@
     const h = partes(iso(today())); put('fa_dia', h.d); put('fa_mes', h.m[0].toUpperCase() + h.m.slice(1)); put('fa_anio', h.y); mark('fa_dia');
     // al generar: se recuerda la dirección del edificio para el proyecto y queda registrado en el CRM
     f('form').addEventListener('submit', () => {
-      S.params.actaProy = { ...(S.params.actaProy || {}), [o.proyecto]: Object.fromEntries(ACTA_PROY.map(k => [k, (f(k).value || '').trim()])) };
+      const datos = Object.fromEntries(ACTA_PROY.map(k => [k, (f(k).value || '').trim()]));
+      if (isAdmin()) S.params.actaProy = { ...(S.params.actaProy || {}), [o.proyecto]: datos }; // configuración compartida: solo la administración la escribe
+      else try { localStorage.setItem('crm-mg-acta', JSON.stringify({ ...actaLocal(), [o.proyecto]: datos })); } catch (e) { }
       const a = { ts: Date.now(), por: S.actor }; o.acta = a; (pendingOps[o.id] = pendingOps[o.id] || {}).acta = a;
       S.log.push({ ts: a.ts, usuario: S.actor, opId: o.id, etapa: 'pos', campo: 'acta', antes: '', despues: 'Acta de entrega generada' }); commit();
     });
@@ -1412,7 +1418,7 @@
     return `${pageHead('Configuración', 'Permisos, plazos, equipo y datos.')}
     ${isAdmin() ? permsPanel() : ''}
     <div class="grid two" style="margin-top:14px">
-      <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}</div></div>
+      <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}${pf('minInactivo', 'Cerrar sesión tras minutos sin uso', 'Seguridad: avisa 1 minuto antes. 0 = nunca')}</div></div>
       <div class="card"><div class="card-h"><h2>🏢 Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
         <div class="f-grid" style="grid-template-columns:1fr 1.6fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input list="dl-empresa" data-emp="${esc(p)}" value="${esc(empEnProy(p))}" placeholder="Ej.: MG PROYECTO 22 S.A.C." ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
@@ -1758,6 +1764,7 @@
     if (a === 'ing-obs') return ingresoObs(getOp(el.dataset.op));
     if (a === 'ing-reenviar') return ingresoReenviar(getOp(el.dataset.op));
     if (a === 'evtab') return openTab(getOp(el.dataset.op), el.dataset.tab);
+    if (a === 'seguir') return marcaActividad(true);
     if (a === 'acta') return openActa(getOp(el.dataset.op));
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
@@ -1863,7 +1870,32 @@
     mq.addEventListener && mq.addEventListener('change', (e) => { let s = null; try { s = localStorage.getItem('crm-mg-theme'); } catch (x) { } if (!s) applyTheme(e.matches ? 'dark' : 'light'); });
   })();
   load();
-  if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else startCloud(u.email); }); render(); }
+  /* ---- Cierre de sesión por inactividad (solo en modo nube) ----
+     La última actividad se guarda en el navegador: así trabajar en cualquier pestaña mantiene abiertas todas. */
+  const LAST_K = 'crm-mg-ultimo-uso', AVISO_MS = 60000;
+  let idleMsg = '', ultimoRegistro = 0;
+  const ultimaActividad = () => { try { return +localStorage.getItem(LAST_K) || Date.now(); } catch (e) { return Date.now(); } };
+  function marcaActividad(forzar) {
+    const now = Date.now(); if (!forzar && now - ultimoRegistro < 5000) return; // no escribir en cada movimiento del mouse
+    ultimoRegistro = now; try { localStorage.setItem(LAST_K, String(now)); } catch (e) { }
+    const av = $('#idle-aviso'); if (av) av.remove();
+  }
+  function revisarInactividad() {
+    const min = +S.params.minInactivo || 0;
+    if (!CL.enabled || cloudState !== 'ready' || !min) return;
+    const resta = min * 60000 - (Date.now() - ultimaActividad());
+    if (resta <= 0) { const av = $('#idle-aviso'); if (av) av.remove(); idleMsg = `Tu sesión se cerró tras ${min} minuto${min > 1 ? 's' : ''} sin uso. Vuelve a entrar.`; if ($('#dlg').open) $('#dlg').close(); return CL.signOut(); }
+    if (resta <= Math.min(AVISO_MS, min * 30000)) { // aviso el último minuto (o la mitad del tiempo, si es muy corto)
+      let av = $('#idle-aviso');
+      if (!av) { av = document.createElement('div'); av.id = 'idle-aviso'; av.setAttribute('role', 'alertdialog'); document.body.appendChild(av); }
+      av.innerHTML = `<b>⏱️ ¿Sigues ahí?</b><span>Por seguridad, tu sesión se cerrará en <b>${Math.ceil(resta / 1000)} s</b> por inactividad.</span><button class="btn pri" type="button" data-act="seguir">Seguir trabajando</button>`;
+    }
+  }
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => document.addEventListener(ev, () => marcaActividad(), { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarInactividad(); }); // al volver de otra ventana o de la suspensión
+  setInterval(revisarInactividad, 1000);
+
+  if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else { marcaActividad(true); idleMsg = ''; startCloud(u.email); } }); render(); }
   else { render(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
   window.__CRM = { get state() { return S; }, derived: () => D };
 })();

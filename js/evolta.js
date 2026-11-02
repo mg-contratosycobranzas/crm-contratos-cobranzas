@@ -6,7 +6,8 @@
   let loading = null;
   const lib = () => loading || (loading = new Promise((ok, ko) => {
     if (window.pdfjsLib) return ok(window.pdfjsLib);
-    const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js';
+    const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; // integrity: el navegador rechaza el archivo si alguien lo altera
+    s.integrity = 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e'; s.crossOrigin = 'anonymous';
     s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; ok(window.pdfjsLib); };
     s.onerror = () => { loading = null; ko(new Error('no se pudo cargar el lector de PDF (revisa tu conexión a internet)')); };
     document.head.appendChild(s);
@@ -115,6 +116,7 @@
   const tess = () => tessLoading || (tessLoading = new Promise((ok, ko) => {
     if (window.Tesseract) return ok(window.Tesseract);
     const s = document.createElement('script'); s.src = TESS; s.onload = () => ok(window.Tesseract);
+    s.integrity = 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F'; s.crossOrigin = 'anonymous';
     s.onerror = () => { tessLoading = null; ko(new Error('no se pudo cargar el lector de imágenes (revisa tu conexión a internet)')); };
     document.head.appendChild(s);
   }));

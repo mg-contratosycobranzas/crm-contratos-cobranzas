@@ -455,6 +455,7 @@ em.pdf{font-style:normal;font-size:10px;font-weight:700;color:var(--accent);back
 .proy tbody tr{cursor:pointer}.proy tbody tr:hover{background:var(--accent-soft)}.proy-hoy{background:var(--accent-soft)}
 .proy-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--gris-bg)}.ev-t .r{text-align:right}
 
+#idle-aviso{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:200;display:flex;gap:12px;align-items:center;flex-wrap:wrap;max-width:min(560px,94vw);padding:12px 16px;border-radius:12px;background:var(--surface);border:2px solid var(--amar);box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .acta-fr{width:100%;height:68vh;border:1px solid var(--line);border-radius:10px;background:#fff}
 
 /* ===== cierre de etapa (firma + V°B°) ===== */

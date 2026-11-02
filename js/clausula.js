@@ -6,7 +6,7 @@
   let zipLoading = null;
   const zipLib = () => zipLoading || (zipLoading = new Promise((ok, ko) => {
     if (window.JSZip) return ok(window.JSZip);
-    const s = document.createElement('script'); s.src = JSZIP;
+    const s = document.createElement('script'); s.src = JSZIP; s.integrity = 'sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG'; s.crossOrigin = 'anonymous';
     s.onload = () => ok(window.JSZip); s.onerror = () => { zipLoading = null; ko(new Error('no se pudo cargar el generador de Word (revisa tu conexión a internet)')); };
     document.head.appendChild(s);
   }));

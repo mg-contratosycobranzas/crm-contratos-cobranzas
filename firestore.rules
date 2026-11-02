@@ -1,15 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
-    // Cambia este correo por el de la administradora principal:
+    // Administradora principal (siempre tiene acceso, aunque la lista del equipo se dañe):
     function owner() { return request.auth != null && request.auth.token.email == 'contratosycobranzas.mg@gmail.com'; }
     function acl() { return get(/databases/$(db)/documents/meta/acl).data; }
-    function member() { return owner() || (request.auth != null && request.auth.token.email in acl().members); }
-    function admin() { return owner() || (request.auth != null && request.auth.token.email in acl().admins); }
+    function mail() { return request.auth.token.email.lower(); }
+    function member() { return owner() || (request.auth != null && mail() in acl().members); }
+    function admin() { return owner() || (request.auth != null && mail() in acl().admins); }
+    // Jefatura: quien da el V°B° de cierres y de ingresos de clientes nuevos
+    function jefe() { return admin() || (request.auth != null && mail() in acl().get('jefes', [])); }
+
+    // --- Lo que solo la jefatura puede decidir, aunque alguien escriba directo en la base ---
+    // Un cierre de etapa: el responsable solo puede firmarlo (estado "pendiente", sin V°B°)
+    function cierreOk(k) {
+      let n = request.resource.data.get('cierres', {}).get(k, null);
+      let o = resource.data.get('cierres', {}).get(k, null);
+      return n == o || (n != null && n.estado == 'pendiente' && !('vb' in n));
+    }
+    function cierresOk() { return cierreOk('cob') && cierreOk('con') && cierreOk('fin') && cierreOk('for') && cierreOk('pos'); }
+    // Ingreso de un cliente nuevo: la asistente solo puede dejarlo "pendiente" (enviar o reenviar), no aprobarlo
+    function aprobOk() {
+      let n = request.resource.data.get('aprob', null);
+      let o = resource.data.get('aprob', null);
+      return n == o || (n != null && n.estado == 'pendiente');
+    }
 
     match /meta/{d} { allow read: if member(); allow write: if admin(); }
-    match /ops/{d} { allow read, create, update: if member(); allow delete: if admin(); }
+    match /ops/{d} {
+      allow read: if member();
+      // quien no es jefatura solo crea clientes "pendientes de V°B°"
+      allow create: if jefe() || (member() && request.resource.data.get('aprob', {}).get('estado', '') == 'pendiente');
+      allow update: if jefe() || (member() && cierresOk() && aprobOk());
+      allow delete: if admin();
+    }
     match /seguimientos/{d} { allow read, create, update: if member(); allow delete: if admin(); }
-    match /log/{d} { allow read, create: if member(); allow update, delete: if false; }
+    // historial: se agrega, nunca se cambia ni se borra
+    match /log/{d} { allow read: if member(); allow create: if member() && request.resource.data.ts is number; allow update, delete: if false; }
   }
 }
