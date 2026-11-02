@@ -28,6 +28,7 @@
   };
   // buzón: la jefatura escucha todo; los demás solo sus propios envíos (lo exigen las reglas)
   C.listenBuzon = (email, cb, err) => (email ? db.collection('buzon').where('email', '==', email) : db.collection('buzon')).onSnapshot(s => cb(s.docChanges().map(ch => ({ type: ch.type, id: ch.doc.id, data: ch.doc.data() }))), err);
+  C.listenCol = (name, cb, err) => db.collection(name).onSnapshot(s => cb(s.docChanges().map(ch => ({ type: ch.type, id: ch.doc.id, data: ch.doc.data() }))), err);
   C.setDoc = (coll, id, data) => db.collection(coll).doc(id).set(clean(data));
   C.updateDoc = (coll, id, f) => { const o = {}; Object.keys(f).forEach(k => o[k] = f[k] === C.DEL ? C.DEL : clean({ v: f[k] }).v); return db.collection(coll).doc(id).set(o, { merge: true }); };
   C.deleteDoc = (coll, id) => db.collection(coll).doc(id).delete();

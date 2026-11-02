@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -62,11 +62,11 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' },
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' },
     // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
     ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos']);
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos', 'v_dev']);
   const verEtapa = (k, n) => can('e_' + k, n);
   // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
   // mensaje corto del día para el equipo (cambia cada día, igual para todos)
@@ -94,7 +94,7 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -144,12 +144,12 @@
     else if (!S.actor) { st = 'denied'; denyMsg = `Tu correo (${authEmail}) no figura en el equipo. Pide a la administradora que te agregue en Equipo.`; }
     else st = 'ready';
     const was = cloudState; cloudState = st;
-    if (st === 'ready' && was !== 'ready') startBuzon();
+    if (st === 'ready' && was !== 'ready') { startBuzon(); startDev(); }
     if (st === 'ready' && was !== 'ready' && isAdmin()) CL.setAcl(aclOf(S.users)); // mantiene al día quién es jefatura para las reglas de Firebase
     if (st === 'ready' && was !== 'ready') { recompute(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
     render(was === 'ready');
   }
-  function stopCloud() { stopBuzon(); if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
+  function stopCloud() { stopBuzon(); stopDev(); if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
   function startCloud(email) {
     stopCloud(); cloudState = 'loading'; authEmail = email; me = (email || '').toLowerCase();
     const upsert = (arr, ch, set) => { let dirty = false; ch.forEach(c => { if (c.type === 'removed') return; set.add(c.id); const i = arr.findIndex(x => x.id === c.id); if (i >= 0) arr[i] = c.data; else arr.push(c.data); if (!c.pending) dirty = true; }); return dirty; };
@@ -1701,6 +1701,173 @@
       <p class="small muted">Tip: el botón <b>☾ / ☀</b> cambia entre modo noche y día. Puedes volver a esta guía en <b>Ayuda</b>.</p>`, onOk: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } }, onCancel: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } } });
   }
 
+  /* ---- Devoluciones de venta (Seguimiento): datos del cliente (del CRM, del PDF de Evolta o a mano), cuenta de destino,
+     captura del correo de solicitud y formato PDF. Cada mes se descarga un respaldo en ZIP para guardarlo fuera de la nube. */
+  let DV = [], dvUnsub = null, dvErr = '';
+  const DV_K = 'crm-mg-dev', DV_RESP_K = 'crm-mg-dev-respaldo';
+  const DV_EST = { Pendiente: 'amar', Programada: '', Devuelta: 'verde', Anulada: 'gris' }, DV_ORD = { Pendiente: 0, Programada: 1, Devuelta: 2, Anulada: 3 };
+  const DV_MOTIVOS = ['Desistimiento de separación', 'Desistimiento de compra', 'Pago en exceso', 'Resolución de contrato', 'Otro'];
+  const DV_CUENTAS = ['de ahorros soles', 'de ahorros dólares', 'corriente soles', 'corriente dólares'];
+  const DV_G = [
+    ['Datos del cliente', [['proyecto', 'Proyecto / Edificio', 'list'], ['distrito', 'Distrito'], ['unidad', 'Departamento Nº'], ['cliente', 'Cliente (titular)', '', 2], ['dni', 'DNI'], ['conyuge', 'Cónyuge'], ['dniConyuge', 'DNI del cónyuge'], ['domicilio', 'Domicilio fiscal', '', 2], ['telefono', 'Teléfono / celular'], ['email', 'Correo electrónico'], ['centroLaboral', 'Centro laboral'], ['precioDpto', 'Precio del departamento (S/)', 'n'], ['precioTotal', 'Precio total (S/)', 'n']]],
+    ['Devolución', [['empresa', 'Empresa', 'list'], ['importe', 'Importe a devolver (S/)', 'n'], ['motivo', 'Motivo', DV_MOTIVOS], ['fSolicitud', 'Fecha de la solicitud', 'd'], ['solicitadoPor', 'Solicitado por'], ['fLiberacion', 'Unidad liberada en el sistema', 'd'], ['fProgramada', 'Fecha programada de devolución', 'd'], ['autorizadaPor', 'Autorizada por', 'list'], ['estado', 'Estado', Object.keys(DV_EST)], ['fDevolucion', 'Fecha en que se devolvió', 'd'], ['obs', 'Observaciones', 'ta', 2]]],
+    ['Cuenta de destino', [['banco', 'Banco', 'list'], ['tipoCuenta', 'Tipo de cuenta', DV_CUENTAS], ['cuenta', 'N° de cuenta'], ['cci', 'CCI (20 dígitos)'], ['titularCuenta', 'Titular de la cuenta', '', 2]]]
+  ];
+  const hay = (v) => v !== undefined && v !== null && String(v).trim() !== '';
+  const dvMes = (d) => String(d.fSolicitud || iso(new Date(d.ts || Date.now()))).slice(0, 7);
+  const mesLargo = (m) => { const [y, mm] = m.split('-').map(Number); return new Date(y, mm - 1, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }); };
+  function dvLocal(save) { try { if (save) localStorage.setItem(DV_K, JSON.stringify(DV)); else DV = JSON.parse(localStorage.getItem(DV_K) || '[]'); } catch (e) { if (save) toast('No hay espacio en este navegador para guardar las capturas'); } }
+  function stopDev() { if (dvUnsub) { dvUnsub(); dvUnsub = null; } DV = []; dvErr = ''; }
+  function startDev() {
+    stopDev(); if (!can('v_dev')) return; // sin permiso no se descargan datos bancarios a ese navegador
+    dvUnsub = CL.listenCol('devoluciones', (ch) => { ch.forEach(c => { const i = DV.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) DV.splice(i, 1); } else if (i >= 0) DV[i] = c.data; else DV.push(c.data); }); dvErr = ''; scheduleRender(); },
+      (e) => { dvErr = e && e.code === 'permission-denied' ? 'Las devoluciones aún no están activadas en Firebase (falta actualizar las reglas).' : 'No se pudieron cargar las devoluciones.'; scheduleRender(); });
+  }
+  async function dvGuardar(d) { if (CL.enabled) await CL.setDoc('devoluciones', d.id, d); else { const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); dvLocal(true); } }
+  const dvCodigo = () => { const y = new Date().getFullYear(), re = new RegExp('^DEV-' + y + '-(\\d+)$'); const n = Math.max(0, ...DV.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `DEV-${y}-${String(n + 1).padStart(4, '0')}`; };
+  function dvDraft(id) {
+    if (ui.dvId === id && ui.dv) return ui.dv;
+    const ex = DV.find(x => x.id === id);
+    ui.dvId = id; ui.dv = ex ? JSON.parse(JSON.stringify(ex)) : { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), estado: 'Pendiente', tipoCuenta: 'de ahorros soles', nuevo: true };
+    return ui.dv;
+  }
+  function dvDeOp(o) {
+    const d = ui.dv, set = (k, v) => { if (hay(v)) d[k] = v; };
+    if (o.id) d.opId = o.id;
+    set('cliente', o.cliente); set('dni', o.dni); set('proyecto', o.proyecto); set('unidad', String(o.unidad || '').replace(/^(dpto\.?|departamento)\s*/i, ''));
+    set('email', o.email); set('telefono', o.telefono); set('empresa', o.id ? empresaDe(o) : o.empresa); set('precioDpto', o.precio); set('precioTotal', o.precio);
+  }
+  async function dvPdfEvolta(file) {
+    toast('Leyendo el estado de cuenta…');
+    try { const { fields } = await EVOLTA.fromPdf(await file.arrayBuffer()); const o = S.ops.find(x => fields.dni && String(x.dni || '').trim() === fields.dni);
+      dvDeOp(o ? { ...o, ...fields } : fields); toast(o ? `Datos de ${o.cliente} cargados (cliente del CRM)` : 'Datos del cliente cargados del PDF'); } catch (e) { toast('No se pudo leer el PDF: ' + e.message); }
+    render(true);
+  }
+  async function dvImagen(file, k) { try { ui.dv[k] = await bzImagen(file, 450000); toast(k === 'solicitud' ? 'Captura del correo adjunta' : 'Constancia adjunta'); } catch (e) { toast(e.message); } render(true); }
+  async function dvLeerCaptura() {
+    const d = ui.dv; if (!d || !d.solicitud) return toast('Primero adjunta la captura del correo');
+    toast('Leyendo la captura… (la primera vez tarda un poco)');
+    try {
+      const r = DEVOLUCION.leerCorreo(await EVOLTA.ocr(await (await fetch(d.solicitud)).blob()));
+      if (!d.opId && r.dni) { const o = S.ops.find(x => String(x.dni || '').trim() === r.dni); if (o) dvDeOp(o); }
+      const puestos = Object.keys(r).filter(k => !hay(d[k])); puestos.forEach(k => d[k] = r[k]);
+      toast(puestos.length ? `Se llenaron ${puestos.length} datos de la captura. Revísalos antes de guardar.` : 'No se encontraron datos nuevos en la captura');
+    } catch (e) { toast('No se pudo leer la captura: ' + e.message); }
+    render(true);
+  }
+  async function dvGuardarForm() {
+    const d = ui.dv; if (!d) return;
+    const falta = [['cliente', 'el cliente'], ['dni', 'el DNI'], ['importe', 'el importe'], ['titularCuenta', 'el titular de la cuenta']].filter(([k]) => !hay(d[k])).map(x => x[1]);
+    if (!hay(d.cuenta) && !hay(d.cci)) falta.push('la cuenta o el CCI');
+    if (falta.length) return toast('Falta completar: ' + falta.join(', '));
+    if (hay(d.cci) && String(d.cci).replace(/\D/g, '').length !== 20 && !await ask('El CCI no tiene 20 dígitos. ¿Guardar igual?', 'Guardar igual')) return;
+    if (!d.solicitud && !await ask('No adjuntaste la captura del correo de solicitud, que es el sustento de la devolución. ¿Guardar sin ella?', 'Guardar sin captura')) return;
+    ['importe', 'precioDpto', 'precioTotal'].forEach(k => { if (hay(d[k])) d[k] = Number(String(d[k]).replace(/[^\d.]/g, '')) || 0; });
+    if (d.estado === 'Devuelta' && !d.fDevolucion) d.fDevolucion = iso(today());
+    if (!d.fSolicitud) d.fSolicitud = iso(today());
+    const nuevo = !!d.nuevo, out = JSON.parse(JSON.stringify(d)); delete out.nuevo;
+    if (!out.codigo) out.codigo = dvCodigo();
+    out.mod = { por: S.actor, ts: Date.now() }; if (nuevo) out.creado = { por: S.actor, ts: Date.now() }; out.ts = out.ts || Date.now();
+    try { await dvGuardar(out); } catch (e) { return toast('No se pudo guardar: ' + (e.code === 'permission-denied' ? 'las devoluciones aún no están activadas en Firebase' : e.message)); }
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: out.opId || '—', etapa: 'gen', campo: 'devolucion', antes: '', despues: `${out.codigo} · ${out.estado} · ${DEVOLUCION.soles(out.importe)}` }); save();
+    toast(`✓ ${out.codigo} guardada`); ui.dv = null; ui.dvId = null;
+    if (location.hash === '#/devolucion/' + out.id) render(true); else location.hash = '#/devolucion/' + out.id;
+  }
+  function dvExcel(list, bajar) {
+    const C = [['Código', 'codigo'], ['Fecha solicitud', 'fSolicitud', 'd'], ['Estado', 'estado'], ['Cliente', 'cliente'], ['DNI', 'dni'], ['Proyecto', 'proyecto'], ['Departamento', 'unidad'], ['Distrito', 'distrito'], ['Empresa', 'empresa'], ['Importe a devolver', 'importe', 'n'], ['Motivo', 'motivo'], ['Solicitado por', 'solicitadoPor'], ['Unidad liberada', 'fLiberacion', 'd'], ['Fecha programada', 'fProgramada', 'd'], ['Fecha de devolución', 'fDevolucion', 'd'], ['Autorizada por', 'autorizadaPor'],
+      ['Banco', 'banco'], ['Tipo de cuenta', 'tipoCuenta'], ['N° de cuenta', 'cuenta'], ['CCI', 'cci'], ['Titular de la cuenta', 'titularCuenta'], ['Teléfono', 'telefono'], ['Correo', 'email'], ['Cónyuge', 'conyuge'], ['DNI cónyuge', 'dniConyuge'], ['Domicilio fiscal', 'domicilio'], ['Centro laboral', 'centroLaboral'], ['Precio departamento', 'precioDpto', 'n'], ['Precio total', 'precioTotal', 'n'], ['Observaciones', 'obs'],
+      ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || '']];
+    const data = list.map(x => { const r = {}; C.forEach(([h, k, t]) => { const v = typeof k === 'function' ? k(x) : x[k]; r[h] = !hay(v) ? '' : t === 'n' ? Number(v) : t === 'd' ? xlDate(v) : String(v); }); return r; });
+    const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' });
+    if (data.length) { ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: /Cliente|Titular|Empresa|Domicilio|Observ/.test(k) ? 32 : Math.max(12, k.length + 2) })); ws['!autofilter'] = { ref: ws['!ref'] }; }
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Devoluciones');
+    if (bajar) { XLSX.writeFile(wb, `Devoluciones_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${list.length} devoluciones`); }
+    return wb;
+  }
+  function dvZipModal(mes) {
+    const meses = [...new Set(DV.map(dvMes))].sort().reverse(); if (!meses.length) return toast('Aún no hay devoluciones para respaldar');
+    const sel = mes && meses.includes(mes) ? mes : meses[0];
+    modal({ title: '🗂️ Respaldo mensual de devoluciones', ok: '⬇️ Descargar ZIP', body: `<p class="small" style="margin-top:0">Se descarga en tu computadora un ZIP con una carpeta por devolución (formato PDF, captura del correo de solicitud y constancia de transferencia) y un Excel del mes. Guárdalo en tu carpeta de respaldos: no ocupa espacio en Drive.</p>
+      <div class="form"><label>Mes<select id="dv-zm">${meses.map(m => `<option value="${m}" ${m === sel ? 'selected' : ''}>${mesLargo(m)} · ${DV.filter(x => dvMes(x) === m).length} devoluciones</option>`).join('')}</select></label></div>`,
+      onOk: (dlg) => { const m = dlg.querySelector('#dv-zm').value, lista = DV.filter(x => dvMes(x) === m).sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
+        toast('Preparando el respaldo…');
+        const buf = XLSX.write(dvExcel(lista), { type: 'array', bookType: 'xlsx' });
+        DEVOLUCION.zipMes(lista, m, buf, { por: fullName(S.actor) }).then(() => { try { if ((localStorage.getItem(DV_RESP_K) || '') < m) localStorage.setItem(DV_RESP_K, m); } catch (e) { } toast('✓ Respaldo descargado'); render(true); })
+          .catch(e => toast('No se pudo crear el respaldo: ' + e.message)); } });
+  }
+  const dvFilter = () => ui.dvF || (ui.dvF = { q: '', est: '', mes: '', emp: '' });
+  function dvRows() {
+    const F = dvFilter(), n = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''), q = n(F.q);
+    return DV.filter(x => (!F.est || x.estado === F.est) && (!F.mes || dvMes(x) === F.mes) && (!F.emp || x.empresa === F.emp) && (!q || n([x.codigo, x.cliente, x.dni, x.proyecto, x.unidad, x.titularCuenta].join(' ')).includes(q)))
+      .sort((a, b) => ((DV_ORD[a.estado] ?? 9) - (DV_ORD[b.estado] ?? 9)) || String(b.fSolicitud || '').localeCompare(String(a.fSolicitud || '')));
+  }
+  function vDevoluciones() {
+    const F = dvFilter(), id = 'rg-dv', mesAct = iso(today()).slice(0, 7), t = today(), prev = iso(new Date(t.getFullYear(), t.getMonth() - 1, 1)).slice(0, 7);
+    const build = () => {
+      const L = dvRows(), sum = (A) => DEVOLUCION.soles(A.reduce((s, x) => s + (Number(x.importe) || 0), 0)) || 'S/ 0.00';
+      const pend = DV.filter(x => x.estado === 'Pendiente'), prog = DV.filter(x => x.estado === 'Programada'), dev = DV.filter(x => x.estado === 'Devuelta' && String(x.fDevolucion || '').slice(0, 7) === mesAct), sin = DV.filter(x => !x.solicitud && x.estado !== 'Anulada');
+      const kpi = (n, l, c) => `<div class="kpi card ${c || ''}"><div><div class="n">${n}</div><div class="l">${l}</div></div></div>`;
+      const cols = [{ h: 'Código', s: x => x.codigo, f: x => `<a href="#/devolucion/${x.id}"><b>${esc(x.codigo || '—')}</b></a>` }, { h: 'Solicitud', s: x => x.fSolicitud, f: x => fdate(x.fSolicitud) || '—' },
+        { h: 'Cliente', s: x => x.cliente, f: x => `<a href="#/devolucion/${x.id}">${esc(x.cliente || '')}</a><div class="small muted">DNI ${esc(x.dni || '—')}</div>` }, { h: 'Proyecto · Dpto', s: x => x.proyecto, f: x => `${esc(x.proyecto || '')}${x.unidad ? ' · ' + esc(x.unidad) : ''}` },
+        { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => DEVOLUCION.soles(x.importe) || '—' }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
+        { h: 'Estado', s: x => DV_ORD[x.estado], f: x => `<span class="badge ${DV_EST[x.estado] || ''}">${esc(x.estado || '')}</span>` }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">📎 Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
+        { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="dv-pdf" data-id="${x.id}">📄 Formato</button>` }];
+      return `<div class="kpis ops-kpis">${kpi(pend.length, `Pendientes · ${sum(pend)}`, pend.length ? 'warn' : '')}${kpi(prog.length, `Programadas · ${sum(prog)}`)}${kpi(dev.length, `Devueltas este mes · ${sum(dev)}`)}${kpi(sin.length, 'Sin captura del correo', sin.length ? 'bad' : '')}</div>
+        <div class="ops-tw full">${tbl(id + '-t', cols, L, DV.length ? 'No hay devoluciones con estos filtros.' : 'Aún no hay devoluciones. Toca “Nueva devolución” para registrar la primera.')}</div>`;
+    };
+    let hecho = ''; try { hecho = localStorage.getItem(DV_RESP_K) || ''; } catch (e) { }
+    const aviso = isJefe() && t.getDate() <= 15 && hecho < prev && DV.some(x => dvMes(x) === prev)
+      ? `<div class="dv-aviso">📦 <span>Inicio de mes: descarga el <b>respaldo de devoluciones de ${mesLargo(prev)}</b> y guárdalo en tu computadora.</span><button class="btn sm pri" data-act="dv-zip" data-mes="${prev}">Descargar respaldo</button></div>` : '';
+    const sel = (k, label, opts) => `<select data-dvf="${k}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    return `${pageHead('Devoluciones', 'Devoluciones de venta: datos del cliente, cuenta de destino, sustento y formato.', `<a class="btn pri" href="#/devolucion/nueva">➕ Nueva devolución</a> <button class="btn" data-act="dv-excel">⬇️ Excel</button> <button class="btn" data-act="dv-zip">🗂️ Respaldo del mes</button>`)}
+      ${dvErr ? `<div class="ev-falta" style="margin-bottom:12px">${esc(dvErr)}</div>` : ''}${aviso}
+      <div class="filters"><input type="search" placeholder="Buscar código, cliente, DNI, dpto…" value="${esc(F.q)}" data-dvf="q" autocomplete="off">
+        ${sel('est', 'Todos los estados', Object.keys(DV_EST).map(e => [e, e]))}${sel('mes', 'Todos los meses', [...new Set(DV.map(dvMes))].sort().reverse().map(m => [m, mesLargo(m)]))}${sel('emp', 'Todas las empresas', [...new Set(DV.map(x => x.empresa).filter(Boolean))].sort().map(e => [e, e]))}</div>
+      ${region(id, build)}`;
+  }
+  function vDevolucion(id) {
+    if (id !== 'nueva' && !DV.find(x => x.id === id) && !(ui.dvId === id && ui.dv)) return `${pageHead('Devolución', '', '<a class="btn" href="#/devoluciones">‹ Volver</a>')}<div class="empty">${DV.length || !CL.enabled ? 'No se encontró esta devolución.' : 'Cargando…'}</div>`;
+    const d = dvDraft(id), uq = (A) => [...new Set(A.filter(Boolean))].sort();
+    const listas = { proyecto: uq(S.ops.map(o => o.proyecto)), empresa: uq([...S.ops.map(empresaDe), ...DV.map(x => x.empresa)]), autorizadaPor: uq(DV.map(x => x.autorizadaPor)),
+      banco: uq(['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'BanBif', 'Pichincha', 'Banco de la Nación', ...DV.map(x => x.banco)]) };
+    const campo = ([k, l, t, w]) => { const v = d[k] ?? '', base = `data-dv="${k}" id="dv-${k}" autocomplete="off"`;
+      const inp = Array.isArray(t) ? `<select ${base}><option value=""></option>${t.map(o => `<option ${v === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+        : t === 'ta' ? `<textarea ${base} rows="2">${esc(v)}</textarea>` : t === 'd' ? `<input type="date" ${base} value="${esc(v)}">`
+        : `<input ${base} value="${esc(v)}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'list' ? `list="dvl-${k}"` : ''}>`;
+      return `<label class="dv-f${w === 2 ? ' w2' : ''}" for="dv-${k}"><span>${l}</span>${inp}</label>`; };
+    const capt = (k, titulo, ayuda) => `<div class="dv-cap"><b>${titulo}</b><span class="small muted">${ayuda}</span>${d[k]
+      ? `<button type="button" class="dv-th" data-act="dv-ver" data-k="${k}"><img src="${d[k]}" alt="${titulo}"></button><div class="dv-cb">${k === 'solicitud' ? '<button class="btn sm pri" data-act="dv-ocr">🔍 Leer datos de la captura</button>' : ''}<button class="btn sm" data-act="dv-quitar" data-k="${k}">Quitar</button></div>`
+      : `<label class="dv-drop">📎 Pega la captura con <b>Ctrl + V</b> o <u>elige un archivo</u><input type="file" accept="image/*" data-dvimg="${k}" style="display:none"></label>`}</div>`;
+    const op = d.opId && getOp(d.opId);
+    return `${pageHead(d.codigo || 'Nueva devolución', d.codigo ? `${esc(d.cliente || '')} · registrada por ${esc(((d.creado || {}).por) || '—')}` : 'Registra la solicitud, adjunta el correo y genera el formato.',
+        `<a class="btn" href="#/devoluciones">‹ Volver</a> <button class="btn" data-act="dv-pdf">📄 Formato PDF</button>${!d.nuevo && isAdmin() ? ' <button class="btn" data-act="dv-del">Eliminar</button>' : ''} <button class="btn pri" data-act="dv-guardar">Guardar</button>`)}
+      <div class="dv-form">
+      <div class="card"><div class="card-b"><h3 class="dv-h">1. Carga los datos del cliente</h3>
+        <div class="dv-cargas"><label class="dv-f dv-bus" for="dv-buscar"><span>Buscar en el CRM (nombre, DNI o unidad)</span><input id="dv-buscar" list="dvl-ops" placeholder="Escribe y elige de la lista" autocomplete="off"></label>
+          <button class="btn" data-act="dv-evolta">📄 Cargar PDF de Evolta</button><input type="file" id="dv-evfile" accept="application/pdf" style="display:none"><span class="small muted">o llénalos a mano más abajo.</span></div>
+        ${op ? `<p class="small" style="margin:8px 0 0">Vinculada al cliente <a href="#/cliente/${op.id}"><b>${esc(op.cliente)}</b></a> (${op.id}).</p>` : ''}</div></div>
+      <div class="card"><div class="card-b"><h3 class="dv-h">2. Sustento</h3><div class="dv-caps">${capt('solicitud', 'Correo de solicitud', 'Captura del correo que pide la devolución. Con “Leer datos” se llenan la cuenta, el CCI, el titular y el importe.')}${capt('voucher', 'Constancia de transferencia', 'Opcional: cuando ya se devolvió el dinero.')}</div></div></div>
+      ${DV_G.map(([tt, fs], i) => `<div class="card"><div class="card-b"><h3 class="dv-h">${i + 3}. ${tt}</h3><div class="dv-grid">${fs.map(campo).join('')}</div></div></div>`).join('')}
+      <div class="dv-acc"><button class="btn" data-act="dv-pdf">📄 Formato PDF</button><button class="btn pri" data-act="dv-guardar">Guardar devolución</button></div></div>
+      <datalist id="dvl-ops">${S.ops.map(o => `<option value="${esc(o.id)} · ${esc(o.cliente || '')} · DNI ${esc(o.dni || '—')} · ${esc(o.proyecto || '')} ${esc(o.unidad || '')}"></option>`).join('')}</datalist>
+      ${Object.entries(listas).map(([k, L]) => `<datalist id="dvl-${k}">${L.map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`).join('')}`;
+  }
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.dataset && t.dataset.dv && ui.dv) ui.dv[t.dataset.dv] = t.value;
+    if (t.dataset && t.dataset.dvf) { dvFilter()[t.dataset.dvf] = t.value; refresh('rg-dv'); }
+  });
+  document.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.id === 'dv-buscar' && ui.dv) { const o = getOp(String(t.value).split(' · ')[0].trim()); if (o) { dvDeOp(o); toast(`Datos de ${o.cliente} cargados`); render(true); } }
+    if (t.id === 'dv-evfile' && t.files[0]) dvPdfEvolta(t.files[0]);
+    if (t.dataset && t.dataset.dvimg && t.files[0]) dvImagen(t.files[0], t.dataset.dvimg);
+  });
+  document.addEventListener('paste', (e) => { // pegar la captura del correo (o la constancia) en cualquier parte del formulario
+    if (route().view !== 'devolucion' || !ui.dv) return; const img = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => i.type.startsWith('image/'));
+    if (img) { e.preventDefault(); dvImagen(img.getAsFile(), !ui.dv.solicitud ? 'solicitud' : !ui.dv.voucher ? 'voucher' : 'solicitud'); }
+  });
+
   /* ---- Buzón: todos envían errores o sugerencias (con captura opcional); la jefatura los evalúa y responde.
      En la nube cada persona solo lee los suyos (reglas de Firebase); en modo local se guarda en este navegador. */
   let BZ = [], bzUnsub = null, bzErr = '', bzForm = { tipo: 'error', texto: '', img: '' };
@@ -1717,11 +1884,11 @@
       primera = false; bzErr = ''; scheduleRender();
     }, (e) => { bzErr = e && e.code === 'permission-denied' ? 'El buzón aún no está activado en Firebase (falta actualizar las reglas).' : 'No se pudo cargar el buzón.'; scheduleRender(); });
   }
-  function bzImagen(file) { // reduce la captura (máx. 1400 px, JPEG) para que entre en la base de datos
+  function bzImagen(file, max = 700000) { // reduce la captura (máx. 1400 px, JPEG) para que entre en la base de datos
     return new Promise((ok, no) => { const r = new FileReader(); r.onerror = () => no(r.error); r.onload = () => { const im = new Image(); im.onerror = () => no(new Error('El archivo no es una imagen')); im.onload = () => {
       const k = Math.min(1, 1400 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
       const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
-      let q = 0.8, d = c.toDataURL('image/jpeg', q); while (d.length > 700000 && q > 0.35) { q -= 0.1; d = c.toDataURL('image/jpeg', q); } ok(d); }; im.src = r.result; }; r.readAsDataURL(file); });
+      let q = 0.8, d = c.toDataURL('image/jpeg', q); while (d.length > max && q > 0.35) { q -= 0.1; d = c.toDataURL('image/jpeg', q); } ok(d); }; im.src = r.result; }; r.readAsDataURL(file); });
   }
   async function bzAdjuntar(file) { try { bzForm.img = await bzImagen(file); toast('Captura adjunta'); } catch (e) { toast(e.message); } render(true); }
   async function bzEnviar() {
@@ -1783,7 +1950,7 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -1811,7 +1978,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -2005,6 +2172,15 @@
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
     if (a === 'help') return location.hash = '#/ayuda';
+    if (a === 'dv-guardar') return dvGuardarForm();
+    if (a === 'dv-pdf') { const d = el.dataset.id ? DV.find(x => x.id === el.dataset.id) : ui.dv; if (d) DEVOLUCION.descargar({ ...d, codigo: d.codigo || 'BORRADOR' }, { por: fullName(S.actor) }).catch(e => toast(e.message)); return; }
+    if (a === 'dv-evolta') { const f = $('#dv-evfile'); if (f) f.click(); return; }
+    if (a === 'dv-ocr') return dvLeerCaptura();
+    if (a === 'dv-quitar') { if (ui.dv) delete ui.dv[el.dataset.k]; return render(true); }
+    if (a === 'dv-ver') { const src = (ui.dv || {})[el.dataset.k]; if (src) modal({ title: 'Captura', body: `<img src="${src}" alt="Captura" style="width:100%;border-radius:8px">`, ok: 'Cerrar', cancel: '', wide: true }); return; }
+    if (a === 'dv-zip') return dvZipModal(el.dataset.mes);
+    if (a === 'dv-excel') { dvExcel(dvRows(), true); return; }
+    if (a === 'dv-del') { const d = ui.dv; if (d && await ask(`¿Eliminar la devolución ${d.codigo || ''} de ${d.cliente || ''}? No se puede deshacer.`, 'Eliminar')) { DV = DV.filter(x => x.id !== d.id); if (CL.enabled) CL.deleteDoc('devoluciones', d.id).catch(e => toast('No se pudo eliminar: ' + e.message)); else dvLocal(true); S.log.push({ ts: Date.now(), usuario: S.actor, opId: d.opId || '—', etapa: 'gen', campo: 'devolucion', antes: d.codigo || '', despues: 'Eliminada' }); save(); ui.dv = null; ui.dvId = null; toast('Devolución eliminada'); location.hash = '#/devoluciones'; } return; }
     if (a === 'bz-tipo') { bzForm.tipo = el.dataset.val; return render(true); }
     if (a === 'bz-enviar') return bzEnviar();
     if (a === 'bz-quitar') { bzForm.img = ''; return render(true); }
@@ -2122,7 +2298,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarInactividad(); }); // al volver de otra ventana o de la suspensión
   setInterval(revisarInactividad, 1000);
 
-  if (!CL.enabled) bzLocal();
+  if (!CL.enabled) { bzLocal(); dvLocal(); }
   if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else { marcaActividad(true); idleMsg = ''; startCloud(u.email); } }); render(); }
   else { render(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
   window.__CRM = { get state() { return S; }, derived: () => D };
