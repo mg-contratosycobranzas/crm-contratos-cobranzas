@@ -34,6 +34,13 @@ service cloud.firestore {
       allow delete: if admin();
     }
     match /seguimientos/{d} { allow read, create, update: if member(); allow delete: if admin(); }
+    // buzón: cada persona envía a su nombre y solo ve lo suyo; la jefatura lee todo, cambia el estado y responde
+    match /buzon/{d} {
+      allow create: if member() && request.resource.data.email == mail() && request.resource.data.estado == 'nuevo' && !('resp' in request.resource.data);
+      allow read: if jefe() || (member() && resource.data.email == mail());
+      allow update: if jefe();
+      allow delete: if admin();
+    }
     // historial: se agrega, nunca se cambia ni se borra
     match /log/{d} { allow read: if member(); allow create: if member() && request.resource.data.ts is number; allow update, delete: if false; }
   }

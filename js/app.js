@@ -144,11 +144,12 @@
     else if (!S.actor) { st = 'denied'; denyMsg = `Tu correo (${authEmail}) no figura en el equipo. Pide a la administradora que te agregue en Equipo.`; }
     else st = 'ready';
     const was = cloudState; cloudState = st;
+    if (st === 'ready' && was !== 'ready') startBuzon();
     if (st === 'ready' && was !== 'ready' && isAdmin()) CL.setAcl(aclOf(S.users)); // mantiene al día quién es jefatura para las reglas de Firebase
     if (st === 'ready' && was !== 'ready') { recompute(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
     render(was === 'ready');
   }
-  function stopCloud() { if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
+  function stopCloud() { stopBuzon(); if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
   function startCloud(email) {
     stopCloud(); cloudState = 'loading'; authEmail = email; me = (email || '').toLowerCase();
     const upsert = (arr, ch, set) => { let dirty = false; ch.forEach(c => { if (c.type === 'removed') return; set.add(c.id); const i = arr.findIndex(x => x.id === c.id); if (i >= 0) arr[i] = c.data; else arr.push(c.data); if (!c.pending) dirty = true; }); return dirty; };
@@ -518,7 +519,7 @@
     const t = (href, ic, l, n, cls) => `<a class="tile ${cls || ''}" href="${href}"><i>${ic}</i><span>${l}</span>${n ? `<em>${n}</em>` : ''}</a>`;
     const bt = (act, ic, l) => `<button class="tile" data-act="${act}"><i>${ic}</i><span>${l}</span></button>`;
     return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/clientes', '🗂️', 'Clientes'), primeraEtapa() && t('#/etapa/' + primeraEtapa(), '🧭', 'Etapas'), can('v_agenda') && t('#/agenda', '📅', 'Agenda', nVenc || '', 'hot'),
-      can('v_equipo') && t('#/usuarios', '👥', 'Equipo'), can('v_actividad') && t('#/actividad', '📈', 'Actividad'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente'), can('a_export') && bt('export-xlsx', '⬇️', 'Excel'), t('#/ayuda', '💡', 'Ayuda')].filter(Boolean).join('');
+      can('v_equipo') && t('#/usuarios', '👥', 'Equipo'), can('v_actividad') && t('#/actividad', '📈', 'Actividad'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente'), can('a_export') && bt('export-xlsx', '⬇️', 'Excel'), t('#/buzon', '📬', 'Buzón', isJefe() ? bzNuevos() || '' : '', 'hot'), t('#/ayuda', '💡', 'Ayuda')].filter(Boolean).join('');
   }
   function insights(all, abiertos, venc, Pm) {
     const out = [], sinA = abiertos.filter(r => r.d.responsable === 'Sin asignar').length;
@@ -1700,6 +1701,79 @@
       <p class="small muted">Tip: el botón <b>☾ / ☀</b> cambia entre modo noche y día. Puedes volver a esta guía en <b>Ayuda</b>.</p>`, onOk: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } }, onCancel: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } } });
   }
 
+  /* ---- Buzón: todos envían errores o sugerencias (con captura opcional); la jefatura los evalúa y responde.
+     En la nube cada persona solo lee los suyos (reglas de Firebase); en modo local se guarda en este navegador. */
+  let BZ = [], bzUnsub = null, bzErr = '', bzForm = { tipo: 'error', texto: '', img: '' };
+  const BZ_K = 'crm-mg-buzon';
+  const BZ_EST = { nuevo: ['Nuevo', 'rojo'], evaluando: ['En evaluación', 'amar'], resuelto: ['Resuelto', 'verde'], descartado: ['No aplica', 'gris'] };
+  const bzNuevos = () => BZ.filter(x => x.estado === 'nuevo').length;
+  function bzLocal(save) { try { if (save) localStorage.setItem(BZ_K, JSON.stringify(BZ)); else BZ = JSON.parse(localStorage.getItem(BZ_K) || '[]'); } catch (e) { if (save) toast('No hay espacio en este navegador para guardar la captura'); } }
+  function stopBuzon() { if (bzUnsub) { bzUnsub(); bzUnsub = null; } BZ = []; bzErr = ''; }
+  function startBuzon() {
+    stopBuzon(); let primera = true;
+    bzUnsub = CL.listenBuzon(isJefe() ? '' : me, (ch) => {
+      ch.forEach(c => { const i = BZ.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) BZ.splice(i, 1); return; }
+        if (i >= 0) BZ[i] = c.data; else { BZ.push(c.data); if (!primera && isJefe() && c.data.email !== me) toast('📬 Nuevo en el buzón: ' + (c.data.tipo === 'error' ? 'error reportado' : 'sugerencia') + ' de ' + c.data.autor); } });
+      primera = false; bzErr = ''; scheduleRender();
+    }, (e) => { bzErr = e && e.code === 'permission-denied' ? 'El buzón aún no está activado en Firebase (falta actualizar las reglas).' : 'No se pudo cargar el buzón.'; scheduleRender(); });
+  }
+  function bzImagen(file) { // reduce la captura (máx. 1400 px, JPEG) para que entre en la base de datos
+    return new Promise((ok, no) => { const r = new FileReader(); r.onerror = () => no(r.error); r.onload = () => { const im = new Image(); im.onerror = () => no(new Error('El archivo no es una imagen')); im.onload = () => {
+      const k = Math.min(1, 1400 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height);
+      let q = 0.8, d = c.toDataURL('image/jpeg', q); while (d.length > 700000 && q > 0.35) { q -= 0.1; d = c.toDataURL('image/jpeg', q); } ok(d); }; im.src = r.result; }; r.readAsDataURL(file); });
+  }
+  async function bzAdjuntar(file) { try { bzForm.img = await bzImagen(file); toast('Captura adjunta'); } catch (e) { toast(e.message); } render(true); }
+  async function bzEnviar() {
+    const t = bzForm.texto.trim(); if (t.length < 5) return toast('Cuéntanos un poco más, en unas palabras');
+    const it = { id: 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: bzForm.tipo, texto: t.slice(0, 2000), img: bzForm.img || '', autor: S.actor, email: me || '', ts: Date.now(), pantalla: (ui.lastView || '').replace(/^#\//, ''), estado: 'nuevo' };
+    if (CL.enabled) { try { await CL.setDoc('buzon', it.id, it); } catch (e) { return toast('No se pudo enviar: ' + (e.code === 'permission-denied' ? 'el buzón aún no está activado en Firebase' : e.message)); } }
+    else { BZ.push(it); bzLocal(true); }
+    bzForm = { tipo: bzForm.tipo, texto: '', img: '' }; toast('✓ Enviado a la jefatura. ¡Gracias!'); render(true);
+  }
+  function bzActualizar(id, f) {
+    const it = BZ.find(x => x.id === id); if (!it) return; const cambio = { ...f, tsResp: Date.now(), por: S.actor }; Object.assign(it, cambio);
+    if (CL.enabled) CL.updateDoc('buzon', id, cambio).catch(e => toast('No se pudo guardar: ' + e.message)); else bzLocal(true);
+  }
+  function vBuzon() {
+    const jefe = isJefe(), fh = (ts) => new Date(ts).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+    const mios = BZ.filter(x => jefe || (CL.enabled ? x.email === me : x.autor === S.actor)).sort((a, b) => b.ts - a.ts);
+    const f = ui.bzF || 'abiertos', lista = jefe ? mios.filter(x => f === 'todos' || (f === 'abiertos' ? ['nuevo', 'evaluando'].includes(x.estado) : x.estado === f)) : mios;
+    const chip = (e) => `<span class="badge ${(BZ_EST[e] || BZ_EST.nuevo)[1]}">${(BZ_EST[e] || BZ_EST.nuevo)[0]}</span>`;
+    const tipoBtn = (k, ic, l, d) => `<button type="button" class="bz-tipo ${bzForm.tipo === k ? 'on' : ''}" data-act="bz-tipo" data-val="${k}"><span class="bz-ic">${ic}</span><b>${l}</b><small>${d}</small></button>`;
+    const card = (x) => `<div class="bz-it ${x.estado === 'nuevo' && jefe ? 'nuevo' : ''}">
+      <div class="bz-h"><span class="bz-ic">${x.tipo === 'error' ? '🐞' : '💡'}</span><b>${x.tipo === 'error' ? 'Error' : 'Sugerencia'}</b>${chip(x.estado)}<span class="small muted">${esc(x.autor || '')} · ${fh(x.ts)}${x.pantalla ? ' · pantalla: ' + esc(x.pantalla) : ''}</span></div>
+      <p class="bz-t">${esc(x.texto)}</p>
+      ${x.img ? `<button type="button" class="bz-th" data-act="bz-ver" data-id="${x.id}"><img src="${x.img}" alt="Captura enviada por ${esc(x.autor || '')}"><span>🔍 Ver captura</span></button>` : ''}
+      ${jefe ? `<div class="bz-j"><label class="small muted">Estado <select data-bzest="${x.id}">${Object.entries(BZ_EST).map(([k, [l]]) => `<option value="${k}" ${x.estado === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <textarea id="bzr-${x.id}" rows="2" maxlength="1000" placeholder="Respuesta para ${esc((x.autor || '').split(' ')[0])} (opcional)">${esc(x.resp || '')}</textarea>
+        <div class="bz-jb"><button class="btn sm pri" data-act="bz-resp" data-id="${x.id}">Guardar respuesta</button>${isAdmin() ? `<button class="btn sm" data-act="bz-del" data-id="${x.id}">Eliminar</button>` : ''}</div></div>`
+        : x.resp ? `<div class="bz-r"><b>Respuesta de la jefatura:</b> ${esc(x.resp)}</div>` : ''}
+    </div>`;
+    const filtros = [['abiertos', 'Por atender'], ['nuevo', 'Nuevos'], ['evaluando', 'En evaluación'], ['resuelto', 'Resueltos'], ['descartado', 'No aplica'], ['todos', 'Todos']];
+    return `${pageHead('Buzón', jefe ? 'Errores y sugerencias del equipo. Evalúa, responde y marca su estado.' : 'Reporta un error o envía una idea. Le llega a la jefatura con tu nombre.')}
+    ${bzErr ? `<div class="ev-falta" style="margin-bottom:12px">${esc(bzErr)}</div>` : ''}
+    <div class="card"><div class="card-b bz-form">
+      <div class="bz-tipos">${tipoBtn('error', '🐞', 'Reportar un error', 'Algo no funciona o sale un mensaje extraño')}${tipoBtn('sugerencia', '💡', 'Enviar una sugerencia', 'Una idea para mejorar el CRM')}</div>
+      <label class="bz-l" for="bz-texto">${bzForm.tipo === 'error' ? '¿Qué pasó? Cuéntanos qué estabas haciendo y qué mensaje salió.' : '¿Qué te gustaría mejorar o agregar?'}</label>
+      <textarea id="bz-texto" rows="4" maxlength="2000" autocomplete="off" placeholder="${bzForm.tipo === 'error' ? 'Ej.: al guardar la fecha de firma en Contratos sale un error en rojo…' : 'Ej.: sería útil ver los vencimientos de esta semana en Mi día…'}">${esc(bzForm.texto)}</textarea>
+      <div class="bz-cap">${bzForm.img ? `<img src="${bzForm.img}" alt="Captura adjunta"><button type="button" class="btn sm" data-act="bz-quitar">Quitar captura</button>` : `📎 <b>Adjunta una captura</b> (opcional): pégala con <b>Ctrl + V</b> o <label class="bz-file">elige un archivo<input type="file" id="bz-file" accept="image/*" style="display:none"></label>`}</div>
+      <div class="bz-acc"><span class="small muted">Se envía con tu nombre, la fecha y la pantalla donde estabas.</span><button class="btn pri" data-act="bz-enviar">Enviar</button></div>
+    </div></div>
+    <h2 class="sec">${jefe ? 'Bandeja de la jefatura' : 'Mis envíos'}</h2>
+    ${jefe ? `<div class="bz-fil">${filtros.map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-act="bz-f" data-val="${k}">${l}</button>`).join('')}</div>` : ''}
+    <div class="bz-list">${lista.length ? lista.map(card).join('') : `<div class="empty">${jefe ? 'No hay mensajes en esta lista.' : 'Aún no has enviado nada. Cuando lo hagas, aquí verás su estado y la respuesta.'}</div>`}</div>`;
+  }
+  document.addEventListener('input', (e) => { if (e.target.id === 'bz-texto') bzForm.texto = e.target.value; });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'bz-file' && e.target.files[0]) bzAdjuntar(e.target.files[0]);
+    if (e.target.dataset && e.target.dataset.bzest) { bzActualizar(e.target.dataset.bzest, { estado: e.target.value }); toast('Estado actualizado'); render(true); }
+  });
+  document.addEventListener('paste', (e) => { // pegar una captura en cualquier parte del buzón
+    if (route().view !== 'buzon') return; const img = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => i.type.startsWith('image/'));
+    if (img) { e.preventDefault(); bzAdjuntar(img.getAsFile()); }
+  });
+
   /* ================= router ================= */
   function route() { const [, view, arg] = location.hash.slice(1).split('/'); return { view: view || 'resumen', arg: arg ? decodeURIComponent(arg) : '' }; }
   function navHtml(r) {
@@ -1713,7 +1787,7 @@
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
-      <div class="nav-h">Más</div>${item('#/ayuda', I.help + 'Ayuda', '', r.view === 'ayuda')}${can('v_config') ? item('#/config', I.cfg + 'Configurar', '', r.view === 'config') : ''}`;
+      <div class="nav-h">Más</div>${item('#/buzon', '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Buzón', isJefe() && bzNuevos() ? `<span class="cnt hot">${bzNuevos()}</span>` : '', r.view === 'buzon')}${item('#/ayuda', I.help + 'Ayuda', '', r.view === 'ayuda')}${can('v_config') ? item('#/config', I.cfg + 'Configurar', '', r.view === 'config') : ''}`;
   }
   function tabbarHtml(r) {
     const t = (href, ic, l, on, act) => `<a href="${href}" class="${on ? 'on' : ''}" ${act ? `data-act="${act}"` : ''}>${ic}<span>${l}</span></a>`;
@@ -1732,11 +1806,12 @@
   function render(keepScroll) {
     if (!gateCheck()) return;
     const r = route(); let html;
+    if (r.view !== 'buzon') ui.lastView = location.hash; // para saber en qué pantalla estaba quien reporta
     if (!S.ops.length && r.view !== 'config') html = `${pageHead('Bienvenida', 'Todavía no hay datos cargados.')}<div class="card"><div class="card-b"><p>Importa tu Excel <b>SEGUIMIENTOS.xlsx</b> (hoja BASE_MAESTRA) o un respaldo desde <a href="#/config">Configuración</a>.</p></div></div>`;
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -1930,6 +2005,13 @@
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
     if (a === 'help') return location.hash = '#/ayuda';
+    if (a === 'bz-tipo') { bzForm.tipo = el.dataset.val; return render(true); }
+    if (a === 'bz-enviar') return bzEnviar();
+    if (a === 'bz-quitar') { bzForm.img = ''; return render(true); }
+    if (a === 'bz-f') { ui.bzF = el.dataset.val; return render(true); }
+    if (a === 'bz-resp') { const t = $('#bzr-' + el.dataset.id), it = BZ.find(x => x.id === el.dataset.id); bzActualizar(el.dataset.id, { resp: (t ? t.value : '').trim(), estado: it && it.estado === 'nuevo' ? 'evaluando' : (it ? it.estado : 'evaluando') }); toast('Respuesta guardada'); return render(true); }
+    if (a === 'bz-ver') { const it = BZ.find(x => x.id === el.dataset.id); if (it) modal({ title: 'Captura de ' + esc(it.autor || ''), body: `<img src="${it.img}" alt="Captura" style="width:100%;border-radius:8px">`, ok: 'Cerrar', cancel: '', wide: true }); return; }
+    if (a === 'bz-del') { if (await ask('¿Eliminar este mensaje del buzón? No se puede deshacer.', 'Eliminar')) { BZ = BZ.filter(x => x.id !== el.dataset.id); if (CL.enabled) CL.deleteDoc('buzon', el.dataset.id).catch(e => toast('No se pudo eliminar: ' + e.message)); else bzLocal(true); toast('Eliminado'); render(true); } return; }
     if (a === 'manual-print') { const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para imprimir'); w.document.write('<!doctype html><meta charset="utf-8"><title>Manual del CRM · Contratos y Cobranzas</title><style>@page{margin:10mm}body{margin:0;background:#FFFDF8}</style>' + manualHtml(true)); w.document.close(); w.focus(); setTimeout(() => w.print(), 400); return; }
     if (a === 'welcome') return showWelcome();
     if (a === 'goto') return location.hash = el.dataset.href;
@@ -2040,6 +2122,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarInactividad(); }); // al volver de otra ventana o de la suspensión
   setInterval(revisarInactividad, 1000);
 
+  if (!CL.enabled) bzLocal();
   if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else { marcaActividad(true); idleMsg = ''; startCloud(u.email); } }); render(); }
   else { render(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
   window.__CRM = { get state() { return S; }, derived: () => D };
