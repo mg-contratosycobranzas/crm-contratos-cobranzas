@@ -420,6 +420,7 @@ body.gated .fab{display:none}
 .ev-t td{padding:6px 8px;border-top:1px solid var(--line2);white-space:nowrap}
 .ev-g{margin:4px 0 0;font-size:12.5px}.ev-g dt{font-weight:650;margin-top:8px}.ev-g dd{margin:2px 0 0;color:var(--muted)}
 .ev-falta{background:var(--amar-bg);color:var(--amar);padding:8px 10px;border-radius:8px;font-size:12.5px}
+.f.resalta input,.f.resalta select,.f.resalta textarea{outline:3px solid var(--accent);outline-offset:2px}
 .f.falta input,.f.falta select,.f.falta textarea{border-color:var(--amar);background:var(--amar-bg)}
 em.pdf{font-style:normal;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:1px 6px;margin-left:4px;vertical-align:1px}
 .ev-leg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}

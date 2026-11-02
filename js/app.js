@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -60,10 +60,14 @@
   const PERMS = [
     { g: 'v', k: 'v_mi', l: 'Mi día' }, { g: 'v', k: 'v_etapas', l: 'Etapas' }, { g: 'v', k: 'v_clientes', l: 'Clientes' }, { g: 'v', k: 'v_equipo', l: 'Equipo' },
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
-    { g: 'a', k: 'a_edit', l: 'Editar datos y marcar pasos' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
+    { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }];
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops']);
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' },
+    // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
+    ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
+  // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos']);
+  const verEtapa = (k, n) => can('e_' + k, n);
   const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', mi: 'v_mi', etapa: 'v_etapas', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
@@ -276,6 +280,12 @@
   function stepTap(opId, sk, i) {
     const d = D.get(opId), it = d && d.check[sk][i]; if (!it) return;
     const done = (prev, msg) => { if (!prev) return; rerenderOp(opId); toast(msg, () => { applyMany(opId, prev); rerenderOp(opId); }); };
+    // Los pasos se marcan solos al completar los datos. Marcarlos (o desmarcarlos) a mano es una excepción de jefatura.
+    // Elegir una opción (p. ej. "¿aplica carta fianza?") sí es completar un dato.
+    if (!can('a_pasos') && !(it.choose && !it.done)) {
+      toast(it.done ? 'Este paso se completó con los datos. Para cambiarlo, corrige el dato en "Editar datos a mano".' : 'Este paso se marca solo al completar su dato. Marcarlo a mano requiere autorización de jefatura.');
+      return openEditor(sk, it.set && Object.keys(it.set)[0]);
+    }
     if (it.done) {
       if (it.set && !('cob_porRecibir' in it.set)) { const clr = {}; Object.keys(it.set).forEach(k => clr[k] = ''); return done(applyMany(opId, clr), 'Paso desmarcado'); }
       return openEditor(sk);
@@ -283,15 +293,20 @@
     if (it.choose) return bigChoice(it.label, it.choose.opts, (v) => done(applyMany(opId, { [it.choose.k]: v }), 'Guardado'));
     if (it.set) {
       const needsMe = Object.values(it.set).includes('$me');
-      const go = (who) => { const o = {}; for (const k in it.set) { const v = it.set[k]; o[k] = v === '$today' ? iso(today()) : v === '$me' ? who : v; } done(applyMany(opId, o), '✓ ' + it.label); };
+      const go = (who) => { const o = {}; for (const k in it.set) { const v = it.set[k]; o[k] = v === '$today' ? iso(today()) : v === '$me' ? who : v; }
+        const prev = applyMany(opId, o);
+        if (prev) { S.log.push({ ts: Date.now(), usuario: S.actor, opId, etapa: sk, campo: 'paso_manual', antes: '', despues: it.label }); commit(); } // queda constancia de la excepción
+        done(prev, '✓ ' + it.label); };
       return needsMe ? pickStageUser(sk, go) : go();
     }
     openEditor(sk);
   }
-  function openEditor(sk) {
+  function openEditor(sk, campo) {
     const sc = $('#sc-' + sk); if (!sc) { toast('Abre la ficha del cliente para completar este dato'); return; }
     sc.open = true; const fe = sc.querySelector('details.fe'); if (fe) fe.open = true;
-    sc.scrollIntoView({ behavior: 'smooth', block: 'start' }); const f = sc.querySelector('[data-fk]'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 300);
+    sc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const f = (campo && sc.querySelector(`[data-fk="${campo}"]`)) || sc.querySelector('[data-fk]'); // directo al dato de ese paso
+    if (f) setTimeout(() => { f.focus({ preventScroll: true }); const lb = f.closest('.f'); if (lb) { lb.classList.add('resalta'); setTimeout(() => lb.classList.remove('resalta'), 2500); } }, 300);
   }
   const OUTCOMES = { Llamada: ['Contestó, todo en orden', 'No contestó', 'Pidió más tiempo', 'Confirmó fecha de firma', 'Prometió pago'], WhatsApp: ['Envié mensaje', 'Cliente respondió', 'Envié documentos', 'Sin respuesta'], Correo: ['Envié correo', 'Cliente respondió', 'Envié documentos'], Reunión: ['Reunión realizada', 'Reunión reprogramada'], Trámite: ['Presenté documentos', 'Recogí documentos', 'Seguimiento en notaría', 'Seguimiento en banco'], Nota: [] };
   const TIPO_IC = { Llamada: '📞', WhatsApp: '💬', Correo: '✉️', Reunión: '🤝', Trámite: '📑', Nota: '📝' };
@@ -509,7 +524,7 @@
     const pool = st ? all.filter(r => r.d.state[k] === 'actual' && r.d.owner[k] === 'Sin asignar') : [];
     const meta = S.params.metaDia || 8, pct = Math.min(100, hoy / meta * 100), R = 38, C = 2 * Math.PI * R;
     const card = (r) => { const sk = k === JEFATURA ? r.d.etapa : k, items = r.d.check[sk] || [], i = items.findIndex(x => !x.done), it = items[i];
-      const main = it && (it.set || it.choose) ? `<button class="btn pri" data-act="step" data-op="${r.o.id}" data-s="${sk}" data-i="${i}">✓ ${esc(it.label)}</button>` : `<a class="btn pri" href="#/cliente/${r.o.id}">${it ? esc(it.label) : 'Abrir'} ›</a>`;
+      const main = it && (it.choose || (it.set && can('a_pasos'))) ? `<button class="btn pri" data-act="step" data-op="${r.o.id}" data-s="${sk}" data-i="${i}">✓ ${esc(it.label)}</button>` : `<a class="btn pri" href="#/cliente/${r.o.id}">${it ? esc(it.label) : 'Abrir'} ›</a>`;
       return `<div class="card midia" style="--sc:${colVar(sk)}"><div class="u-top">${sbadge(sk)}${alertBadge(r.d.alerta)}</div><a href="#/cliente/${r.o.id}"><b>${esc(r.o.cliente)}</b></a><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.diasTotal ?? '—'} días${k === JEFATURA ? ' · ' + esc(r.d.responsable) : ''}${SMART.has(k) ? desTxt(r) : ''}</div>
         <div class="m-act">${main}<button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="Llamada" title="Anotar llamada">📞</button><button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="WhatsApp" title="Anotar WhatsApp">💬</button></div></div>`; };
     return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
@@ -548,6 +563,7 @@
   };
 
   function vEtapa(key) {
+    if (!verEtapa(key)) return vSinAcceso();
     const st = STAGE[key], F = flt('etapa-' + key, { estado: 'actual', resp: '', proy: '', q: '' }), id = 'rg-etapa';
     const owners = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...S.ops.map(o => st.ownerKey ? o[st.ownerKey] : st.fixedOwner).filter(Boolean)])];
     const build = () => {
@@ -679,7 +695,9 @@
     if (key === 'for') return kv('Semáforo minuta lev.', semBadge(d.semMin)) + kv('Semáforo notarial', semBadge(d.semNot)) + kv('Límite notarial', o.for_fIngresoNotaria ? fdate(iso(CRM.addDays(pd(o.for_fIngresoNotaria), S.params.slaNot))) : '—');
     return '';
   }
-  const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span><em>${c.done ? 'Deshacer' : (c.set || c.choose) ? 'Hecho ✓' : 'Completar'}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
+  // quién puede marcar pasos a mano ve "Marcar ✓ / Deshacer"; el resto ve el dato que debe completar
+  const stepLabel = (c) => can('a_pasos') ? (c.done ? 'Deshacer' : (c.set || c.choose) ? 'Marcar ✓' : 'Completar') : (c.done ? '' : c.choose ? 'Elegir' : 'Completar dato');
+  const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span><em>${stepLabel(c)}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
   const stageHead = (key, d) => `${stateChip(d.state[key])}<span class="small muted">Responsable: <b style="color:var(--ink)">${respCell(d.owner[key])}</b></span>${bar(d.progress[key])}`;
   const headHtml = (o, d) => `<div class="t"><h1>${esc(o.cliente)}</h1>${d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(d.etapa)}${alertBadge(d.alerta)}</div>
     <div class="meta"><span><b>ID</b>${o.id}</span><span><b>DNI</b>${esc(o.dni || '—')}</span><span><b>Proyecto</b>${esc(o.proyecto || '—')} ${esc(o.unidad || '')}</span><span><b>Vendedor</b>${esc(o.vendedor || '—')}</span><span><b>Banco</b>${esc(o.banco || '—')}</span><span><b>Precio</b>${money(o.precio)}</span><span><b>Financia banco</b>${money(o.montoBanco)}</span><span><b>Días en proceso</b>${d.diasTotal ?? '—'}</span></div>
@@ -1369,7 +1387,7 @@
     return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><button class="btn sm danger" data-act="op-del" data-op="${o.id}">🗑️ Eliminar cliente</button></div>
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div class="ficha-grid"><div>
-      ${STAGES.map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
+      ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
         <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
@@ -1389,7 +1407,7 @@
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
-    STAGES.forEach(s => { $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
+    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
   }
@@ -1440,7 +1458,11 @@
     return `<div class="card perms"><div class="card-h"><h2>🔐 Permisos: qué puede ver y usar cada persona ${tip('Apaga un botón o una pantalla y esa persona deja de verlo. Tú, como administrador, siempre tienes todo.')}</h2></div><div class="card-b">
       ${people.length ? `<div class="chips" style="margin-bottom:12px">${people.map(u => `<button class="chipb ${u.name === sel ? 'on' : ''}" data-act="perm-user" data-u="${esc(u.name)}">${esc(u.name.split(' ').slice(0, 2).join(' '))}</button>`).join('')}</div>
       <div class="tpls"><span class="small muted">Plantillas rápidas:</span> <button class="btn sm" data-act="perm-tpl" data-val="view">👁️ Solo consulta</button> <button class="btn sm" data-act="perm-tpl" data-val="ops">🛠️ Operativo</button> <button class="btn sm" data-act="perm-tpl" data-val="all">⭐ Todo</button> <button class="btn sm" data-act="perm-try">▶ Probar como ${esc(sel.split(' ')[0])}</button></div>
-      <h3 style="margin:14px 0 6px">Pantallas</h3><div class="switches">${sw('v')}</div><h3 style="margin:14px 0 6px">Botones</h3><div class="switches">${sw('a')}</div>` : '<div class="empty">Agrega usuarios en Equipo para darles permisos.</div>'}
+      <h3 style="margin:14px 0 6px">Etapas que puede ver ${tip('Las etapas apagadas no aparecen en su menú ni en la ficha del cliente. Los datos generales del cliente siempre se ven.')}</h3>
+      <div class="tpls" style="margin-bottom:8px"><button class="btn sm" data-act="perm-etapas" data-val="propia">🎯 Solo su etapa (${esc(STAGE[(user(sel) || {}).stage] ? STAGE[user(sel).stage].name : '—')})</button> <button class="btn sm" data-act="perm-etapas" data-val="todas">👁️ Todas</button></div>
+      <div class="switches">${sw('e')}</div>
+      <h3 style="margin:14px 0 6px">Pantallas</h3><div class="switches">${sw('v')}</div><h3 style="margin:14px 0 6px">Botones</h3><div class="switches">${sw('a')}</div>
+      <p class="small muted" style="margin:8px 0 0">“Marcar pasos a mano” está apagado para todos: los pasos se marcan solos cuando la persona completa los datos. Actívalo solo como excepción. Tú, como administradora, siempre puedes marcarlos.</p>` : '<div class="empty">Agrega usuarios en Equipo para darles permisos.</div>'}
       ${CL.enabled ? '<p class="small muted" style="margin:14px 0 0">🔒 En modo nube, el acceso lo protege el correo y la contraseña de cada persona.</p><!--' : ''}<hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><b>PIN de administrador:</b> ${S.adminPin ? '<span class="badge verde">Activado</span> <button class="btn sm" data-act="pin-set">Cambiar PIN</button> <button class="btn sm danger" data-act="pin-clear">Quitar PIN</button>' : '<span class="badge amar">Sin PIN</span> <button class="btn sm pri" data-act="pin-set">Crear PIN</button>'}</div>
       <p class="small muted" style="margin:8px 0 0">El PIN protege la cuenta de administrador al cambiar de usuario. Es una barrera de uso, no seguridad bancaria: los datos viven en el navegador y en el repositorio.</p>${CL.enabled ? '-->' : ''}</div></div>`;
   }
@@ -1572,7 +1594,7 @@
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
     const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
-      ${can('v_etapas') ? `<div class="nav-h">Gestión por etapa</div>${STAGES.map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
+      ${can('v_etapas') ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
       <div class="nav-h">Más</div>${item('#/ayuda', I.help + 'Ayuda', '', r.view === 'ayuda')}${can('v_config') ? item('#/config', I.cfg + 'Configurar', '', r.view === 'config') : ''}`;
   }
@@ -1752,7 +1774,12 @@
     if (a === 'quickseg') return quickSeg(el.dataset.op, el.dataset.t);
     if (a === 'autoassign') return autoAssign();
     if (a === 'perm-user') { ui.permU = el.dataset.u; return render(true); }
-    if (a === 'perm-tpl') { const u = ui.permU, v = el.dataset.val; PERMS.forEach(p => { S.perms[u] = S.perms[u] || {}; S.perms[u][p.k] = v === 'all' ? true : v === 'ops' ? !PERM_OFF.has(p.k) : (p.g === 'v' && p.k !== 'v_config'); }); S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: 'Plantilla: ' + el.textContent.trim() }); save(); toast('Permisos aplicados'); return render(true); }
+    if (a === 'perm-etapas') { // atajo: solo su propia etapa, o todas
+      const u = ui.permU, st = (user(u) || {}).stage, solo = el.dataset.val === 'propia';
+      S.perms[u] = S.perms[u] || {}; STAGES.forEach(s => { S.perms[u]['e_' + s.key] = !solo || s.key === st; });
+      S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: solo ? 'Ve solo su etapa' : 'Ve todas las etapas' }); save(); toast('Etapas actualizadas'); return render(true);
+    }
+    if (a === 'perm-tpl') { const u = ui.permU, v = el.dataset.val; PERMS.filter(p => p.g !== 'e').forEach(p => { S.perms[u] = S.perms[u] || {}; /* las plantillas no tocan las etapas visibles */ S.perms[u][p.k] = v === 'all' ? true : v === 'ops' ? !PERM_OFF.has(p.k) : (p.g === 'v' && p.k !== 'v_config'); }); S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'permiso', antes: u, despues: 'Plantilla: ' + el.textContent.trim() }); save(); toast('Permisos aplicados'); return render(true); }
     if (a === 'perm-back') { ui.previewReal = null; S.actor = actorOf(); toast('Volviste a tu usuario'); location.hash = '#/config'; return render(); }
     if (a === 'perm-try') { if (CL.enabled) ui.previewReal = S.actor; S.actor = ui.permU; if (!CL.enabled) save(); toast('Ahora ves el CRM como ' + S.actor); location.hash = '#/resumen'; return render(); }
     if (a === 'pin-set') return setPin();
