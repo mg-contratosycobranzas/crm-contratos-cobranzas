@@ -237,9 +237,6 @@ html{font-size:14px} body{font-size:14px;transition:background .25s,color .25s}
 /* saludo y pendientes del día */
 .hero{display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:20px 22px;margin-bottom:16px;background:linear-gradient(120deg,var(--accent-soft),var(--surface) 70%)}
 .hero h1{font-size:24px}.hero p{margin:4px 0 0}
-.man h3{margin:4px 0 8px}.man h4{margin:14px 0 4px;font-size:14px}.man-ol{margin:4px 0;padding-left:22px}.man-ol li{margin:3px 0}
-.man-et{border:1px solid var(--line);border-left:5px solid var(--sc);border-radius:10px;padding:10px 14px;margin:10px 0}.man-et summary{cursor:pointer;font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}
-.man-et summary small{font-weight:400;color:var(--muted)}.man-n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--sc);color:#fff;font-size:13px}.man-datos{font-size:13px;color:var(--muted)}
 .hero .motiva{margin-top:10px;padding:8px 12px;border-radius:10px;background:var(--surface);border-left:4px solid var(--accent);font-weight:600;max-width:560px}
 .todos{display:flex;gap:10px;flex-wrap:wrap}
 .todo{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:0 10px;align-items:center;text-align:left;min-width:150px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer}

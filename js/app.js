@@ -1585,45 +1585,100 @@
   }
 
   /* ---- Ayuda ---- */
-  /* Manual paso a paso: los pasos siguen el checklist de cada etapa; los datos salen de FIELDS */
+  /* Manual paso a paso: mapa del proceso, flujograma del día y un flujograma por etapa.
+     Los pasos siguen el checklist de cada etapa; "Lo que registras" sale de FIELDS. Un nodo {q,si,no} es una decisión. */
+  const MAN_COL = { cob: '#FFC53D', con: '#FF6B57', fin: '#3DD6A3', for: '#B79CFF', pos: '#FF9F43', gen: '#5A4A50' };
   const MANUAL_INICIO = [
-    ['Entra', 'Abre el enlace del CRM, escribe tu correo Gmail y tu contraseña. Es personal: no la compartas.'],
-    ['Revisa Mi día', 'Ahí están tus expedientes, del más urgente al menos urgente. Empieza siempre por arriba.'],
-    ['Abre al cliente', 'Toca su nombre o búscalo en Clientes (por nombre, DNI o unidad).'],
-    ['Completa los datos', 'Llena las fechas y estados de tu etapa. Cada paso se marca solo cuando su dato está completo.'],
-    ['Anota cada gestión', 'En "Seguimiento del cliente" escribe qué pasó, la próxima acción y la fecha compromiso. El mismo día.'],
-    ['Cierra la etapa', 'Con todo en verde, firma la culminación. La jefatura da su V°B° y recién descargas la constancia.'],
-    ['Sal al terminar', 'Toca Salir. Si te olvidas, el CRM se cierra solo a los 15 minutos sin uso.']
+    ['Entra', 'Correo Gmail y contraseña. Es personal.'],
+    ['Mi día', 'Tus expedientes, del más urgente al menos urgente.'],
+    ['Abre al cliente', 'Toca su nombre o búscalo por DNI o unidad.'],
+    ['Completa los datos', 'Cada paso se marca solo al tener su dato.'],
+    ['Anota la gestión', 'Qué pasó, próxima acción y fecha compromiso.'],
+    ['Cierra la etapa', 'Firma, V°B° de la jefatura y constancia.'],
+    ['Sal', 'Toca Salir. Se cierra solo a los 15 min.']
   ];
   const MANUAL = {
-    cob: { pasos: ['Toma el expediente (queda a tu nombre).', 'Registra la fecha de la carta de aprobación del banco y su vencimiento.', 'Registra la fecha en que inicias la cobranza.', 'Actualiza la inicial por recibir cada vez que el cliente paga.', 'Cuando la inicial llegue a S/ 0, registra la fecha de culminación: el expediente pasa a Contratos.'],
-      tools: ['"Cargar estado de cuenta (PDF Evolta)": llena los datos solo. Revisa que coincidan.'] },
-    con: { pasos: ['Toma el expediente y registra la fecha de validación de documentos.', 'Indica si aplica actualización de documentos.', 'Envía la cláusula digital y marca "Cláusula enviada".', 'Envía los documentos a notaría y registra la fecha de envío de la minuta (inicio de firmas).', 'Completa Notaría y Kardex/Banco y cotéjalo con la captura de Evolta.', 'Registra el cheque en Evolta y el estado del kardex.', 'Registra la fecha de firma del cliente y la del representante legal.', 'Marca "Datos ingresados al CRM Evolta".'],
-      tools: ['"Generar cláusula adicional (Word)" desde la minuta en PDF.', '"Cotejar con Evolta" en Notaría y Kardex/Banco: sube la imagen de Evolta y el CRM compara.'] },
-    fin: { pasos: ['Define si aplica carta fianza o minuta de levantamiento (o "No aplica").', 'Toma el expediente como responsable de valorados.', 'Registra la fecha de solicitud al banco.', 'Registra la emisión de la carta fianza (banco, monto y N°) y su vencimiento.', 'Registra la fecha de desembolso.', 'Mantén la carta al día: renuévala antes del vencimiento o regístrala como devuelta.'],
-      tools: ['"Cotejar con Evolta" en Carta Fianza: banco, monto y N° frente a Evolta.', 'Pantalla Cartas fianza: vencimientos, renovar, devolver y Excel.'] },
-    for: { pasos: ['Toma el expediente y registra la fecha de inicio.', 'Define si aplica levantamiento de hipoteca; si aplica, registra la firma de la minuta.', 'Registra el ingreso a notaría.', 'Sigue la inscripción en SUNARP: estado, código, N° de título y observaciones.', 'Registra los gastos notariales y registrales.', 'Carga la copia simple SUNARP en Evolta con su N° de título y márcala como "Cargada".', 'Registra la fecha de independización.'],
+    cob: { termina: 'Inicial en S/ 0',
+      flujo: ['Toma el expediente', 'Carta de aprobación y vencimiento', 'Inicio de la cobranza', 'Actualiza la inicial por recibir', { q: '¿Inicial en S/ 0?', si: 'Registra la culminación: pasa a Contratos', no: 'Sigue el cobro y anota la gestión' }],
+      pasos: ['Toma el expediente: queda a tu nombre y aparece en tu Mi día.', 'Registra la fecha de la carta de aprobación del banco y su fecha de vencimiento, tal como figura en el documento del banco.', 'Registra la fecha en que inicias la cobranza de la cuota inicial.', 'Cada vez que el cliente paga, actualiza el monto de la inicial por recibir y anota la gestión en el seguimiento.', 'Cuando la inicial por recibir llegue a S/ 0, registra la fecha de culminación: el expediente pasa automáticamente a Contratos.'],
+      tools: ['Cargar estado de cuenta (PDF Evolta): llena los datos solo. Revisa que coincidan con Evolta.'] },
+    con: { termina: 'Firmas del cliente y del representante',
+      flujo: ['Toma y valida documentos', 'Envía la cláusula digital', 'Documentos a notaría e inicio de firmas', 'Notaría y Kardex: coteja con Evolta', 'Cheque y estado del kardex', { q: '¿Firmaron cliente y representante?', si: 'Datos a Evolta: pasa a Finanzas', no: 'Coordina las firmas y anota la gestión' }],
+      pasos: ['Toma el expediente y registra la fecha de validación de la documentación.', 'Indica si aplica actualización de documentos.', 'Envía la cláusula digital al cliente y marca "Cláusula enviada".', 'Envía los documentos a notaría y registra la fecha de envío de la minuta, que marca el inicio de firmas.', 'Completa la pestaña Notaría y Kardex/Banco y cotéjala con la captura de Evolta: el CRM compara los datos y te avisa si algo no coincide.', 'Registra el cheque en Evolta y el estado del kardex.', 'Registra la fecha de firma del cliente y la del representante legal.', 'Marca "Datos ingresados al CRM Evolta" para dejar la etapa completa.'],
+      tools: ['Generar cláusula adicional (Word) a partir de la minuta en PDF.', 'Cotejar con Evolta en Notaría y Kardex/Banco: subes la captura y el CRM compara.'] },
+    fin: { termina: 'Carta emitida, minuta firmada o "No aplica"',
+      flujo: [{ q: '¿Aplica carta fianza o minuta?', si: 'Continúa con la solicitud', no: 'Marca "No aplica": pasa a Formalización' }, 'Toma como responsable de valorados', 'Solicitud al banco', 'Emisión: banco, monto y N° (coteja con Evolta)', 'Registra el desembolso', { q: '¿Carta vigente o devuelta?', si: 'Etapa saneada', no: 'Renuévala antes del vencimiento' }],
+      pasos: ['Define si el expediente requiere carta fianza o minuta de levantamiento. Si no aplica, márcalo y la etapa queda cerrada.', 'Toma el expediente como responsable de valorados.', 'Registra la fecha de solicitud al banco.', 'Registra la emisión de la carta fianza con banco, monto y número, y su fecha de vencimiento. Cotéjalo con la captura de Evolta.', 'Registra la fecha de desembolso.', 'Mantén la carta al día: renuévala antes de que venza o regístrala como devuelta con su fecha de devolución.'],
+      tools: ['Cotejar con Evolta en Carta Fianza: banco, monto y N° frente a la captura.', 'Pantalla Cartas fianza: vencimientos, renovar, devolver y descarga en Excel.'] },
+    for: { termina: 'Independización registrada',
+      flujo: ['Toma y registra el inicio', { q: '¿Aplica levantamiento de hipoteca?', si: 'Registra la firma de la minuta', no: 'Sigue al ingreso a notaría' }, 'Ingreso a notaría', 'Inscripción SUNARP: estado, código y título', 'Gastos notariales y registrales', 'Copia simple SUNARP cargada en Evolta', 'Independización: pasa a Postventa'],
+      pasos: ['Toma el expediente y registra la fecha de inicio de la formalización.', 'Define si aplica levantamiento de hipoteca. Si aplica, registra la fecha de firma de la minuta de levantamiento.', 'Registra la fecha de ingreso a notaría.', 'Sigue la inscripción en SUNARP y registra su estado, el código de inscripción, el número de título y las observaciones.', 'Registra los gastos notariales y registrales.', 'Carga en Evolta la copia simple que emite SUNARP, con su número de título, y márcala como "Cargada".', 'Registra la fecha de independización: el expediente pasa a Postventa.'],
       tools: ['Pantalla Inscripciones: estado, código y título de todos tus expedientes en una sola lista.'] },
-    pos: { pasos: ['Recibe el expediente derivado y márcalo como "Derivado a postventa".', 'Coordina la entrega de la unidad con el cliente.', 'Genera el acta de entrega desde la ficha (se llena sola con los datos del cliente).', 'Marca "Unidad entregada": la operación queda cerrada.'],
-      tools: ['"Generador de actas" dentro de la etapa Postventa.'] }
+    pos: { termina: 'Unidad entregada',
+      flujo: ['Marca "Derivado a postventa"', 'Coordina la entrega con el cliente', 'Genera el acta de entrega', 'Marca "Unidad entregada": operación cerrada'],
+      pasos: ['Recibe el expediente derivado y márcalo como "Derivado a postventa".', 'Coordina con el cliente la fecha y hora de entrega de la unidad.', 'Genera el acta de entrega desde la ficha: ya viene llena con los datos del cliente.', 'Marca "Unidad entregada": la operación queda cerrada.'],
+      tools: ['Generador de actas, dentro de la etapa Postventa.'] }
   };
+  const MANUAL_CSS = `.mn{--ink:#22181C;--soft:#5A4A50;--paper:#FFFDF8;--line:#EADFD3;background:var(--paper);color:var(--ink);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.55;border-radius:14px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.mn *{box-sizing:border-box}.mn p,.mn li{text-align:justify;hyphens:auto}
+.mn-hero{background:var(--ink);color:#FFF3E3;padding:26px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.mn-hero h2{margin:0;font-size:26px;line-height:1.15}.mn-hero p{margin:6px 0 0;color:#E9D9C8;text-align:left}
+.mn-dots{display:flex;gap:8px}.mn-dots i{width:22px;height:22px;border-radius:50%}
+.mn-sec{padding:20px 28px}.mn-sec+.mn-sec{border-top:1px solid var(--line)}
+.mn-h{margin:0 0 12px;font-size:18px;display:flex;align-items:center;gap:10px}.mn-h::before{content:"";width:6px;height:20px;border-radius:3px;background:var(--c,var(--ink))}
+.mn-map{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.mn-st{flex:1 1 150px;min-width:0;background:var(--c);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.mn-st .n{font-size:28px;font-weight:900;line-height:1}.mn-st b{font-size:15px}.mn-st small{font-size:12px;color:var(--ink);opacity:.8}.mn-st em{font-style:normal;font-size:12px;border-top:1px dashed rgba(34,24,28,.35);padding-top:6px;margin-top:auto}
+.mn-ar{align-self:center;font-size:22px;font-weight:900;color:var(--soft)}
+.mn-flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px 4px}
+.mn-node{flex:0 1 150px;min-width:0;background:#fff;border:2px solid var(--c);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.35;display:flex;flex-direction:column;gap:6px}
+.mn-node .k{width:24px;height:24px;border-radius:50%;background:var(--c);color:var(--ink);font-weight:800;font-size:12px;display:grid;place-items:center}
+.mn-node.q{flex-basis:220px;border-style:dashed;background:color-mix(in srgb,var(--c) 16%,#fff)}
+.mn-node.q .k{border-radius:4px;transform:rotate(45deg)}.mn-node.q .k span{transform:rotate(-45deg)}
+.mn-br{display:grid;gap:4px;font-size:12px}.mn-br span{padding:3px 8px;border-radius:8px;background:#fff;border:1px solid var(--line)}.mn-br b{color:var(--soft)}
+.mn-node small{color:var(--soft);text-align:left}
+.mn-fa{align-self:center;color:var(--c);font-size:20px;font-weight:900;padding:0 2px}
+.mn-stage{border-top:1px solid var(--line);break-inside:avoid-page}
+.mn-band{background:var(--c);padding:16px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mn-band .n{font-size:44px;font-weight:900;line-height:1}.mn-band h3{margin:0;font-size:22px}.mn-band p{margin:2px 0 0;font-size:13px;text-align:left}
+.mn-band .who{margin-left:auto;background:rgba(255,255,255,.55);border-radius:999px;padding:6px 14px;font-weight:700;font-size:13px}
+.mn-body{padding:18px 28px;display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px}
+.mn-body h4{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft)}
+.mn-ol{margin:0;padding-left:20px}.mn-ol li{margin:4px 0}.mn-ol li::marker{font-weight:800;color:var(--soft)}
+.mn-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}.mn-chips span{font-size:12px;background:color-mix(in srgb,var(--c) 22%,#fff);border-radius:999px;padding:3px 10px}
+.mn-tool{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:6px 0}.mn-tool::before{content:"✦";color:var(--soft)}
+.mn-full{grid-column:1/-1}
+.mn-reg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.mn-reg div{border-left:4px solid var(--c);padding:6px 12px}.mn-reg b{display:block}.mn-reg p{margin:2px 0 0;font-size:13px}
+@media (max-width:700px){.mn-body{grid-template-columns:1fr}.mn-ar{display:none}.mn-sec,.mn-band,.mn-body{padding-left:16px;padding-right:16px}}
+@media print{.mn{border-radius:0}.mn-node,.mn-st{break-inside:avoid}}`;
   function manualHtml(print) {
     const etapas = STAGES.filter(s => print || verEtapa(s.key));
-    const lista = (xs) => '<ol class="man-ol">' + xs.map(x => '<li>' + x + '</li>').join('') + '</ol>';
-    const datos = (k) => (FIELDS[k] || []).map(f => f.l).join(' · ');
-    return '<section class="man"><h3>Primeros pasos (para todos)</h3><ol class="man-ol">' + MANUAL_INICIO.map(([t, d]) => '<li><b>' + t + '.</b> ' + d + '</li>').join('') + '</ol>'
-      + etapas.map(s => '<details class="man-et" style="--sc:' + colVar(s.key) + '"' + (print ? ' open' : '') + '><summary><span class="man-n">' + s.n + '</span>' + esc(s.name) + ' <small>' + esc(s.rol) + '</small></summary>'
-        + '<p class="muted">' + esc(s.desc) + '</p><h4>Paso a paso</h4>' + lista(MANUAL[s.key].pasos)
-        + '<h4>Lo que registras en el CRM</h4><p class="man-datos">' + esc(datos(s.key)) + '</p>'
-        + '<h4>Herramientas que te ayudan</h4>' + lista(MANUAL[s.key].tools)
-        + '<h4>Para cerrar la etapa</h4><p>Todos los pasos en verde → <b>Firmar culminación</b> → la jefatura da su <b>V°B°</b> → <b>Descargar constancia (PDF)</b>.</p></details>').join('')
-      + '<h3>Registros generales</h3><ul class="man-ol"><li><b>Nuevo cliente:</b> si lo creas tú, queda pendiente hasta el V°B° de la jefatura.</li><li><b>Seguimiento:</b> cada llamada, mensaje o visita se anota con fecha y próxima acción.</li><li><b>Historial:</b> cada cambio queda guardado con tu nombre, fecha y hora.</li><li><b>Pasos a mano:</b> solo la jefatura puede marcar un paso por excepción; queda registrado.</li></ul></section>';
+    const quien = (k) => { const corto = (n) => { const w = n.split(' '); return w.length > 2 ? w.slice(0, -1).join(' ') : w[0]; }; const ns = S.users.filter(u => u.stage === k).map(u => corto(u.name)); return ns.length ? (ns.length > 1 ? ns.slice(0, -1).join(', ') + ' y ' + ns[ns.length - 1] : ns[0]) : (STAGE[k].fixedOwner || '').split(' ')[0]; };
+    const flujo = (xs, c) => '<div class="mn-flow" style="--c:' + c + '">' + xs.map((x, i) => (i ? '<span class="mn-fa">➜</span>' : '') + (typeof x === 'string'
+      ? '<div class="mn-node"><span class="k">' + (i + 1) + '</span>' + esc(x) + '</div>'
+      : Array.isArray(x) ? '<div class="mn-node"><span class="k">' + (i + 1) + '</span><b>' + esc(x[0]) + '</b><small>' + esc(x[1]) + '</small></div>'
+      : '<div class="mn-node q"><span class="k"><span>?</span></span><b>' + esc(x.q) + '</b><div class="mn-br"><span><b>Sí:</b> ' + esc(x.si) + '</span><span><b>No:</b> ' + esc(x.no) + '</span></div></div>')).join('') + '</div>';
+    const cierre = flujo(['Todos los pasos en verde', 'Firmas la culminación', 'La jefatura da su V°B°', 'Descargas la constancia PDF'], MAN_COL.gen);
+    return '<div class="mn"><style>' + MANUAL_CSS + '</style>'
+      + '<div class="mn-hero"><div><h2>Manual del CRM · Contratos y Cobranzas</h2><p>Cómo trabaja cada etapa, paso a paso, y qué se registra.</p></div><div class="mn-dots">' + STAGES.map(s => '<i style="background:' + MAN_COL[s.key] + '"></i>').join('') + '</div></div>'
+      + '<div class="mn-sec"><h3 class="mn-h">Mapa del proceso</h3><div class="mn-map">' + STAGES.map((s, i) => (i ? '<span class="mn-ar">➜</span>' : '') + '<div class="mn-st" style="--c:' + MAN_COL[s.key] + '"><span class="n">' + s.n + '</span><b>' + esc(s.name) + '</b><small>' + esc(quien(s.key) || s.rol) + '</small><em>Termina: ' + esc(MANUAL[s.key].termina) + '</em></div>').join('') + '</div>'
+      + '<p style="margin:12px 0 0">Cada cliente recorre las cinco etapas en este orden. Cuando una etapa se completa, el CRM pasa el expediente solo a la siguiente y lo muestra en el Mi día de su responsable.</p></div>'
+      + '<div class="mn-sec"><h3 class="mn-h">Tu día en el CRM</h3>' + flujo(MANUAL_INICIO, MAN_COL.con) + '</div>'
+      + etapas.map(s => { const c = MAN_COL[s.key], m = MANUAL[s.key];
+        return '<section class="mn-stage" style="--c:' + c + '"><div class="mn-band"><span class="n">' + s.n + '</span><div><h3>' + esc(s.name) + '</h3><p>' + esc(s.desc) + '</p></div><span class="who">' + esc(quien(s.key) || s.rol) + '</span></div>'
+          + '<div class="mn-body"><div class="mn-full"><h4>Flujograma</h4>' + flujo(m.flujo, c) + '</div>'
+          + '<div><h4>Paso a paso</h4><ol class="mn-ol">' + m.pasos.map(p => '<li>' + esc(p) + '</li>').join('') + '</ol></div>'
+          + '<div><h4>Lo que registras</h4><div class="mn-chips">' + (FIELDS[s.key] || []).map(f => '<span>' + esc(f.l) + '</span>').join('') + '</div><h4>Herramientas</h4>' + m.tools.map(t => '<div class="mn-tool">' + esc(t) + '</div>').join('') + '</div>'
+          + '<div class="mn-full"><h4>Para cerrar la etapa</h4>' + cierre + '</div></div></section>'; }).join('')
+      + '<div class="mn-sec"><h3 class="mn-h">Registros generales</h3><div class="mn-reg">'
+      + [['cob', 'Nuevo cliente', 'Si lo creas tú, queda pendiente hasta el V°B° de la jefatura.'], ['con', 'Seguimiento', 'Cada llamada, mensaje o visita se anota con fecha y próxima acción.'], ['fin', 'Historial', 'Cada cambio queda guardado con tu nombre, la fecha y la hora.'], ['for', 'Pasos a mano', 'Solo la jefatura puede marcar un paso por excepción, y queda registrado.']].map(([k, t, d]) => '<div style="--c:' + MAN_COL[k] + '"><b>' + t + '</b><p>' + d + '</p></div>').join('')
+      + '</div></div></div>';
   }
   function vAyuda() {
     const step = (n, t, d) => `<div class="how"><span class="hn">${n}</span><div><b>${t}</b><p class="muted">${d}</p></div></div>`;
     return `${pageHead('Ayuda', 'Cómo funciona el CRM en 2 minutos.', `<button class="btn" data-act="welcome">Ver la bienvenida</button> <button class="btn" data-act="manual-print">🖨️ Imprimir manual</button>`)}
     <h2 class="sec" style="margin-top:0">📘 Manual paso a paso</h2>
-    <div class="card"><div class="card-b">${manualHtml()}</div></div>
+    ${manualHtml()}
     <h2 class="sec">El camino de cada cliente</h2>
     <div class="flow help-flow">${STAGES.map((s, i) => `<div class="fstage" style="--sc:${colVar(s.key)}"><div class="fs-top"><span class="fs-n">${s.n}</span><b>${s.name}</b></div><p class="small muted" style="margin:6px 0">${esc(s.desc)}</p><div class="fs-who">${IC.nouser.replace('<svg', '<svg class="mini"')}${esc(s.rol)}</div></div>${i < 4 ? '<span class="arrow">›</span>' : ''}`).join('')}</div>
     <h2 class="sec">¿Qué significan los colores?</h2>
@@ -1875,7 +1930,7 @@
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
     if (a === 'help') return location.hash = '#/ayuda';
-    if (a === 'manual-print') { const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para imprimir'); w.document.write('<!doctype html><meta charset="utf-8"><title>Manual del CRM</title><style>body{font:14px/1.5 Arial,sans-serif;color:#222;margin:28px}h1{font-size:22px}h3{margin:22px 0 6px}h4{margin:12px 0 4px}details{border-top:2px solid #ddd;padding-top:8px;margin-top:14px}summary{font-size:18px;font-weight:700;list-style:none}.man-n{display:inline-block;width:24px;height:24px;border-radius:50%;background:#333;color:#fff;text-align:center;margin-right:8px}small{color:#666;font-weight:400}.muted{color:#666}</style><h1>Manual del CRM · Contratos y Cobranzas</h1>' + manualHtml(true)); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); return; }
+    if (a === 'manual-print') { const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para imprimir'); w.document.write('<!doctype html><meta charset="utf-8"><title>Manual del CRM · Contratos y Cobranzas</title><style>@page{margin:10mm}body{margin:0;background:#FFFDF8}</style>' + manualHtml(true)); w.document.close(); w.focus(); setTimeout(() => w.print(), 400); return; }
     if (a === 'welcome') return showWelcome();
     if (a === 'goto') return location.hash = el.dataset.href;
     if (a === 'gofilter') { ui.f[el.dataset.view] = { q: '', etapa: '', alerta: '', proy: '', banco: '', sin: '', [el.dataset.k]: el.dataset.val }; return location.hash = '#/' + el.dataset.view; }
