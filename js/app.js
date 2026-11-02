@@ -1585,17 +1585,53 @@
   }
 
   /* ---- Ayuda ---- */
+  /* Manual paso a paso: los pasos siguen el checklist de cada etapa; los datos salen de FIELDS */
+  const MANUAL_INICIO = [
+    ['Entra', 'Abre el enlace del CRM, escribe tu correo Gmail y tu contraseña. Es personal: no la compartas.'],
+    ['Revisa Mi día', 'Ahí están tus expedientes, del más urgente al menos urgente. Empieza siempre por arriba.'],
+    ['Abre al cliente', 'Toca su nombre o búscalo en Clientes (por nombre, DNI o unidad).'],
+    ['Completa los datos', 'Llena las fechas y estados de tu etapa. Cada paso se marca solo cuando su dato está completo.'],
+    ['Anota cada gestión', 'En "Seguimiento del cliente" escribe qué pasó, la próxima acción y la fecha compromiso. El mismo día.'],
+    ['Cierra la etapa', 'Con todo en verde, firma la culminación. La jefatura da su V°B° y recién descargas la constancia.'],
+    ['Sal al terminar', 'Toca Salir. Si te olvidas, el CRM se cierra solo a los 15 minutos sin uso.']
+  ];
+  const MANUAL = {
+    cob: { pasos: ['Toma el expediente (queda a tu nombre).', 'Registra la fecha de la carta de aprobación del banco y su vencimiento.', 'Registra la fecha en que inicias la cobranza.', 'Actualiza la inicial por recibir cada vez que el cliente paga.', 'Cuando la inicial llegue a S/ 0, registra la fecha de culminación: el expediente pasa a Contratos.'],
+      tools: ['"Cargar estado de cuenta (PDF Evolta)": llena los datos solo. Revisa que coincidan.'] },
+    con: { pasos: ['Toma el expediente y registra la fecha de validación de documentos.', 'Indica si aplica actualización de documentos.', 'Envía la cláusula digital y marca "Cláusula enviada".', 'Envía los documentos a notaría y registra la fecha de envío de la minuta (inicio de firmas).', 'Completa Notaría y Kardex/Banco y cotéjalo con la captura de Evolta.', 'Registra el cheque en Evolta y el estado del kardex.', 'Registra la fecha de firma del cliente y la del representante legal.', 'Marca "Datos ingresados al CRM Evolta".'],
+      tools: ['"Generar cláusula adicional (Word)" desde la minuta en PDF.', '"Cotejar con Evolta" en Notaría y Kardex/Banco: sube la imagen de Evolta y el CRM compara.'] },
+    fin: { pasos: ['Define si aplica carta fianza o minuta de levantamiento (o "No aplica").', 'Toma el expediente como responsable de valorados.', 'Registra la fecha de solicitud al banco.', 'Registra la emisión de la carta fianza (banco, monto y N°) y su vencimiento.', 'Registra la fecha de desembolso.', 'Mantén la carta al día: renuévala antes del vencimiento o regístrala como devuelta.'],
+      tools: ['"Cotejar con Evolta" en Carta Fianza: banco, monto y N° frente a Evolta.', 'Pantalla Cartas fianza: vencimientos, renovar, devolver y Excel.'] },
+    for: { pasos: ['Toma el expediente y registra la fecha de inicio.', 'Define si aplica levantamiento de hipoteca; si aplica, registra la firma de la minuta.', 'Registra el ingreso a notaría.', 'Sigue la inscripción en SUNARP: estado, código, N° de título y observaciones.', 'Registra los gastos notariales y registrales.', 'Carga la copia simple SUNARP en Evolta con su N° de título y márcala como "Cargada".', 'Registra la fecha de independización.'],
+      tools: ['Pantalla Inscripciones: estado, código y título de todos tus expedientes en una sola lista.'] },
+    pos: { pasos: ['Recibe el expediente derivado y márcalo como "Derivado a postventa".', 'Coordina la entrega de la unidad con el cliente.', 'Genera el acta de entrega desde la ficha (se llena sola con los datos del cliente).', 'Marca "Unidad entregada": la operación queda cerrada.'],
+      tools: ['"Generador de actas" dentro de la etapa Postventa.'] }
+  };
+  function manualHtml(print) {
+    const etapas = STAGES.filter(s => print || verEtapa(s.key));
+    const lista = (xs) => '<ol class="man-ol">' + xs.map(x => '<li>' + x + '</li>').join('') + '</ol>';
+    const datos = (k) => (FIELDS[k] || []).map(f => f.l).join(' · ');
+    return '<section class="man"><h3>Primeros pasos (para todos)</h3><ol class="man-ol">' + MANUAL_INICIO.map(([t, d]) => '<li><b>' + t + '.</b> ' + d + '</li>').join('') + '</ol>'
+      + etapas.map(s => '<details class="man-et" style="--sc:' + colVar(s.key) + '"' + (print ? ' open' : '') + '><summary><span class="man-n">' + s.n + '</span>' + esc(s.name) + ' <small>' + esc(s.rol) + '</small></summary>'
+        + '<p class="muted">' + esc(s.desc) + '</p><h4>Paso a paso</h4>' + lista(MANUAL[s.key].pasos)
+        + '<h4>Lo que registras en el CRM</h4><p class="man-datos">' + esc(datos(s.key)) + '</p>'
+        + '<h4>Herramientas que te ayudan</h4>' + lista(MANUAL[s.key].tools)
+        + '<h4>Para cerrar la etapa</h4><p>Todos los pasos en verde → <b>Firmar culminación</b> → la jefatura da su <b>V°B°</b> → <b>Descargar constancia (PDF)</b>.</p></details>').join('')
+      + '<h3>Registros generales</h3><ul class="man-ol"><li><b>Nuevo cliente:</b> si lo creas tú, queda pendiente hasta el V°B° de la jefatura.</li><li><b>Seguimiento:</b> cada llamada, mensaje o visita se anota con fecha y próxima acción.</li><li><b>Historial:</b> cada cambio queda guardado con tu nombre, fecha y hora.</li><li><b>Pasos a mano:</b> solo la jefatura puede marcar un paso por excepción; queda registrado.</li></ul></section>';
+  }
   function vAyuda() {
     const step = (n, t, d) => `<div class="how"><span class="hn">${n}</span><div><b>${t}</b><p class="muted">${d}</p></div></div>`;
-    return `${pageHead('Ayuda', 'Cómo funciona el CRM en 2 minutos.', `<button class="btn" data-act="welcome">Ver la bienvenida</button>`)}
-    <h2 class="sec" style="margin-top:0">El camino de cada cliente</h2>
+    return `${pageHead('Ayuda', 'Cómo funciona el CRM en 2 minutos.', `<button class="btn" data-act="welcome">Ver la bienvenida</button> <button class="btn" data-act="manual-print">🖨️ Imprimir manual</button>`)}
+    <h2 class="sec" style="margin-top:0">📘 Manual paso a paso</h2>
+    <div class="card"><div class="card-b">${manualHtml()}</div></div>
+    <h2 class="sec">El camino de cada cliente</h2>
     <div class="flow help-flow">${STAGES.map((s, i) => `<div class="fstage" style="--sc:${colVar(s.key)}"><div class="fs-top"><span class="fs-n">${s.n}</span><b>${s.name}</b></div><p class="small muted" style="margin:6px 0">${esc(s.desc)}</p><div class="fs-who">${IC.nouser.replace('<svg', '<svg class="mini"')}${esc(s.rol)}</div></div>${i < 4 ? '<span class="arrow">›</span>' : ''}`).join('')}</div>
     <h2 class="sec">¿Qué significan los colores?</h2>
     <div class="grid two"><div class="card"><div class="card-b">${['Inmediato', 'Por acumulación', 'Bajo control', 'Cerrado'].map(a => `<div class="lg2">${alertChip(a)}<span>${ALERT_HELP[a]}</span></div>`).join('')}</div></div>
     <div class="card"><div class="card-b"><div class="lg2"><span class="badge verde">En plazo</span><span>Está dentro del tiempo permitido (SLA).</span></div><div class="lg2"><span class="badge amar">Por vencer</span><span>Faltan ${S.params.anticipo} días o menos para el límite.</span></div><div class="lg2"><span class="badge rojo">Vencido</span><span>Ya pasó el plazo.</span></div><div class="lg2"><span class="badge rojo plain">Sin asignar</span><span>Nadie es responsable todavía. Asígnalo desde la ficha o con "Tomar".</span></div></div></div></div>
     <h2 class="sec">Lo más común, paso a paso</h2>
     <div class="grid two">
-      <div class="card"><div class="card-b">${step(1, 'Registrar una llamada o gestión', 'Entra a <b>Clientes</b>, abre al cliente y completa "Seguimiento del cliente": qué pasó, próxima acción y fecha compromiso.')}${step(2, 'Avanzar una etapa', 'En la ficha abre la etapa y completa las fechas (por ejemplo, firma del cliente). El CRM mueve solo al expediente cuando la etapa se completa.')}${step(3, 'Asignar un responsable', 'En la ficha elige el nombre en "Responsable", o entra al usuario y toca <b>Tomar</b> en los expedientes sin asignar.')}</div></div>
+      <div class="card"><div class="card-b">${step(1, 'Registrar una llamada o gestión', 'Entra a <b>Clientes</b>, abre al cliente y completa "Seguimiento del cliente": qué pasó, próxima acción y fecha compromiso.')}${step(2, 'Avanzar una etapa', 'En la ficha abre la etapa y completa las fechas (por ejemplo, firma del cliente). Cada paso se marca solo y el CRM mueve el expediente cuando la etapa se completa.')}${step(3, 'Asignar un responsable', 'En la ficha elige el nombre en "Responsable", o entra al usuario y toca <b>Tomar</b> en los expedientes sin asignar.')}</div></div>
       <div class="card"><div class="card-b">${step(4, 'Ver qué hace cada persona', 'Ve a <b>Actividad</b>: muestra cada cambio y seguimiento con el nombre de quien lo hizo.')}${step(5, 'Agregar o quitar usuarios', 'Ve a <b>Equipo</b>, abajo en "Gestionar equipo".')}${step(6, 'Descargar indicadores', 'Toca <b>Descargar Excel</b> arriba: trae productividad, eficiencia y eficacia por persona y por etapa.')}</div></div>
     </div>
     <h2 class="sec">Glosario</h2>
@@ -1605,7 +1641,7 @@
   function showWelcome() {
     const s = (n, t, d) => `<div class="how"><span class="hn">${n}</span><div><b>${t}</b><p class="muted">${d}</p></div></div>`;
     modal({ title: '👋 Bienvenida al CRM de Contratos y Cobranzas', ok: 'Entendido, empezar', cancel: '', body: `<p class="muted" style="margin-top:0">Cada cliente pasa por <b>5 etapas</b>: Cobranzas → Contratos → Finanzas → Formalización → Postventa.</p>
-      ${s(1, 'Elige quién eres', 'Arriba, en "Trabajando como". Así queda registrado quién hizo cada acción.')}${s(2, 'Abre Mi día', 'Ahí ves tus expedientes del más urgente al menos urgente, con un botón para el siguiente paso.')}${s(3, 'Toca, no escribas', 'En cada cliente toca el paso que hiciste (queda con la fecha de hoy) y usa 📞 💬 para anotar una gestión en 2 toques.')}${s(4, 'Mide resultados', 'Con "Descargar Excel" obtienes productividad, eficiencia y eficacia.')}
+      ${s(1, 'Elige quién eres', 'Arriba, en "Trabajando como". Así queda registrado quién hizo cada acción.')}${s(2, 'Abre Mi día', 'Ahí ves tus expedientes del más urgente al menos urgente, con un botón para el siguiente paso.')}${s(3, 'Completa tus datos', 'En cada cliente llena las fechas y estados de tu etapa: los pasos se marcan solos. Usa 📞 💬 para anotar una gestión en 2 toques.')}${s(4, 'Mide resultados', 'Con "Descargar Excel" obtienes productividad, eficiencia y eficacia.')}
       <p class="small muted">Tip: el botón <b>☾ / ☀</b> cambia entre modo noche y día. Puedes volver a esta guía en <b>Ayuda</b>.</p>`, onOk: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } }, onCancel: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } } });
   }
 
@@ -1839,6 +1875,7 @@
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
     if (a === 'help') return location.hash = '#/ayuda';
+    if (a === 'manual-print') { const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para imprimir'); w.document.write('<!doctype html><meta charset="utf-8"><title>Manual del CRM</title><style>body{font:14px/1.5 Arial,sans-serif;color:#222;margin:28px}h1{font-size:22px}h3{margin:22px 0 6px}h4{margin:12px 0 4px}details{border-top:2px solid #ddd;padding-top:8px;margin-top:14px}summary{font-size:18px;font-weight:700;list-style:none}.man-n{display:inline-block;width:24px;height:24px;border-radius:50%;background:#333;color:#fff;text-align:center;margin-right:8px}small{color:#666;font-weight:400}.muted{color:#666}</style><h1>Manual del CRM · Contratos y Cobranzas</h1>' + manualHtml(true)); w.document.close(); w.focus(); setTimeout(() => w.print(), 300); return; }
     if (a === 'welcome') return showWelcome();
     if (a === 'goto') return location.hash = el.dataset.href;
     if (a === 'gofilter') { ui.f[el.dataset.view] = { q: '', etapa: '', alerta: '', proy: '', banco: '', sin: '', [el.dataset.k]: el.dataset.val }; return location.hash = '#/' + el.dataset.view; }
