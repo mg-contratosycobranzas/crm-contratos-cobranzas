@@ -1703,7 +1703,7 @@
 
   /* ---- Devoluciones de venta (Seguimiento): datos del cliente (del CRM, del PDF de Evolta o a mano), cuenta de destino,
      captura del correo de solicitud y formato PDF. Cada mes se descarga un respaldo en ZIP para guardarlo fuera de la nube. */
-  let DV = [], dvUnsub = null, dvErr = '';
+  let DV = [], dvUnsub = null, dvErr = '', dvListo = false, dvReintento = null;
   const DV_K = 'crm-mg-dev', DV_RESP_K = 'crm-mg-dev-respaldo';
   const DV_EST = { Pendiente: 'amar', Programada: '', Devuelta: 'verde', Anulada: 'gris' }, DV_ORD = { Pendiente: 0, Programada: 1, Devuelta: 2, Anulada: 3 };
   const DV_MOTIVOS = ['Desistimiento de separación', 'Desistimiento de compra', 'Pago en exceso', 'Resolución de contrato', 'Otro'];
@@ -1717,13 +1717,13 @@
   const dvMes = (d) => String(d.fSolicitud || iso(new Date(d.ts || Date.now()))).slice(0, 7);
   const mesLargo = (m) => { const [y, mm] = m.split('-').map(Number); return new Date(y, mm - 1, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }); };
   function dvLocal(save) { try { if (save) localStorage.setItem(DV_K, JSON.stringify(DV)); else DV = JSON.parse(localStorage.getItem(DV_K) || '[]'); } catch (e) { if (save) toast('No hay espacio en este navegador para guardar las capturas'); } }
-  function stopDev() { if (dvUnsub) { dvUnsub(); dvUnsub = null; } DV = []; dvErr = ''; }
+  function stopDev() { clearTimeout(dvReintento); if (dvUnsub) { dvUnsub(); dvUnsub = null; } DV = []; dvErr = ''; dvListo = false; }
   function startDev() {
     stopDev(); if (!can('v_dev')) return; // sin permiso no se descargan datos bancarios a ese navegador
-    dvUnsub = CL.listenCol('devoluciones', (ch) => { ch.forEach(c => { const i = DV.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) DV.splice(i, 1); } else if (i >= 0) DV[i] = c.data; else DV.push(c.data); }); dvErr = ''; scheduleRender(); },
-      (e) => { dvErr = e && e.code === 'permission-denied' ? 'Las devoluciones aún no están activadas en Firebase (falta actualizar las reglas).' : 'No se pudieron cargar las devoluciones.'; scheduleRender(); });
+    dvUnsub = CL.listenCol('devoluciones', (ch) => { ch.forEach(c => { const i = DV.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) DV.splice(i, 1); } else if (i >= 0) DV[i] = c.data; else DV.push(c.data); }); dvErr = ''; dvListo = true; scheduleRender(); },
+      (e) => { dvUnsub = null; dvReintento = setTimeout(() => { if (cloudState === 'ready') startDev(); }, 20000); dvErr = e && e.code === 'permission-denied' ? 'Las devoluciones aún no están activadas en Firebase (falta actualizar las reglas).' : 'No se pudieron cargar las devoluciones.'; scheduleRender(); });
   }
-  async function dvGuardar(d) { if (CL.enabled) await CL.setDoc('devoluciones', d.id, d); else { const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); dvLocal(true); } }
+  async function dvGuardar(d) { if (CL.enabled) { await CL.setDoc('devoluciones', d.id, d); const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); if (!dvUnsub) startDev(); } else { const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); dvLocal(true); } }
   const dvCodigo = () => { const y = new Date().getFullYear(), re = new RegExp('^DEV-' + y + '-(\\d+)$'); const n = Math.max(0, ...DV.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `DEV-${y}-${String(n + 1).padStart(4, '0')}`; };
   function dvDraft(id) {
     if (ui.dvId === id && ui.dv) return ui.dv;
@@ -1826,7 +1826,7 @@
       ${region(id, build)}`;
   }
   function vDevolucion(id) {
-    if (id !== 'nueva' && !DV.find(x => x.id === id) && !(ui.dvId === id && ui.dv)) return `${pageHead('Devolución', '', '<a class="btn" href="#/devoluciones">‹ Volver</a>')}<div class="empty">${DV.length || !CL.enabled ? 'No se encontró esta devolución.' : 'Cargando…'}</div>`;
+    if (id !== 'nueva' && !DV.find(x => x.id === id) && !(ui.dvId === id && ui.dv)) return `${pageHead('Devolución', '', '<a class="btn" href="#/devoluciones">‹ Volver</a>')}<div class="empty">${dvErr ? esc(dvErr) : dvListo || !CL.enabled ? 'No se encontró esta devolución.' : 'Cargando…'}</div>`;
     const d = dvDraft(id), uq = (A) => [...new Set(A.filter(Boolean))].sort();
     const listas = { proyecto: uq(S.ops.map(o => o.proyecto)), empresa: uq([...S.ops.map(empresaDe), ...DV.map(x => x.empresa)]), autorizadaPor: uq(DV.map(x => x.autorizadaPor)),
       banco: uq(['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'BanBif', 'Pichincha', 'Banco de la Nación', ...DV.map(x => x.banco)]) };
