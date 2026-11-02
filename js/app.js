@@ -69,6 +69,30 @@
   const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos']);
   const verEtapa = (k, n) => can('e_' + k, n);
   // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
+  // mensaje corto del día para el equipo (cambia cada día, igual para todos)
+  const MOTIVA = [
+    'Cada expediente cerrado es una familia más cerca de su hogar. 🏡',
+    'Paso a paso se llega lejos: hoy cierra al menos uno. 💪',
+    'Lo que se anota hoy, no se olvida mañana. ✍️',
+    'Un buen seguimiento vale más que mil urgencias. 📞',
+    'Somos un equipo: si alguien se traba, le damos una mano. 🤝',
+    'Hecho es mejor que perfecto. ¡A avanzar! 🚀',
+    'Tu orden de hoy es la tranquilidad del cliente mañana. ✨',
+    'Primero lo urgente, luego lo importante, siempre con calma. 🧭',
+    'Cada dato bien registrado ahorra una llamada. ✅',
+    'Las metas grandes se logran con días pequeños bien hechos. 📈',
+    'Una sonrisa también se nota por teléfono. 😊',
+    'Hoy es un buen día para dejar algo cerrado. 🔒',
+    'La constancia gana a la prisa. 🐢',
+    'Revisa, confirma y avanza: así trabajamos. 🔍',
+    'Lo que hacemos bien se nota en cada entrega. 🔑',
+    'Pequeños avances diarios, grandes resultados al mes. 🌱',
+    'Pregunta sin miedo: entre todos sabemos más. 💬',
+    'Un expediente al día es un problema menos. 📂',
+    'Gracias por tu esfuerzo: se ve y se valora. 🙌',
+    'Empieza por lo que más tiempo lleva esperando. ⏳'
+  ];
+  const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
@@ -462,7 +486,7 @@
     const gauge = (pct, meta, big, label, sub) => { const v = Math.max(0, Math.min(100, Number(pct) || 0)), R = 38, C = 2 * Math.PI * R; return `<div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" stroke-linecap="round" stroke-dasharray="${v / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${gcol(v, meta)}"/><text x="50" y="56" text-anchor="middle" class="g-big">${big}</text></svg><div><b>${label}</b><span class="small muted">${sub}</span><span class="small" style="color:${gcol(v, meta)}">${v >= meta ? '✔ Meta cumplida' : 'Meta: ' + meta + '%'}</span></div></div>`; };
     const ins = insights(all, abiertos, venc, Pm);
     const apps = homeApps(crit.length, venc.length);
-    return `<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} 👋</h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p></div>
+    return `<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} 👋</h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p><p class="motiva">${esc(motivaHoy())}</p></div>
       <div class="apps">${apps}</div></div>
     <h2 class="sec">Resultados del área ${tip('Eficacia: de lo que se trabajó, cuánto se cerró. Eficiencia: % de procesos cerrados dentro del plazo. Productividad: procesos cerrados en los últimos 7 días frente a la meta semanal. Las metas se cambian en Configurar.')}</h2>
     <div class="grid three gauges">${gauge(Pm.eficacia, S.params.metaEficacia, (Pm.eficacia === '' ? '—' : Math.round(Pm.eficacia) + '%'), 'Eficacia', `${Pm.cul} cerrados de ${Pm.cul + Pm.curso}`)}${gauge(Pm.dentro, S.params.metaEficiencia, (Pm.dentro === '' ? '—' : Math.round(Pm.dentro) + '%'), 'Eficiencia', `${Pm.dentro === '' ? 'Sin datos' : 'cerrados dentro del plazo'}`)}${gauge(cerr7 / Math.max(1, S.params.metaSemana) * 100, 100, cerr7, 'Productividad', `cerrados en 7 días · meta ${S.params.metaSemana}`)}</div>
