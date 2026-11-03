@@ -2208,9 +2208,26 @@
     if (a === 'user-add') return addUser();
     if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>📄 Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Empresa (razón social)<input id="n-empresa" list="dl-empresa" placeholder="Se completa sola según el proyecto"></label><span></span></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
       onOk: (dlg) => { const v = (i) => dlg.querySelector('#n-' + i).value.trim(); if (!v('cliente')) { toast('Escribe el nombre del cliente'); return false; }
+        // aviso de cliente duplicado: mismo DNI, mismo nombre o misma unidad del mismo proyecto
+        const nrm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        const dig = (x) => String(x || '').replace(/\D/g, '');
+        const dni = dig(v('dni')), nom = nrm(v('cliente')), pro = nrm(v('proyecto')), uni = nrm(v('unidad'));
+        const dups = S.ops.map(o => { const r = [];
+          if (dni && dig(o.dni) === dni) r.push('mismo DNI');
+          if (nom && nrm(o.cliente) === nom) r.push('mismo nombre');
+          if (pro && uni && nrm(o.proyecto) === pro && nrm(o.unidad) === uni) r.push('misma unidad');
+          return r.length ? { o, r } : null; }).filter(Boolean);
+        const firma = dni + '|' + nom + '|' + pro + '|' + uni;
+        if (dups.length && dlg._dupOk !== firma) {
+          dlg._dupOk = firma; let box = dlg.querySelector('.dup-aviso');
+          if (!box) { box = document.createElement('div'); box.className = 'ev-falta dup-aviso'; box.setAttribute('role', 'alert'); dlg.querySelector('.dlg-b').prepend(box); }
+          box.innerHTML = `<b>⚠️ Este cliente podría estar repetido:</b><ul style="margin:6px 0 6px 18px;padding:0">${dups.slice(0, 5).map(d => `<li><b>${esc(d.o.cliente)}</b> (${esc(d.o.id)})${d.o.dni ? ' · DNI ' + esc(d.o.dni) : ''}${d.o.proyecto ? ' · ' + esc(d.o.proyecto) : ''}${d.o.unidad ? ' – ' + esc(d.o.unidad) : ''} · <i>${d.r.join(', ')}</i> <button type="button" class="btn sm" data-act="goto" data-href="#/cliente/${esc(d.o.id)}" data-close>Ver</button></li>`).join('')}</ul>Si de verdad es otro cliente u otra compra, toca <b>Crear de todas formas</b>.`;
+          dlg.querySelector('[data-m=ok]').textContent = 'Crear de todas formas'; box.scrollIntoView({ block: 'nearest' }); return false;
+        }
         const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()), cliente: v('cliente') };
         ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k)));
-        if (v('empresa') && v('empresa') !== empEnProy(op.proyecto)) { if (op.proyecto && !empEnProy(op.proyecto)) setEmpresaProyecto(op.proyecto, v('empresa')); else op.empresa = v('empresa'); } // la primera vez queda como la empresa del proyecto if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
+        if (v('empresa') && v('empresa') !== empEnProy(op.proyecto)) { if (op.proyecto && !empEnProy(op.proyecto)) setEmpresaProyecto(op.proyecto, v('empresa')); else op.empresa = v('empresa'); } // la primera vez queda como la empresa del proyecto
+        if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
         if (op.precio != null) op.cob_porRecibir = Math.max(0, op.precio - (op.montoBanco || 0)); // la inicial empieza pendiente, no cobrada
         marcaIngreso(op); if (op.aprob) toast('Cliente creado. Queda pendiente del V°B° de la administración');
         S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); commit(); location.hash = '#/cliente/' + op.id; } });
