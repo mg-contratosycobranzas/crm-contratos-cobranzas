@@ -533,3 +533,10 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .ciclo-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:10px}.ciclo-bar i{display:grid;place-items:center;color:#fff;font-style:normal;font-size:12px;font-weight:650;min-width:22px}
 .ciclo-t{width:100%;border-collapse:collapse}.ciclo-t td,.ciclo-t th{padding:5px 8px;border-bottom:1px solid var(--line2);text-align:left;font-size:13px}.ciclo-t th{font-size:11px;color:var(--muted);text-transform:uppercase}.ciclo-t .r{text-align:right}.ciclo-t .sw{display:inline-block;width:12px;height:12px;border-radius:3px}
 .cg-bar{position:relative;display:flex;height:9px;width:200px;max-width:100%;background:var(--line2);border-radius:5px;margin-bottom:3px}.cg-bar i{display:block;height:100%}.cg-bar i:first-child{border-radius:5px 0 0 5px}.cg-bar i.r{background:var(--rojo)}.cg-bar i.a{background:var(--amar)}.cg-bar i.v{background:var(--verde)}.cg-bar u{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed var(--ink)}
+
+/* Modelo de productividad */
+.prod-exp>summary{cursor:pointer;list-style:none;flex-wrap:wrap}.prod-exp>summary::-webkit-details-marker{display:none}.prod-exp>summary h2::before{content:'▸ ';color:var(--muted)}.prod-exp[open]>summary h2::before{content:'▾ '}
+.prod-f{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}.prod-f .pf{flex:1 1 200px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:3px;background:var(--surface2)}
+.prod-f .pf b{font-size:15px}.prod-f .pf em{font-style:normal;color:var(--accent,#2c6db4);font-weight:600}.prod-f .pf span{font-size:13px}.prod-f .pf small{font-size:12px;color:var(--muted)}.prod-f .pf small.m{color:var(--ink);font-weight:600}
+.prod-f .op{align-self:center;font-size:22px;color:var(--muted)}.prod-ref{margin:4px 0 0;padding-left:18px;line-height:1.5}.prod-ref li{margin:2px 0}
+.txt-verde{color:var(--verde)}
