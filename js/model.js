@@ -50,7 +50,7 @@
       { k: 'proyecto', l: 'Proyecto', t: 'text', list: 'proyecto' }, { k: 'empresa', l: 'Empresa (razón social)', t: 'text', list: 'empresa' }, { k: 'unidad', l: 'Unidad', t: 'text' },
       { k: 'fechaInicio', l: 'Fecha de inicio', t: 'date' },
       { k: 'vendedor', l: 'Vendedor', t: 'text', list: 'vendedor' }, { k: 'jefeVentas', l: 'Jefe de ventas', t: 'text', list: 'jefeVentas' },
-      { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo de banco', t: 'text' },
+      { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo / asesor de banco', t: 'text', list: 'ejecBanco' }, { k: 'ban_fRecibe', l: 'Fecha en que el ejecutivo de banco recibe el caso', t: 'date' },
       { k: 'montoBanco', l: 'Monto a financiar (S/)', t: 'number' }, { k: 'bono', l: 'Bono MiVivienda (S/)', t: 'number' }, { k: 'precio', l: 'Precio de venta (S/)', t: 'number' },
       { k: 'observaciones', l: 'Observaciones', t: 'textarea', w: 2 }
     ],
@@ -70,7 +70,8 @@
       { k: 'con_cheque', l: 'Cheque en CRM Evolta', t: 'select', o: YN },
       { k: 'con_kardexMonto', l: 'Kardex (N°)', t: 'number' },
       { k: 'con_estadoKardex', l: 'Estado del kardex', t: 'select', o: ['Pendiente', 'En proceso', 'Completo', 'Observado', 'No corresponde'] },
-      { k: 'con_notaria', l: 'Notaría', t: 'text', list: 'notaria' }, { k: 'con_abogado', l: 'Abogado a cargo', t: 'text', list: 'abogado' },
+      { k: 'con_notaria', l: 'Notaría', t: 'text', list: 'notaria' }, { k: 'con_fLlegaNotaria', l: 'Fecha en que llega a notaría (envío del banco)', t: 'date' },
+      { k: 'con_abogado', l: 'Abogado / doctor a cargo en notaría', t: 'text', list: 'abogado' }, { k: 'con_fAsignaAbogado', l: 'Fecha de asignación del abogado', t: 'date' },
       { k: 'con_fFirmaCliente', l: 'Fecha firma cliente', t: 'date' }, { k: 'con_fFirmaRL', l: 'Fecha firma representante legal', t: 'date' },
       { k: 'con_datosCRM', l: 'Datos ingresados al CRM Evolta', t: 'select', o: ['INGRESADO', 'NO INGRESADO'] },
       { k: 'con_fCulm', l: 'Fecha de culminación', t: 'date' }

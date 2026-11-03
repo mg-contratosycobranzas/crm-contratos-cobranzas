@@ -62,11 +62,11 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' },
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos banco y notaría' },
     // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
     ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos', 'v_dev']);
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos', 'v_dev', 'v_tiempos']);
   const verEtapa = (k, n) => can('e_' + k, n);
   // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
   // mensaje corto del día para el equipo (cambia cada día, igual para todos)
@@ -94,7 +94,7 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const VIEW_PERM = { tiempos: 'v_tiempos', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -710,7 +710,7 @@
     if (f.t === 'select') inp = `<select ${base}><option value=""></option>${[...new Set([...f.o, ...(v && !f.o.includes(v) ? [v] : [])])].map(x => `<option ${String(v) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
     else if (f.t === 'owner') { const key = Object.keys(STAGE).find(s => STAGE[s].ownerKey === f.k); const names = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...(v ? [v] : [])])]; inp = `<select ${base}><option value="">Sin asignar</option>${names.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`; }
     else if (f.t === 'textarea') inp = `<textarea rows="2" ${base}>${esc(v)}</textarea>`;
-    else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${f.list}"` : ''} value="${esc(v)}" ${f.k === 'empresa' && !v && empresaDe(op) ? `placeholder="${esc(empresaDe(op))} (del proyecto)"` : ''} ${base}>`;
+    else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${listaDe(op, f)}"` : ''} value="${esc(v)}" ${f.k === 'empresa' && !v && empresaDe(op) ? `placeholder="${esc(empresaDe(op))} (del proyecto)"` : ''} ${base}>`;
     const fromPdf = mark && op.evolta && (op.evolta.campos || []).includes(f.k);
     return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${mark && v === '' ? 'falta' : ''}"><span>${f.l}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
@@ -769,6 +769,57 @@
       ${(e.pagos || []).length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Pagos registrados</th><th>Monto</th><th>Forma</th><th>N° operación</th><th>Entidad</th></tr></thead><tbody>${e.pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${money(p.monto)}</td><td>${esc(p.forma)}</td><td>${esc(p.operacion)}</td><td>${esc(p.entidad)}</td></tr>`).join('')}</tbody></table></div>` : ''}
       <details class="info"><summary>¿Qué significa cada concepto?</summary><dl class="ev-g">${EV_GLOSARIO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></details></div>`;
   }
+  /* ---- Tiempos banco y notaría: cuánto tarda cada ejecutivo de banco en llevar el caso a notaría
+     y cuánto tarda cada notaría / abogado hasta que firma el cliente ---- */
+  const TRAMOS = {
+    ban: { ini: 'ban_fRecibe', fin: 'con_fLlegaNotaria', l: 'Banco → notaría' },
+    not: { ini: 'con_fLlegaNotaria', fin: 'con_fFirmaCliente', l: 'Notaría → firma del cliente' },
+    abo: { ini: 'con_fAsignaAbogado', fin: 'con_fFirmaCliente', l: 'Abogado → firma del cliente' } };
+  // días de un tramo: terminado (inicio y fin) o en curso (solo inicio, se cuenta hasta hoy)
+  function tramo(o, k) {
+    const t = TRAMOS[k], a = pd(o[t.ini]), b = pd(o[t.fin]);
+    if (!a) return { dias: null, enCurso: false };
+    return b ? { dias: Math.max(0, diff(b, a)), enCurso: false } : { dias: Math.max(0, diff(today(), a)), enCurso: true };
+  }
+  function vTiempos() {
+    const all = rows(true).map(r => r.o), avg = (L) => L.length ? Math.round(L.reduce((t, x) => t + x, 0) / L.length) : null;
+    const dd = (n) => n == null ? '<span class="muted">—</span>' : `<b>${n}</b> ${n === 1 ? 'día' : 'días'}`;
+    // agrupa los clientes por quien atiende el tramo y calcula promedio, más rápido, más lento y casos en curso
+    const grupo = (k, claves) => {
+      const m = new Map();
+      all.forEach(o => { const t = tramo(o, k); if (t.dias == null) return; const ks = claves(o); const id = ks.join('|');
+        if (!m.has(id)) m.set(id, { ks, hechos: [], curso: [] }); (t.enCurso ? m.get(id).curso : m.get(id).hechos).push({ o, d: t.dias }); });
+      return [...m.values()].map(g => { const h = g.hechos.map(x => x.d); return { ...g, n: g.hechos.length + g.curso.length, prom: avg(h), min: h.length ? Math.min(...h) : null, max: h.length ? Math.max(...h) : null, viejo: g.curso.length ? Math.max(...g.curso.map(x => x.d)) : null }; })
+        .sort((a, b) => (b.prom ?? -1) - (a.prom ?? -1));
+    };
+    const sinDato = (x) => x || '<span class="muted">(sin registrar)</span>';
+    const colsDe = (heads) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => sinDato(esc(g.ks[i] || '')) })),
+      { h: 'Casos', cls: 'r', s: g => g.n, f: g => g.n },
+      { h: 'Promedio (terminados)', cls: 'r', s: g => g.prom ?? -1, f: g => dd(g.prom) + (g.hechos.length ? ` <span class="small muted">(${g.hechos.length})</span>` : '') },
+      { h: 'Más rápido', cls: 'r', s: g => g.min ?? -1, f: g => dd(g.min) }, { h: 'Más lento', cls: 'r', s: g => g.max ?? -1, f: g => dd(g.max) },
+      { h: 'En curso', cls: 'r', s: g => g.curso.length, f: g => g.curso.length ? `${g.curso.length} <span class="small muted">· el más antiguo lleva ${g.viejo} días</span>` : '<span class="muted">0</span>' }];
+    const prom = (k) => avg(all.map(o => tramo(o, k)).filter(t => t.dias != null && !t.enCurso).map(t => t.dias));
+    const enCurso = (k) => all.filter(o => tramo(o, k).enCurso).length;
+    const kpi = (n, l) => `<div class="kpi"><div class="n">${n == null ? '—' : n}</div><div class="small muted">${l}</div></div>`;
+    const curso = all.flatMap(o => ['ban', 'not'].map(k => ({ o, k, t: tramo(o, k) }))).filter(x => x.t.enCurso).sort((a, b) => b.t.dias - a.t.dias).slice(0, 15);
+    const colsCurso = [{ h: 'Cliente', s: x => x.o.cliente || '', f: x => `<a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente || x.o.id)}</b></a>` },
+      { h: 'Tramo', s: x => x.k, f: x => TRAMOS[x.k].l }, { h: 'Quién lo tiene', s: x => x.k === 'ban' ? x.o.ejecBanco || '' : x.o.con_abogado || x.o.con_notaria || '',
+        f: x => x.k === 'ban' ? `${sinDato(esc(x.o.ejecBanco || ''))} <span class="small muted">${esc(x.o.banco || '')}</span>` : `${sinDato(esc(x.o.con_abogado || ''))} <span class="small muted">${esc(x.o.con_notaria || '')}</span>` },
+      { h: 'Desde', s: x => x.o[TRAMOS[x.k].ini], f: x => fdate(x.o[TRAMOS[x.k].ini]) }, { h: 'Días', cls: 'r', s: x => x.t.dias, f: x => dd(x.t.dias) }];
+    const faltan = [[all.filter(o => o.ejecBanco && !o.ban_fRecibe).length, ['tiene', 'tienen', 'ejecutivo de banco pero no la fecha en que recibió el caso']],
+      [all.filter(o => o.con_notaria && !o.con_fLlegaNotaria).length, ['tiene', 'tienen', 'notaría pero no la fecha en que llegó a notaría']],
+      [all.filter(o => o.con_abogado && !o.con_fAsignaAbogado).length, ['tiene', 'tienen', 'abogado pero no la fecha de asignación']]].filter(x => x[0]);
+    const card = (t, sub, body) => `<div class="card" style="margin-top:14px"><div class="card-h"><h2>${t}</h2><span class="small muted">${sub}</span></div>${body}</div>`;
+    return `${pageHead('Tiempos banco y notaría', 'Cuánto tarda cada ejecutivo de banco en llevar el caso a notaría, y cada notaría y abogado hasta que firma el cliente.', '',
+      'Se mide con las fechas de la ficha del cliente: <b>Fecha en que el ejecutivo de banco recibe el caso</b> (Datos generales), <b>Fecha en que llega a notaría</b>, <b>Fecha de asignación del abogado</b> y <b>Fecha firma cliente</b> (Contratos). El promedio usa solo los casos terminados; los que siguen abiertos se cuentan hasta hoy en "En curso".')}
+      <div class="kpis ops-kpis">${kpi(prom('ban'), 'Días promedio banco → notaría')}${kpi(prom('not'), 'Días promedio notaría → firma del cliente')}${kpi(prom('abo'), 'Días promedio abogado → firma del cliente')}${kpi(enCurso('ban'), 'Casos en el banco ahora')}${kpi(enCurso('not'), 'Casos en notaría sin firma del cliente')}</div>
+      ${faltan.length ? `<div class="ev-falta" style="margin-top:14px"><b>Para medir mejor:</b> ${faltan.map(([n, [v1, vn, t]]) => `${n} ${n === 1 ? 'cliente ' + v1 : 'clientes ' + vn} ${t}`).join(' · ')}.</div>` : ''}
+      ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', `<div class="ops-tw">${tbl('tp-ban', colsDe(['Banco', 'Ejecutivo / asesor']), grupo('ban', o => [o.banco, o.ejecBanco]), 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.')}</div>`)}
+      ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', `<div class="ops-tw">${tbl('tp-not', colsDe(['Notaría']), grupo('not', o => [o.con_notaria]), 'Aún no hay clientes con la fecha en que llegó a notaría.')}</div>`)}
+      ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', `<div class="ops-tw">${tbl('tp-abo', colsDe(['Notaría', 'Abogado / doctor']), grupo('abo', o => [o.con_notaria, o.con_abogado]), 'Aún no hay clientes con la fecha de asignación del abogado.')}</div>`)}
+      ${card('⏳ Casos abiertos más demorados', 'Los 15 que más tiempo llevan en el banco o en notaría', `<div class="ops-tw">${tbl('tp-cur', colsCurso, curso, 'No hay casos abiertos en el banco ni en notaría.')}</div>`)}`;
+  }
+
   /* ---- Resumen de operaciones (administración): lo más importante de cada venta, en pantalla y en Excel ---- */
   // empresa: la del cliente; si no, la configurada para su proyecto (Configurar → Empresa por proyecto); si no, la de la minuta
   const empEnProy = (p) => ((S.params.empresas || {})[p]) || '';
@@ -781,7 +832,9 @@
     { h: 'Unidad / Dpto.', v: r => r.o.unidad, s: 1 }, { h: 'Cliente', v: r => r.o.cliente, s: 1 }, { h: 'DNI', v: r => r.o.dni },
     { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n', s: 1 },
     { h: 'Ejecutivo de ventas', v: r => r.o.vendedor }, { h: 'Jefe de ventas', v: r => r.o.jefeVentas }, { h: 'Banco', v: r => r.o.banco, s: 1 }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
-    { h: 'Kardex', v: r => r.o.con_kardexMonto }, { h: 'Abogado a cargo', v: r => r.o.con_abogado },
+    { h: 'Ejecutivo recibe el caso', v: r => r.o.ban_fRecibe, t: 'd' }, { h: 'Llega a notaría', v: r => r.o.con_fLlegaNotaria, t: 'd' }, { h: 'Días banco → notaría', v: r => tramo(r.o, 'ban').dias, t: 'i', x: r => tramo(r.o, 'ban') }, { h: 'Notaría', v: r => r.o.con_notaria },
+    { h: 'Kardex', v: r => r.o.con_kardexMonto }, { h: 'Abogado a cargo', v: r => r.o.con_abogado }, { h: 'Asignación del abogado', v: r => r.o.con_fAsignaAbogado, t: 'd' },
+    { h: 'Días notaría → firma cliente', v: r => tramo(r.o, 'not').dias, t: 'i', x: r => tramo(r.o, 'not') }, { h: 'Días abogado → firma cliente', v: r => tramo(r.o, 'abo').dias, t: 'i', x: r => tramo(r.o, 'abo') },
     { h: 'Firma cliente', v: r => r.o.con_fFirmaCliente, t: 'd' }, { h: 'Firma inmobiliaria', v: r => r.o.con_fFirmaRL, t: 'd' },
     { h: 'Fecha base (ingreso)', v: r => fechaBase(r.o), t: 'd' }, { h: 'Mes de ingreso', v: r => mesTxt(mesDe(fechaBase(r.o))), s: 1 },
     { h: 'Desembolso programado', v: r => desembolsoProg(r.o), t: 'd' }, { h: 'Fecha de desembolso', v: r => r.o.fin_fDesembolso, t: 'd' },
@@ -1156,7 +1209,7 @@
   }
   function tabHtml(o, tk) {
     const T = CRM.EV_TABS[tk], G = T.groups;
-    const card = (gs) => `<div class="nkb-card ${T.wide ? 'nkb-row' : ''}">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text' }, 'siempre')).join('')}`).join('')}</div>`;
+    const card = (gs) => `<div class="nkb-card ${T.wide ? 'nkb-row' : ''}">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text', list: { ejecBanco: 'ejecBanco', con_notaria: 'notaria', con_abogado: 'abogado' }[f.k] }, 'siempre')).join('')}`).join('')}</div>`;
     return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm" data-act="evtab" data-tab="${tk}" data-op="${o.id}">📋 Cotejar con Evolta</button></div>
       ${tabStatus(o, tk)}<div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></div>`;
   }
@@ -1950,7 +2003,7 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos banco y notaría', '', r.view === 'tiempos'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -1965,9 +2018,13 @@
       can('v_agenda') && t('#/agenda', svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>'), 'Agenda', r.view === 'agenda'),
       t('javascript:void 0', svg('<path d="M4 6h16M4 12h16M4 18h16"/>'), 'Más', false, 'nav-toggle')].filter(Boolean).join('');
   }
+  const slugL = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  // lista de sugerencias del campo: los ejecutivos del banco del cliente y los abogados de su notaría
+  const listaDe = (op, f) => f.k === 'ejecBanco' && op.banco ? 'ejecBanco-' + slugL(op.banco) : f.k === 'con_abogado' && op.con_notaria ? 'abogado-' + slugL(op.con_notaria) : f.list;
   function renderDatalists() {
     const dl = (id, vals) => `<datalist id="dl-${id}">${vals.map(v => `<option value="${esc(v)}">`).join('')}</datalist>`;
-    $('#dls').innerHTML = dl('proyecto', uniq(o => o.proyecto)) + dl('vendedor', uniq(o => o.vendedor)) + dl('jefeVentas', uniq(o => o.jefeVentas)) + dl('banco', uniq(o => o.banco)) + dl('empresa', uniq(empresaDe)) + dl('notaria', uniq(o => o.con_notaria)) + dl('abogado', uniq(o => o.con_abogado));
+    $('#dls').innerHTML = dl('proyecto', uniq(o => o.proyecto)) + dl('vendedor', uniq(o => o.vendedor)) + dl('jefeVentas', uniq(o => o.jefeVentas)) + dl('banco', uniq(o => o.banco)) + dl('empresa', uniq(empresaDe)) + dl('notaria', uniq(o => o.con_notaria)) + dl('abogado', uniq(o => o.con_abogado)) + dl('ejecBanco', uniq(o => o.ejecBanco))
+      + uniq(o => o.banco).map(b => dl('ejecBanco-' + slugL(b), uniq(o => o.banco === b && o.ejecBanco))).join('') + uniq(o => o.con_notaria).map(n => dl('abogado-' + slugL(n), uniq(o => o.con_notaria === n && o.con_abogado))).join('');
   }
   let lastKey = '';
   function render(keepScroll) {
@@ -1978,7 +2035,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
