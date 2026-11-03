@@ -2251,10 +2251,15 @@
     if (t.id === 'minfile' && t.files[0]) { loadMinuta(t.files[0], ui.minOp); t.value = ''; }
   });
   document.addEventListener('submit', (e) => {
-    if (e.target.id === 'login-form') { e.preventDefault(); const em = $('#lg-e').value.trim(), pw = $('#lg-p').value; CL.signIn(em, pw).catch(x => toast(AUTH_ERR[x.code] || 'No se pudo entrar: ' + x.message)); return; }
-    const f = e.target.closest('#seg-form'); if (!f) return; e.preventDefault();
-    if (!can('a_seg')) return toast(NOPERM);
-    const fd = new FormData(f), nota = (fd.get('nota') || '').trim(); if (!nota) return;
+        if (e.target.id === 'login-form') {
+      e.preventDefault(); const f = e.target, em = $('#lg-e').value.trim(), pw = $('#lg-p').value, btn = f.querySelector('button[type=submit]');
+      let msg = f.querySelector('.lg-err'); if (!msg) { msg = document.createElement('p'); msg.className = 'small lg-err'; msg.setAttribute('role', 'alert'); msg.style.cssText = 'margin:0;color:var(--red)'; btn.before(msg); }
+      const fin = (txt) => { clearTimeout(lento); btn.disabled = false; btn.textContent = 'Entrar'; msg.textContent = txt || ''; if (txt) toast(txt); };
+      const lento = setTimeout(() => { msg.textContent = 'Está tardando más de lo normal. Revisa tu conexión o si algún bloqueador/antivirus impide conectar con Google (Firebase).'; }, 12000);
+      btn.disabled = true; btn.textContent = 'Entrando…'; msg.textContent = '';
+      CL.signIn(em, pw).then(() => fin(''), x => fin(AUTH_ERR[x.code] || 'No se pudo entrar: ' + (x.code || x.message)));
+      return;
+    }
     S.seguimientos.push({ id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), opId: f.dataset.op, ts: Date.now(), usuario: S.actor, tipo: fd.get('tipo'), etapa: fd.get('etapa'), nota, proxima: (fd.get('proxima') || '').trim(), fCompromiso: fd.get('fCompromiso') || '', resuelto: false });
     save(); f.reset(); refreshFicha(f.dataset.op); $('#nav').innerHTML = navHtml(route()); toast('Seguimiento registrado');
   });
