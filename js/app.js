@@ -876,7 +876,6 @@
     const colsDe = (heads, conObs) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => sinDato(g.ks[i]) + (i === heads.length - 1 && g.s.pocos ? ' <span class="badge plain gris" title="Menos de ' + MIN_CASOS + ' casos terminados: compáralo con cuidado">pocos casos</span>' : '') })),
       { h: 'Casos', cls: 'r', s: g => g.s.n, f: g => g.s.n },
       { h: `Mediana (${U})`, cls: 'r', s: g => g.s.mediana ?? -1, f: g => dd(g.s.mediana) },
-      { h: 'Promedio', cls: 'r', s: g => g.s.promedio ?? -1, f: g => dd(g.s.promedio) },
       { h: 'Rápido / lento', cls: 'r', s: g => g.s.max ?? -1, f: g => g.s.min == null ? '<span class="muted">—</span>' : `${g.s.min} / ${g.s.max}` },
       { h: '% en meta', cls: 'r', s: g => g.s.enMeta ?? -1, f: g => pctBadge(g.s.enMeta) + (g.s.hechos ? ` <span class="small muted">de ${g.s.hechos}</span>` : '') },
       ...(conObs ? [{ h: 'Sin observaciones', cls: 'r', s: g => g.s.sinObs ?? -1, f: g => pctBadge(g.s.sinObs) + (g.s.obsProm != null ? ` <span class="small muted">· ${g.s.obsProm} obs/caso</span>` : '') }] : []),
