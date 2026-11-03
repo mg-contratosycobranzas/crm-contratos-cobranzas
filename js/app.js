@@ -62,11 +62,11 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos y efectividad' },
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos y efectividad' }, { g: 'v', k: 'v_carga', l: 'Carga del equipo' },
     // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
     ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
-  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos', 'v_dev', 'v_tiempos']);
+  const PERM_OFF = new Set(['v_config', 'a_users', 'a_params', 'a_import', 'a_delop', 'v_ops', 'a_pasos', 'v_dev', 'v_tiempos', 'v_carga']);
   const verEtapa = (k, n) => can('e_' + k, n);
   // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
   // mensaje corto del día para el equipo (cambia cada día, igual para todos)
@@ -94,7 +94,7 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { tiempos: 'v_tiempos', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const VIEW_PERM = { tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -900,6 +900,7 @@
         ${sel('foco', 'Informe: todos', [...uniq(o => o.banco).map(b => ['b:' + b, 'Informe del banco ' + b]), ...uniq(o => o.con_notaria).map(n => ['n:' + n, 'Informe de ' + n])])}
         ${F.desde || F.hasta || F.banco || F.fin || F.foco ? '<button class="btn sm" data-act="tp-limpiar">Quitar filtros</button>' : ''}</div>
       <div class="kpis ops-kpis">${['ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
+      ${cicloCard(base)}
       <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
         <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
           <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
@@ -929,6 +930,7 @@
     add('Detalle por cliente', base.map(o => { const x = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, Banco: o.banco, 'Ejecutivo de banco': o.ejecBanco, 'Bono MiVivienda': Number(o.bono) > 0 ? 'Sí' : 'No', Notaría: o.con_notaria, Abogado: o.con_abogado, 'Asistente legal': o.con_asistente, 'Motivo de demora': o.con_motivoDemora || '', 'Obs. banco': o.con_banObs ?? '', 'Obs. notaría': o.con_notObs ?? '', 'Espera cliente banco': o.con_banPausa ?? '', 'Espera cliente notaría': o.con_notPausa ?? '' };
       Object.entries(TRAMOS).forEach(([k, t]) => { const r = tramo(o, k); x[`${t.l} · inicio`] = xd(o[t.ini]); x[`${t.l} · fin`] = xd(o[t.fin]); x[`${t.l} · días`] = r.dias ?? ''; x[`${t.l} · estado`] = r.dias == null ? '' : (r.enCurso ? 'En curso · ' : 'Terminado · ') + ({ verde: 'en meta', amarillo: 'por vencer', rojo: 'fuera de meta' }[r.sem] || ''); });
       return x; }));
+    { const C = cicloResumen(base); add('Ciclo de la venta', [...C.segs.map(x => ({ Tramo: x.de + ' → ' + x.a, [`Mediana (${U})`]: x.med ?? '', 'Casos': x.n, '% del ciclo': x.med && C.suma ? Math.round(x.med * 100 / C.suma) : '' })), { Tramo: 'Venta → desembolso (real)', [`Mediana (${U})`]: C.desemb.med ?? '', Casos: C.desemb.n }, { Tramo: 'Venta → inscripción (real)', [`Mediana (${U})`]: C.insc.med ?? '', Casos: C.insc.n }]); }
     add('Fechas a revisar', tpProblemas(base).map(p => ({ ID: p.o.id, Cliente: p.o.cliente, Problema: p.txt })));
     const filtros = [F.desde && 'desde ' + mesTxt(F.desde), F.hasta && 'hasta ' + mesTxt(F.hasta), F.banco && 'banco ' + F.banco, F.fin && (F.fin === 'bono' ? 'con bono' : 'sin bono'), F.foco && F.foco.slice(2), ui.proy && 'proyecto ' + ui.proy].filter(Boolean).join(' · ') || 'ninguno';
     add('Metodología', [{ Concepto: 'Generado', Detalle: new Date().toLocaleString('es-PE') + ' por ' + (S.actor || '') }, { Concepto: 'Filtros', Detalle: filtros }, { Concepto: 'Unidad', Detalle: U + (+S.params.diasHabiles ? ' (lunes a viernes, sin feriados nacionales del Perú ni los adicionales configurados)' : '') },
@@ -974,6 +976,7 @@
       <p class="np" style="background:#fff8e1;border:1px solid #f0d58a;padding:8px;border-radius:6px">Para guardarlo como PDF elige <b>"Guardar como PDF"</b> en Destino de la ventana de impresión.</p>
       <header><div><h1>${esc(titulo)}</h1><p>${esc(periodo)}${filtros ? ' · ' + esc(filtros) : ''} · Tiempos en ${U}</p></div><div style="text-align:right"><div class="logo" style="margin-left:auto">MG</div><p>Grupo MG · Contratos y Cobranzas<br>${fdate(iso(today()))}</p></div></header>
       ${sec('Indicadores principales', `<div class="kp">${top.map(({ k, s }) => `<div><small>${esc(TRAMOS[k].l)}</small><b>${s.mediana ?? '—'}</b><small>mediana · meta ${s.meta ?? '—'} · ${s.enMeta == null ? '—' : s.enMeta + '% en meta'} · ${s.curso} en curso</small></div>`).join('')}</div>`)}
+      ${(() => { const C = cicloResumen(base); if (!C.segs.some(x => x.n)) return ''; return sec('Ciclo completo de la venta', `<p>Mediana de la venta al desembolso: <b>${C.desemb.med ?? '—'} ${U}</b> (${C.desemb.n} casos) · a la inscripción: <b>${C.insc.med ?? '—'} ${U}</b> (${C.insc.n} casos).</p><div style="display:flex;height:22px;border-radius:5px;overflow:hidden;margin:6px 0">${C.segs.filter(x => x.med).map(x => `<div style="flex:${x.med};background:${CICLO_COL[x.i]};color:#fff;font-size:10px;display:grid;place-items:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${x.med}</div>`).join('')}</div><table><tbody>${C.segs.map(x => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${CICLO_COL[x.i]};-webkit-print-color-adjust:exact;print-color-adjust:exact"></span> ${esc(x.de)} → ${esc(x.a)}</td><td class="r"><b>${x.med ?? '—'}</b> ${U}</td><td class="r">${x.med && C.suma ? Math.round(x.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${x.n} casos</td></tr>`).join('')}</tbody></table>`); })()}
       ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
       ${sec('Ejecutivos de banco · banco → notaría', barras('ban', ['Banco', 'Ejecutivo']))}
       ${sec('Notarías · llegada → firma del cliente', barras('not', ['Notaría']))}
@@ -988,6 +991,85 @@
       </body></html>`;
     const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para generar el informe');
     w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
+  }
+
+  /* ---- Ciclo completo de la venta: de la venta al desembolso y la inscripción, hito por hito ---- */
+  const CICLO = [
+    { k: 'base', l: 'Ingreso de la venta', f: o => fechaBase(o) }, { k: 'fRecibeBanco', l: 'Banco recibe el caso' }, { k: 'con_fLlegaNotaria', l: 'Llega a notaría' },
+    { k: 'con_fFirmaCliente', l: 'Firma del cliente' }, { k: 'con_fFirmaRL', l: 'Firma del representante legal' }, { k: 'fin_fDesembolso', l: 'Desembolso' }, { k: 'for_fInscripcion', l: 'Inscripción SUNARP' }];
+  const CICLO_COL = ['#2c6db4', '#b86e12', '#7448b0', '#be3f76', '#37474f', '#1c8658'];
+  const hitoF = (o, h) => (h.f ? h.f(o) : o[h.k]) || '';
+  // tramos entre hitos consecutivos de un cliente (solo si ambas fechas existen y están en orden)
+  function cicloTramos(o) {
+    return CICLO.slice(0, -1).map((h, i) => { const a = hitoF(o, h), b = hitoF(o, CICLO[i + 1]); return { i, de: h.l, a: CICLO[i + 1].l, dias: a && b && b >= a ? diasEntre(pd(a), pd(b)) : null }; });
+  }
+  function cicloHtml(o) {
+    const U = unidadDias(), T = cicloTramos(o), F = CICLO.map(h => hitoF(o, h));
+    const ult = F.map((f, i) => f ? i : -1).filter(i => i >= 0).pop();
+    if (ult == null || ult < 0) return '';
+    const base = F[0], fin = F[5], total = base && fin && fin >= base ? diasEntre(pd(base), pd(fin)) : null, lleva = base && !fin ? diasEntre(pd(base), today()) : null;
+    return `<div class="card ciclo"><div class="card-h"><h2>🔁 Ciclo de la venta</h2><span class="small muted">${total != null ? `Venta → desembolso: <b>${total} ${U}</b>` : lleva != null ? `Lleva <b>${lleva} ${U}</b> desde la venta, sin desembolso aún` : ''}</span></div>
+      <div class="ciclo-tl">${CICLO.map((h, i) => `<div class="ch ${F[i] ? 'ok' : ''}"><i style="--cc:${CICLO_COL[Math.min(i, CICLO_COL.length - 1)]}"></i><b>${esc(h.l)}</b><span>${F[i] ? fdate(F[i]) : 'pendiente'}</span></div>${i < CICLO.length - 1 ? `<div class="cs">${T[i].dias != null ? `<em>${T[i].dias} d</em>` : F[i] && !F[i + 1] && i === ult ? `<em class="cur">${diasEntre(pd(F[i]), today())} d…</em>` : '<em class="na">—</em>'}</div>` : ''}`).join('')}</div></div>`;
+  }
+  function cicloResumen(base) {
+    const B = base || tpBase(), segs = CICLO.slice(0, -1).map((h, i) => { const L = B.map(o => cicloTramos(o)[i].dias).filter(x => x != null); return { i, de: h.l, a: CICLO[i + 1].l, med: mediana(L), n: L.length }; });
+    const tot = (j) => { const L = B.map(o => { const a = hitoF(o, CICLO[0]), b = hitoF(o, CICLO[j]); return a && b && b >= a ? diasEntre(pd(a), pd(b)) : null; }).filter(x => x != null); return { med: mediana(L), n: L.length }; };
+    const suma = segs.reduce((t, s) => t + (s.med || 0), 0);
+    return { segs, suma, desemb: tot(5), insc: tot(6) };
+  }
+  function cicloCard(base) {
+    const C = cicloResumen(base), U = unidadDias(); if (!C.segs.some(s => s.n)) return '';
+    return `<div class="card tp-card"><div class="card-h"><h2>🔁 Ciclo completo de la venta</h2><span class="small muted">Mediana de cada tramo, de la venta a la inscripción (${U})</span></div><div class="card-b">
+      <div class="ciclo-kp"><div><b>${C.desemb.med ?? '—'}</b><span>${U} de la venta al desembolso <small>(${C.desemb.n} casos)</small></span></div><div><b>${C.insc.med ?? '—'}</b><span>${U} de la venta a la inscripción <small>(${C.insc.n} casos)</small></span></div><div><b>${C.suma}</b><span>${U} sumando la mediana de cada tramo</span></div></div>
+      <div class="ciclo-bar">${C.segs.filter(s => s.med).map(s => `<i style="flex:${s.med};background:${CICLO_COL[s.i]}" title="${esc(s.de)} → ${esc(s.a)}: ${s.med} ${U}">${s.med}</i>`).join('')}</div>
+      <table class="ciclo-t"><thead><tr><th></th><th>Tramo</th><th class="r">Mediana</th><th class="r">% del ciclo</th><th class="r">Casos</th></tr></thead><tbody>${C.segs.map(s => `<tr><td><span class="sw" style="background:${CICLO_COL[s.i]}"></span></td><td>${esc(s.de)} → ${esc(s.a)}</td><td class="r"><b>${s.med ?? '—'}</b></td><td class="r">${s.med && C.suma ? Math.round(s.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${s.n}</td></tr>`).join('')}</tbody></table>
+      ${C.suma ? (() => { const m = [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0]; return `<p class="small" style="margin:8px 0 0">💡 El tramo más largo es <b>${esc(m.de)} → ${esc(m.a)}</b>: ${Math.round(m.med * 100 / C.suma)}% del ciclo. Ahí está la mayor oportunidad de acortar el tiempo total.</p>`; })() : ''}</div></div>`;
+  }
+  /* ---- Carga del equipo: cuántos casos abiertos tiene cada persona (interna y externa) frente al promedio ---- */
+  function cargaDatos() {
+    const abiertos = rows().filter(r => r.d.etapa !== 'cerrado'), tope = S.params.topeCarga || 5;
+    const per = new Map();
+    abiertos.forEach(r => { const n = r.d.responsable || 'Sin asignar', k = n + '|' + r.d.etapa; if (!per.has(k)) per.set(k, { name: n, etapa: r.d.etapa, L: [] }); per.get(k).L.push(r); });
+    // quien no tiene casos también aparece (tiene capacidad)
+    S.users.filter(u => STAGE[u.stage] && u.stage !== JEFATURA).forEach(u => { const k = u.name + '|' + u.stage; if (!per.has(k)) per.set(k, { name: u.name, etapa: u.stage, L: [] }); });
+    const filas = [...per.values()].map(p => ({ ...p, n: p.L.length, inm: p.L.filter(r => r.d.alerta === 'Inmediato').length, acu: p.L.filter(r => r.d.alerta === 'Por acumulación').length }));
+    const prom = {}; STAGES.forEach(s => { const F = filas.filter(f => f.etapa === s.key && f.name !== 'Sin asignar'); prom[s.key] = F.length ? F.reduce((t, f) => t + f.n, 0) / F.length : 0; });
+    filas.forEach(f => { f.prom = prom[f.etapa]; f.estado = f.name === 'Sin asignar' ? 'sin' : f.n > f.prom + tope ? 'alta' : f.n < Math.max(0, f.prom - tope) ? 'baja' : 'ok'; });
+    const valMed = new Map(tpGrupos('val', rows(true).map(r => r.o)).map(g => [g.ks[0], g.s]));
+    filas.forEach(f => { if (f.etapa === 'con') f.tiempo = valMed.get(f.name) || null; });
+    filas.sort((a, b) => STAGES.findIndex(s => s.key === a.etapa) - STAGES.findIndex(s => s.key === b.etapa) || (a.name === 'Sin asignar') - (b.name === 'Sin asignar') || b.n - a.n);
+    const ext = (k) => tpGrupos(k, rows(true).map(r => r.o)).filter(g => g.s.curso).sort((a, b) => b.s.curso - a.s.curso);
+    return { filas, abiertos, tope, ban: ext('ban'), not: ext('abo') };
+  }
+  function vCarga() {
+    const C = cargaDatos(), U = unidadDias(), mx = Math.max(1, ...C.filas.map(f => f.n));
+    const est = { alta: '<span class="badge rojo">Sobrecargado</span>', baja: '<span class="badge verde">Con capacidad</span>', ok: '<span class="badge plain gris">Normal</span>', sin: '<span class="badge amar">Por asignar</span>' };
+    const kpi = (n, l, c) => `<div class="kpi"><div class="n ${c || ''}">${n}</div><div class="small muted">${l}</div></div>`;
+    const sinAsig = C.filas.filter(f => f.name === 'Sin asignar').reduce((t, f) => t + f.n, 0), altas = C.filas.filter(f => f.estado === 'alta');
+    const cols = [{ h: 'Persona', s: f => f.name, f: f => f.name === 'Sin asignar' ? '<i class="muted">Sin asignar</i>' : `<b>${esc(f.name)}</b>` }, { h: 'Etapa', s: f => f.etapa, f: f => sbadge(f.etapa) },
+      { h: 'Casos a cargo', s: f => f.n, f: f => `<div class="cg-bar"><i class="r" style="width:${f.inm * 100 / mx}%"></i><i class="a" style="width:${f.acu * 100 / mx}%"></i><i class="v" style="width:${(f.n - f.inm - f.acu) * 100 / mx}%"></i>${f.name !== 'Sin asignar' && f.prom ? `<u style="left:${Math.min(100, f.prom * 100 / mx)}%" title="Promedio de la etapa: ${f.prom.toFixed(1)}"></u>` : ''}</div><b>${f.n}</b> <span class="small muted">${f.inm ? `· ${f.inm} urgente${f.inm > 1 ? 's' : ''} ` : ''}${f.acu ? `· ${f.acu} por acumulación` : ''}</span>` },
+      { h: 'Promedio', cls: 'r', s: f => f.prom, f: f => f.name === 'Sin asignar' ? '' : f.prom.toFixed(1) },
+      { h: 'Estado', s: f => f.estado, f: f => est[f.estado] },
+      { h: 'Tiempo de validación', cls: 'r', s: f => f.tiempo ? f.tiempo.mediana : -1, f: f => f.tiempo ? `<b>${f.tiempo.mediana ?? '—'}</b> d <span class="small muted">· ${f.tiempo.enMeta ?? '—'}% en meta</span>` : '<span class="muted">—</span>' }];
+    const colsExt = (heads) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => g.ks[i] ? esc(g.ks[i]) : '<span class="muted">(sin registrar)</span>' })),
+      { h: 'Casos abiertos', cls: 'r', s: g => g.s.curso, f: g => `<b>${g.s.curso}</b>` }, { h: 'Vencidos', cls: 'r', s: g => g.s.vencidos, f: g => g.s.vencidos ? `<span class="badge rojo">${g.s.vencidos}</span>` : '<span class="muted">0</span>' },
+      { h: 'Por vencer', cls: 'r', s: g => g.s.porVencer, f: g => g.s.porVencer ? `<span class="badge amar">${g.s.porVencer}</span>` : '<span class="muted">0</span>' }, { h: 'El más antiguo', cls: 'r', s: g => g.s.viejo, f: g => `${g.s.viejo} ${U}` }];
+    return `${pageHead('Carga del equipo', 'Cuántos casos abiertos tiene cada persona, comparado con el promedio de su etapa, y cuántos tienen el banco y la notaría.', `<button class="btn" data-act="carga-excel">⬇️ Excel</button>`,
+      `<b>Sobrecargado</b> = tiene más de ${C.tope} casos por encima del promedio de su etapa; <b>Con capacidad</b> = tiene ${C.tope} o más por debajo (el margen es el "tope de carga" de Configurar). La barra muestra en rojo los casos urgentes, en amarillo los que se acumulan y en verde los que están bajo control; la línea es el promedio de la etapa.`)}
+      <div class="kpis ops-kpis">${kpi(C.abiertos.length, 'Casos abiertos')}${kpi(sinAsig, 'Sin responsable asignado', sinAsig ? 'txt-amar' : '')}${kpi(altas.length, 'Personas sobrecargadas', altas.length ? 'txt-rojo' : '')}${kpi(C.ban.reduce((t, g) => t + g.s.curso, 0), 'Casos en el banco')}${kpi(C.not.reduce((t, g) => t + g.s.curso, 0), 'Casos en notaría')}</div>
+      ${altas.length ? `<div class="ev-falta tp-avisos">💡 <b>Sugerencia:</b> ${altas.map(f => { const lib = C.filas.filter(x => x.etapa === f.etapa && x.estado === 'baja')[0]; return `${esc(f.name)} tiene ${f.n} casos (promedio ${f.prom.toFixed(0)})${lib ? `; ${esc(lib.name)} tiene capacidad (${lib.n})` : ''}`; }).join(' · ')}. Puedes repartir con <b>Tomar y repartir</b>.</div>` : ''}
+      <div class="card tp-card"><div class="card-h"><h2>👥 Equipo interno</h2><span class="small muted">Responsable actual de cada caso abierto</span></div><div class="ops-tw">${tbl('cg-int', cols, C.filas, 'No hay casos abiertos.')}</div></div>
+      <div class="card tp-card"><div class="card-h"><h2>🏦 Ejecutivos de banco</h2><span class="small muted">Casos que hoy están en el banco (aún no llegan a notaría)</span></div><div class="ops-tw">${tbl('cg-ban', colsExt(['Banco', 'Ejecutivo / asesor']), C.ban, 'No hay casos en el banco con fecha de recepción.')}</div></div>
+      <div class="card tp-card"><div class="card-h"><h2>⚖️ Notarías y abogados</h2><span class="small muted">Casos asignados a un abogado que aún no firma el cliente</span></div><div class="ops-tw">${tbl('cg-not', colsExt(['Notaría', 'Abogado / doctor']), C.not, 'No hay casos en notaría con abogado asignado.')}</div></div>`;
+  }
+  function cargaExcel() {
+    const C = cargaDatos(), wb = XLSX.utils.book_new();
+    const add = (n, d) => { const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }]); ws['!cols'] = Object.keys(d[0] || { x: 1 }).map(h => ({ wch: Math.max(12, h.length + 4) })); XLSX.utils.book_append_sheet(wb, ws, n); };
+    add('Equipo interno', C.filas.map(f => ({ Persona: f.name, Etapa: STAGE[f.etapa] ? STAGE[f.etapa].name : f.etapa, 'Casos a cargo': f.n, Urgentes: f.inm, 'Por acumulación': f.acu, 'Promedio de la etapa': Math.round(f.prom * 10) / 10, Estado: { alta: 'Sobrecargado', baja: 'Con capacidad', ok: 'Normal', sin: 'Por asignar' }[f.estado], 'Mediana validación': f.tiempo ? f.tiempo.mediana ?? '' : '' })));
+    const ex = (L, h) => L.map(g => ({ ...Object.fromEntries(h.map((x, i) => [x, g.ks[i] || '(sin registrar)'])), 'Casos abiertos': g.s.curso, Vencidos: g.s.vencidos, 'Por vencer': g.s.porVencer, 'El más antiguo (días)': g.s.viejo }));
+    add('Ejecutivos de banco', ex(C.ban, ['Banco', 'Ejecutivo'])); add('Notarías y abogados', ex(C.not, ['Notaría', 'Abogado']));
+    add('Detalle', C.abiertos.map(r => ({ ID: r.o.id, Cliente: r.o.cliente, Proyecto: r.o.proyecto, Etapa: STAGE[r.d.etapa] ? STAGE[r.d.etapa].name : r.d.etapa, Responsable: r.d.responsable, Alerta: r.d.alerta, Banco: r.o.banco, 'Ejecutivo de banco': r.o.ejecBanco, Notaría: r.o.con_notaria, Abogado: r.o.con_abogado })));
+    XLSX.writeFile(wb, `Carga_del_equipo_${iso(today())}.xlsx`); toast('Excel generado');
   }
 
   /* ---- Resumen de operaciones (administración): lo más importante de cada venta, en pantalla y en Excel ---- */
@@ -1636,6 +1718,7 @@
     const d = D.get(id);
     return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><button class="btn sm danger" data-act="op-del" data-op="${o.id}">🗑️ Eliminar cliente</button></div>
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
+    <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
         <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
@@ -1654,7 +1737,7 @@
   }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
-    $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); $('#tl').innerHTML = timelineHtml(o);
+    $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
@@ -2173,7 +2256,7 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y efectividad', '', r.view === 'tiempos'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y efectividad', '', r.view === 'tiempos'), can('v_carga') && item('#/carga', '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carga del equipo', '', r.view === 'carga'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -2205,7 +2288,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -2382,6 +2465,7 @@
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
+    if (a === 'carga-excel') return cargaExcel();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-limpiar') { ui.tp = null; return render(true); }
     if (a === 'export-cf') return exportCf();
