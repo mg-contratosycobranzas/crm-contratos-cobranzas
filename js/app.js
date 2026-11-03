@@ -62,7 +62,7 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos banco y notaría' },
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos y efectividad' },
     // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
     ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
@@ -286,7 +286,9 @@
     (pendingOps[id] = pendingOps[id] || {})[k] = v === undefined ? CL.DEL : v;
     S.log.push({ ts: Date.now(), usuario: S.actor, opId: id, etapa: k.includes('_') ? k.split('_')[0] : 'gen', campo: k, antes: before ?? '', despues: v ?? '' });
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
-    commit(); return true;
+    commit();
+    if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('⚠️ Revisa la fecha: ' + p.txt); }, 50);
+    return true;
   }
 
   /* ================= acciones de un toque ================= */
@@ -769,55 +771,224 @@
       ${(e.pagos || []).length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Pagos registrados</th><th>Monto</th><th>Forma</th><th>N° operación</th><th>Entidad</th></tr></thead><tbody>${e.pagos.map(p => `<tr><td>${fdate(p.fecha)}</td><td>${money(p.monto)}</td><td>${esc(p.forma)}</td><td>${esc(p.operacion)}</td><td>${esc(p.entidad)}</td></tr>`).join('')}</tbody></table></div>` : ''}
       <details class="info"><summary>¿Qué significa cada concepto?</summary><dl class="ev-g">${EV_GLOSARIO.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl></details></div>`;
   }
-  /* ---- Tiempos banco y notaría: cuánto tarda cada ejecutivo de banco en llevar el caso a notaría
-     y cuánto tarda cada notaría / abogado hasta que firma el cliente ---- */
+  /* ---- Tiempos y efectividad: cuánto tarda cada tramo (banco, notaría, abogado, equipo interno),
+     contra una meta, en días hábiles y descontando lo que se esperó al cliente. Con Excel e informe PDF. ---- */
   const TRAMOS = {
-    ban: { ini: 'ban_fRecibe', fin: 'con_fLlegaNotaria', l: 'Banco → notaría' },
-    not: { ini: 'con_fLlegaNotaria', fin: 'con_fFirmaCliente', l: 'Notaría → firma del cliente' },
-    abo: { ini: 'con_fAsignaAbogado', fin: 'con_fFirmaCliente', l: 'Abogado → firma del cliente' } };
-  // días de un tramo: terminado (inicio y fin) o en curso (solo inicio, se cuenta hasta hoy)
-  function tramo(o, k) {
-    const t = TRAMOS[k], a = pd(o[t.ini]), b = pd(o[t.fin]);
-    if (!a) return { dias: null, enCurso: false };
-    return b ? { dias: Math.max(0, diff(b, a)), enCurso: false } : { dias: Math.max(0, diff(today(), a)), enCurso: true };
+    val: { ini: 'con_fAsignacion', fin: 'con_fValidacion', meta: 'metaVal', l: 'Validación legal (interno)', c: 'Asistente legal', quien: o => [o.con_asistente] },
+    ban: { ini: 'fRecibeBanco', fin: 'con_fLlegaNotaria', meta: 'metaBan', l: 'Banco → notaría', c: 'Ejecutivo de banco', pausa: 'con_banPausa', obs: 'con_banObs', quien: o => [o.banco, o.ejecBanco] },
+    not: { ini: 'con_fLlegaNotaria', fin: 'con_fFirmaCliente', meta: 'metaNot', l: 'Notaría → firma del cliente', c: 'Notaría', pausa: 'con_notPausa', obs: 'con_notObs', quien: o => [o.con_notaria] },
+    abo: { ini: 'con_fAsignaAbogado', fin: 'con_fFirmaCliente', meta: 'metaAbo', l: 'Abogado → firma del cliente', c: 'Abogado de notaría', pausa: 'con_notPausa', obs: 'con_notObs', quien: o => [o.con_notaria, o.con_abogado] },
+    rl: { ini: 'con_fFirmaCliente', fin: 'con_fFirmaRL', meta: 'metaRl', l: 'Firma cliente → firma representante legal (interno)', c: 'Empresa', quien: o => [empresaDe(o)] },
+    des: { ini: 'con_fFirmaRL', fin: 'fin_fDesembolso', meta: 'metaDes', l: 'Firma representante legal → desembolso', c: 'Banco', quien: o => [o.banco] } };
+  const TP_FECHAS = [...new Set(Object.values(TRAMOS).flatMap(t => [t.ini, t.fin]))];
+  // feriados nacionales del Perú (fijos + Jueves y Viernes Santo) y los que agregue la administración
+  const feriadosCache = {};
+  function feriados(y) {
+    const key = y + '|' + (S.params.feriadosExtra || ''); if (feriadosCache[key]) return feriadosCache[key];
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30,
+      i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+    const pascua = new Date(y, mes - 1, dia), set = new Set(['01-01', '05-01', '06-07', '06-29', '07-23', '07-28', '07-29', '08-06', '08-30', '10-08', '11-01', '12-08', '12-09', '12-25'].map(x => y + '-' + x));
+    [-3, -2].forEach(n => set.add(iso(CRM.addDays(pascua, n))));
+    String(S.params.feriadosExtra || '').split(/[\s,;]+/).forEach(x => { const t = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(x) || /^(\d{4})-(\d{2})-(\d{2})$/.exec(x); if (!t) return; set.add(t[1].length === 4 ? `${t[1]}-${t[2]}-${t[3]}` : `${t[3]}-${t[2].padStart(2, '0')}-${t[1].padStart(2, '0')}`); });
+    return (feriadosCache[key] = set);
   }
+  // días entre dos fechas: hábiles (lunes a viernes sin feriados) o calendario, según Configurar
+  function diasEntre(a, b) {
+    if (b <= a) return 0; if (!+S.params.diasHabiles) return diff(b, a);
+    let n = 0; for (let d = CRM.addDays(a, 1); d <= b; d = CRM.addDays(d, 1)) { const w = d.getDay(); if (w && w !== 6 && !feriados(d.getFullYear()).has(iso(d))) n++; }
+    return n;
+  }
+  const unidadDias = () => +S.params.diasHabiles ? 'días hábiles' : 'días';
+  // un tramo de un cliente: días netos (descontada la espera del cliente), meta y semáforo
+  function tramo(o, k) {
+    const t = TRAMOS[k], a = pd(o[t.ini]), b = pd(o[t.fin]), meta = +S.params[t.meta] || null;
+    if (!a || (b && b < a)) return { dias: null, enCurso: false }; // sin inicio o con fechas al revés: no se mide (sale en "Fechas a revisar")
+    const bruto = diasEntre(a, b || today()), pausa = t.pausa ? Math.max(0, Number(o[t.pausa]) || 0) : 0, dias = Math.max(0, bruto - pausa), enCurso = !b;
+    const sem = !meta ? '' : dias > meta ? 'rojo' : enCurso && dias >= meta * 0.8 ? 'amarillo' : 'verde';
+    return { dias, bruto, pausa, enCurso, meta, sem, ini: o[t.ini], fin: o[t.fin] || '', obs: t.obs ? Number(o[t.obs]) || 0 : null };
+  }
+  const mediana = (L) => { if (!L.length) return null; const s = [...L].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+  const promedio = (L) => L.length ? Math.round(L.reduce((t, x) => t + x, 0) / L.length) : null;
+  const pct = (a, b) => b ? Math.round(a * 100 / b) : null;
+  const MIN_CASOS = 3; // con menos casos terminados, la comparación no es confiable
+  // filtros de la pantalla (y del informe)
+  const tpF = () => (ui.tp = ui.tp || { desde: '', hasta: '', banco: '', fin: '', foco: '' });
+  function tpBase() {
+    const F = tpF();
+    return rows(true).map(r => r.o).filter(o => (!F.banco || o.banco === F.banco) && (!F.fin || (F.fin === 'bono' ? Number(o.bono) > 0 : !(Number(o.bono) > 0)))
+      && (!F.foco || (F.foco.startsWith('b:') ? o.banco === F.foco.slice(2) : F.foco.startsWith('n:') ? o.con_notaria === F.foco.slice(2) : true)));
+  }
+  // casos de un tramo: los terminados cuentan si terminaron dentro del período; los abiertos se muestran siempre
+  function tpCasos(k, base) {
+    const F = tpF();
+    return (base || tpBase()).map(o => ({ o, t: tramo(o, k) })).filter(x => x.t.dias != null && (x.t.enCurso || ((!F.desde || x.t.fin.slice(0, 7) >= F.desde) && (!F.hasta || x.t.fin.slice(0, 7) <= F.hasta))));
+  }
+  function tpStats(L) {
+    const h = L.filter(x => !x.t.enCurso), d = h.map(x => x.t.dias), c = L.filter(x => x.t.enCurso), meta = L.length ? L[0].t.meta : null;
+    const conObs = h.filter(x => x.t.obs != null);
+    return { n: L.length, hechos: h.length, mediana: mediana(d), promedio: promedio(d), min: d.length ? Math.min(...d) : null, max: d.length ? Math.max(...d) : null,
+      enMeta: pct(h.filter(x => x.t.sem === 'verde').length, h.length), curso: c.length, vencidos: c.filter(x => x.t.sem === 'rojo').length, porVencer: c.filter(x => x.t.sem === 'amarillo').length,
+      viejo: c.length ? Math.max(...c.map(x => x.t.dias)) : null, obsProm: conObs.length ? Math.round(conObs.reduce((t, x) => t + x.t.obs, 0) * 10 / conObs.length) / 10 : null,
+      sinObs: conObs.length ? pct(conObs.filter(x => !x.t.obs).length, conObs.length) : null, meta, pocos: h.length < MIN_CASOS };
+  }
+  function tpGrupos(k, base) {
+    const m = new Map(); tpCasos(k, base).forEach(x => { const ks = TRAMOS[k].quien(x.o).map(v => v || ''); const id = ks.join('|'); if (!m.has(id)) m.set(id, { ks, L: [] }); m.get(id).L.push(x); });
+    return [...m.values()].map(g => ({ ...g, s: tpStats(g.L) })).sort((a, b) => (b.s.mediana ?? -1) - (a.s.mediana ?? -1));
+  }
+  // fechas que no cuadran: futuras, fin antes que inicio, o más espera que días del tramo
+  function tpProblemas(base) {
+    const hoy = iso(today()), out = [];
+    (base || tpBase()).forEach(o => {
+      TP_FECHAS.forEach(f => { if (o[f] && String(o[f]).slice(0, 10) > hoy) out.push({ o, txt: `${CRM.FIELD_LABEL[f] || f}: fecha futura (${fdate(o[f])})` }); });
+      Object.entries(TRAMOS).forEach(([k, t]) => { const a = o[t.ini], b = o[t.fin];
+        if (a && b && b < a) out.push({ o, txt: `${t.l}: el fin (${fdate(b)}) es anterior al inicio (${fdate(a)})` });
+        if (t.pausa && Number(o[t.pausa]) > 0) { const x = tramo(o, k); if (x.dias != null && Number(o[t.pausa]) > x.bruto) out.push({ o, txt: `${t.l}: la espera del cliente (${o[t.pausa]}) es mayor que los días del tramo (${x.bruto})` }); } });
+    });
+    return out;
+  }
+  function tpFaltan(base) {
+    const B = base || tpBase();
+    return [[B.filter(o => o.ejecBanco && !o.fRecibeBanco).length, 'tiene', 'tienen', 'ejecutivo de banco pero no la fecha en que recibió el caso'],
+      [B.filter(o => o.con_notaria && !o.con_fLlegaNotaria).length, 'tiene', 'tienen', 'notaría pero no la fecha en que llegó a notaría'],
+      [B.filter(o => o.con_abogado && !o.con_fAsignaAbogado).length, 'tiene', 'tienen', 'abogado pero no la fecha de asignación'],
+      [B.filter(o => o.fRecibeBanco && !o.ejecBanco).length, 'tiene', 'tienen', 'fecha del banco pero no el nombre del ejecutivo']].filter(x => x[0])
+      .map(([n, v1, vn, t]) => `${n} ${n === 1 ? 'cliente ' + v1 : 'clientes ' + vn} ${t}`);
+  }
+  // motivos de demora: en qué casos se registró y cuántos se pasaron de la meta
+  function tpMotivos(base) {
+    const m = {}; (base || tpBase()).forEach(o => { if (!o.con_motivoDemora) return; const r = m[o.con_motivoDemora] = m[o.con_motivoDemora] || { n: 0, fuera: 0 }; r.n++;
+      if (['ban', 'not', 'abo'].some(k => tramo(o, k).sem === 'rojo')) r.fuera++; });
+    const tot = Object.values(m).reduce((t, r) => t + r.n, 0); let acum = 0;
+    return Object.entries(m).sort((a, b) => b[1].n - a[1].n).map(([motivo, r]) => { acum += r.n; return { motivo, ...r, pct: pct(r.n, tot), acum: pct(acum, tot) }; });
+  }
+  // tendencia: mediana y % en meta de los tramos terminados en cada uno de los últimos 6 meses
+  function tpTendencia(base) {
+    const meses = []; for (let i = 5; i >= 0; i--) { const d = new Date(today().getFullYear(), today().getMonth() - i, 1); meses.push(iso(d).slice(0, 7)); }
+    const B = base || tpBase();
+    return { meses, filas: Object.keys(TRAMOS).map(k => ({ k, l: TRAMOS[k].l, cel: meses.map(mm => { const L = B.map(o => tramo(o, k)).filter(t => t.dias != null && !t.enCurso && t.fin.slice(0, 7) === mm); return { n: L.length, med: mediana(L.map(t => t.dias)), ok: pct(L.filter(t => t.sem === 'verde').length, L.length) }; }) })) };
+  }
+  const semDot = (s) => s ? `<span class="tp-sem ${s}" title="${s === 'verde' ? 'Dentro de la meta' : s === 'amarillo' ? 'Cerca de vencer la meta' : 'Fuera de la meta'}"></span>` : '';
+  const pctBadge = (p) => p == null ? '<span class="muted">—</span>' : `<span class="badge ${p >= 80 ? 'verde' : p >= 60 ? 'amar' : 'rojo'}">${p}%</span>`;
   function vTiempos() {
-    const all = rows(true).map(r => r.o), avg = (L) => L.length ? Math.round(L.reduce((t, x) => t + x, 0) / L.length) : null;
-    const dd = (n) => n == null ? '<span class="muted">—</span>' : `<b>${n}</b> ${n === 1 ? 'día' : 'días'}`;
-    // agrupa los clientes por quien atiende el tramo y calcula promedio, más rápido, más lento y casos en curso
-    const grupo = (k, claves) => {
-      const m = new Map();
-      all.forEach(o => { const t = tramo(o, k); if (t.dias == null) return; const ks = claves(o); const id = ks.join('|');
-        if (!m.has(id)) m.set(id, { ks, hechos: [], curso: [] }); (t.enCurso ? m.get(id).curso : m.get(id).hechos).push({ o, d: t.dias }); });
-      return [...m.values()].map(g => { const h = g.hechos.map(x => x.d); return { ...g, n: g.hechos.length + g.curso.length, prom: avg(h), min: h.length ? Math.min(...h) : null, max: h.length ? Math.max(...h) : null, viejo: g.curso.length ? Math.max(...g.curso.map(x => x.d)) : null }; })
-        .sort((a, b) => (b.prom ?? -1) - (a.prom ?? -1));
-    };
-    const sinDato = (x) => x || '<span class="muted">(sin registrar)</span>';
-    const colsDe = (heads) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => sinDato(esc(g.ks[i] || '')) })),
-      { h: 'Casos', cls: 'r', s: g => g.n, f: g => g.n },
-      { h: 'Promedio (terminados)', cls: 'r', s: g => g.prom ?? -1, f: g => dd(g.prom) + (g.hechos.length ? ` <span class="small muted">(${g.hechos.length})</span>` : '') },
-      { h: 'Más rápido', cls: 'r', s: g => g.min ?? -1, f: g => dd(g.min) }, { h: 'Más lento', cls: 'r', s: g => g.max ?? -1, f: g => dd(g.max) },
-      { h: 'En curso', cls: 'r', s: g => g.curso.length, f: g => g.curso.length ? `${g.curso.length} <span class="small muted">· el más antiguo lleva ${g.viejo} días</span>` : '<span class="muted">0</span>' }];
-    const prom = (k) => avg(all.map(o => tramo(o, k)).filter(t => t.dias != null && !t.enCurso).map(t => t.dias));
-    const enCurso = (k) => all.filter(o => tramo(o, k).enCurso).length;
-    const kpi = (n, l) => `<div class="kpi"><div class="n">${n == null ? '—' : n}</div><div class="small muted">${l}</div></div>`;
-    const curso = all.flatMap(o => ['ban', 'not'].map(k => ({ o, k, t: tramo(o, k) }))).filter(x => x.t.enCurso).sort((a, b) => b.t.dias - a.t.dias).slice(0, 15);
-    const colsCurso = [{ h: 'Cliente', s: x => x.o.cliente || '', f: x => `<a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente || x.o.id)}</b></a>` },
-      { h: 'Tramo', s: x => x.k, f: x => TRAMOS[x.k].l }, { h: 'Quién lo tiene', s: x => x.k === 'ban' ? x.o.ejecBanco || '' : x.o.con_abogado || x.o.con_notaria || '',
-        f: x => x.k === 'ban' ? `${sinDato(esc(x.o.ejecBanco || ''))} <span class="small muted">${esc(x.o.banco || '')}</span>` : `${sinDato(esc(x.o.con_abogado || ''))} <span class="small muted">${esc(x.o.con_notaria || '')}</span>` },
-      { h: 'Desde', s: x => x.o[TRAMOS[x.k].ini], f: x => fdate(x.o[TRAMOS[x.k].ini]) }, { h: 'Días', cls: 'r', s: x => x.t.dias, f: x => dd(x.t.dias) }];
-    const faltan = [[all.filter(o => o.ejecBanco && !o.ban_fRecibe).length, ['tiene', 'tienen', 'ejecutivo de banco pero no la fecha en que recibió el caso']],
-      [all.filter(o => o.con_notaria && !o.con_fLlegaNotaria).length, ['tiene', 'tienen', 'notaría pero no la fecha en que llegó a notaría']],
-      [all.filter(o => o.con_abogado && !o.con_fAsignaAbogado).length, ['tiene', 'tienen', 'abogado pero no la fecha de asignación']]].filter(x => x[0]);
-    const card = (t, sub, body) => `<div class="card" style="margin-top:14px"><div class="card-h"><h2>${t}</h2><span class="small muted">${sub}</span></div>${body}</div>`;
-    return `${pageHead('Tiempos banco y notaría', 'Cuánto tarda cada ejecutivo de banco en llevar el caso a notaría, y cada notaría y abogado hasta que firma el cliente.', '',
-      'Se mide con las fechas de la ficha del cliente: <b>Fecha en que el ejecutivo de banco recibe el caso</b> (Datos generales), <b>Fecha en que llega a notaría</b>, <b>Fecha de asignación del abogado</b> y <b>Fecha firma cliente</b> (Contratos). El promedio usa solo los casos terminados; los que siguen abiertos se cuentan hasta hoy en "En curso".')}
-      <div class="kpis ops-kpis">${kpi(prom('ban'), 'Días promedio banco → notaría')}${kpi(prom('not'), 'Días promedio notaría → firma del cliente')}${kpi(prom('abo'), 'Días promedio abogado → firma del cliente')}${kpi(enCurso('ban'), 'Casos en el banco ahora')}${kpi(enCurso('not'), 'Casos en notaría sin firma del cliente')}</div>
-      ${faltan.length ? `<div class="ev-falta" style="margin-top:14px"><b>Para medir mejor:</b> ${faltan.map(([n, [v1, vn, t]]) => `${n} ${n === 1 ? 'cliente ' + v1 : 'clientes ' + vn} ${t}`).join(' · ')}.</div>` : ''}
-      ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', `<div class="ops-tw">${tbl('tp-ban', colsDe(['Banco', 'Ejecutivo / asesor']), grupo('ban', o => [o.banco, o.ejecBanco]), 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.')}</div>`)}
-      ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', `<div class="ops-tw">${tbl('tp-not', colsDe(['Notaría']), grupo('not', o => [o.con_notaria]), 'Aún no hay clientes con la fecha en que llegó a notaría.')}</div>`)}
-      ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', `<div class="ops-tw">${tbl('tp-abo', colsDe(['Notaría', 'Abogado / doctor']), grupo('abo', o => [o.con_notaria, o.con_abogado]), 'Aún no hay clientes con la fecha de asignación del abogado.')}</div>`)}
-      ${card('⏳ Casos abiertos más demorados', 'Los 15 que más tiempo llevan en el banco o en notaría', `<div class="ops-tw">${tbl('tp-cur', colsCurso, curso, 'No hay casos abiertos en el banco ni en notaría.')}</div>`)}`;
+    const F = tpF(), base = tpBase(), U = unidadDias();
+    const dd = (n) => n == null ? '<span class="muted">—</span>' : `<b>${n}</b>`;
+    const sinDato = (x) => x ? esc(x) : '<span class="muted">(sin registrar)</span>';
+    const colsDe = (heads, conObs) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => sinDato(g.ks[i]) + (i === heads.length - 1 && g.s.pocos ? ' <span class="badge plain gris" title="Menos de ' + MIN_CASOS + ' casos terminados: compáralo con cuidado">pocos casos</span>' : '') })),
+      { h: 'Casos', cls: 'r', s: g => g.s.n, f: g => g.s.n },
+      { h: `Mediana (${U})`, cls: 'r', s: g => g.s.mediana ?? -1, f: g => dd(g.s.mediana) },
+      { h: 'Promedio', cls: 'r', s: g => g.s.promedio ?? -1, f: g => dd(g.s.promedio) },
+      { h: 'Rápido / lento', cls: 'r', s: g => g.s.max ?? -1, f: g => g.s.min == null ? '<span class="muted">—</span>' : `${g.s.min} / ${g.s.max}` },
+      { h: '% en meta', cls: 'r', s: g => g.s.enMeta ?? -1, f: g => pctBadge(g.s.enMeta) + (g.s.hechos ? ` <span class="small muted">de ${g.s.hechos}</span>` : '') },
+      ...(conObs ? [{ h: 'Sin observaciones', cls: 'r', s: g => g.s.sinObs ?? -1, f: g => pctBadge(g.s.sinObs) + (g.s.obsProm != null ? ` <span class="small muted">· ${g.s.obsProm} obs/caso</span>` : '') }] : []),
+      { h: 'En curso', cls: 'r', s: g => g.s.curso, f: g => g.s.curso ? `${g.s.curso}${g.s.vencidos ? ` <span class="badge rojo">${g.s.vencidos} vencido${g.s.vencidos > 1 ? 's' : ''}</span>` : ''}${g.s.porVencer ? ` <span class="badge amar">${g.s.porVencer} por vencer</span>` : ''}` : '<span class="muted">0</span>' }];
+    const card = (t, sub, body, extra) => `<div class="card tp-card"><div class="card-h"><h2>${t}</h2><span class="small muted">${sub}</span>${extra || ''}</div>${body}</div>`;
+    const tabla = (id, k, heads, conObs, vacio) => `<div class="ops-tw">${tbl(id, colsDe(heads, conObs), tpGrupos(k, base), vacio)}</div>`;
+    const kpi = (k) => { const s = tpStats(tpCasos(k, base)); return `<div class="kpi"><div class="n">${s.mediana ?? '—'} <span class="small muted">${U}</span></div><div class="small muted">${TRAMOS[k].l} · mediana</div><div class="small">${pctBadge(s.enMeta)} en meta (${s.meta ?? '—'} d) · ${s.curso} en curso${s.vencidos ? ` · <b class="txt-rojo">${s.vencidos} vencido${s.vencidos > 1 ? 's' : ''}</b>` : ''}</div></div>`; };
+    const curso = Object.keys(TRAMOS).flatMap(k => tpCasos(k, base).filter(x => x.t.enCurso).map(x => ({ ...x, k }))).sort((a, b) => (b.t.dias - (b.t.meta || 0)) - (a.t.dias - (a.t.meta || 0))).slice(0, 20);
+    const colsCurso = [{ h: '', f: x => semDot(x.t.sem) }, { h: 'Cliente', s: x => x.o.cliente || '', f: x => `<a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente || x.o.id)}</b></a> <span class="small muted">${esc(x.o.proyecto || '')} ${esc(x.o.unidad || '')}</span>` },
+      { h: 'Tramo', s: x => x.k, f: x => TRAMOS[x.k].l }, { h: 'Quién lo tiene', s: x => TRAMOS[x.k].quien(x.o).filter(Boolean).join(' · '), f: x => sinDato(TRAMOS[x.k].quien(x.o).filter(Boolean).reverse().join(' · ')) },
+      { h: 'Desde', s: x => x.t.ini, f: x => fdate(x.t.ini) }, { h: 'Días / meta', cls: 'r', s: x => x.t.dias - (x.t.meta || 0), f: x => `<b>${x.t.dias}</b> / ${x.t.meta ?? '—'}${x.t.pausa ? ` <span class="small muted">(−${x.t.pausa} espera)</span>` : ''}` },
+      { h: 'Motivo', s: x => x.o.con_motivoDemora || '', f: x => x.o.con_motivoDemora ? esc(x.o.con_motivoDemora) : '<span class="muted">—</span>' }];
+    const mot = tpMotivos(base), T = tpTendencia(base), probl = tpProblemas(base), falt = tpFaltan(base);
+    const sel = (k, label, opts) => `<select data-tpf="${k}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    const P = S.params, mf = (k, l) => `<label class="f">${l}<input type="number" min="0" value="${P[k] ?? ''}" data-pk="${k}"></label>`;
+    return `${pageHead('Tiempos y efectividad', 'Cuánto tarda cada banco, ejecutivo, notaría, abogado y el equipo interno, contra la meta de cada tramo.',
+      `<button class="btn" data-act="tp-excel">⬇️ Excel</button> <button class="btn pri" data-act="tp-pdf">🖨️ Informe PDF</button>`,
+      `Cada tramo se mide con dos fechas de la ficha del cliente, en <b>${U}</b>${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, y se le resta lo que se esperó al cliente. <b>Mediana</b> = el caso del medio (no la distorsiona un caso extremo). <b>% en meta</b> = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. Con menos de ${MIN_CASOS} casos terminados verás "pocos casos". El informe PDF se guarda con "Guardar como PDF" en la ventana de impresión.`)}
+      <div class="filters">
+        <label class="small">Terminados desde <input type="month" data-tpf="desde" value="${esc(F.desde)}"></label><label class="small">hasta <input type="month" data-tpf="hasta" value="${esc(F.hasta)}"></label>
+        ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(b => [b, b]))}${sel('fin', 'Todo financiamiento', [['bono', 'Con bono MiVivienda'], ['sinbono', 'Sin bono']])}
+        ${sel('foco', 'Informe: todos', [...uniq(o => o.banco).map(b => ['b:' + b, 'Informe del banco ' + b]), ...uniq(o => o.con_notaria).map(n => ['n:' + n, 'Informe de ' + n])])}
+        ${F.desde || F.hasta || F.banco || F.fin || F.foco ? '<button class="btn sm" data-act="tp-limpiar">Quitar filtros</button>' : ''}</div>
+      <div class="kpis ops-kpis">${['ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
+      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
+        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
+          <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
+          <label class="f" style="grid-column:1/-1">Feriados o días no laborables adicionales <input type="text" data-pt="feriadosExtra" value="${esc(P.feriadosExtra || '')}" placeholder="Ej.: 02/01/2026, 26/12/2026"><span class="small">Los feriados nacionales del Perú (incluidos Jueves y Viernes Santo) ya se descuentan solos.</span></label></div></details>
+      ${falt.length || probl.length ? `<div class="ev-falta tp-avisos">${falt.length ? `<b>Faltan datos para medir:</b> ${falt.join(' · ')}.` : ''}${probl.length ? `${falt.length ? '<br>' : ''}<b>Fechas a revisar (${probl.length}):</b> ${probl.slice(0, 8).map(p => `<a href="#/cliente/${p.o.id}">${esc(p.o.cliente || p.o.id)}</a> — ${esc(p.txt)}`).join(' · ')}${probl.length > 8 ? ` · y ${probl.length - 8} más (ver Excel)` : ''}` : ''}</div>` : ''}
+      ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
+      ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
+      ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
+      ${card('👥 Equipo interno', 'Validación legal y firma del representante legal: lo que depende de nosotros', `<div class="ops-tw">${tbl('tp-val', colsDe(['Asistente legal']), tpGrupos('val', base), 'Sin casos con fecha de asignación y validación.')}</div><div class="ops-tw">${tbl('tp-rl', colsDe(['Empresa (firma RL)']), tpGrupos('rl', base), 'Sin casos con firma del cliente.')}</div>`)}
+      ${card('💰 Desembolso', 'Desde la firma del representante legal hasta el desembolso del banco', tabla('tp-des', 'des', ['Banco'], false, 'Sin casos con firma del representante legal.'))}
+      ${card('🔎 Motivos de demora', 'Dónde se pierde el tiempo: las primeras filas explican la mayoría de los retrasos', mot.length ? `<div class="ops-tw"><table><thead><tr><th>Motivo</th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th><th class="r">Fuera de meta</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}<div class="tp-bar"><i style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td><td class="r">${m.fuera}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Aún no hay motivos de demora registrados. Se elige en la ficha del cliente → Contratos → "Motivo principal de demora".</div>')}
+      ${card('📈 Tendencia de los últimos 6 meses', `Mediana en ${U} y % en meta de los casos terminados cada mes`, `<div class="ops-tw"><table><thead><tr><th>Tramo</th>${T.meses.map(m => `<th class="r">${mesTxt(m)}</th>`).join('')}</tr></thead><tbody>${T.filas.map(f => `<tr><td>${esc(f.l)}</td>${f.cel.map(c => `<td class="r">${c.n ? `<b>${c.med}</b> <span class="small muted">· ${c.ok}% · ${c.n}</span>` : '<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`)}
+      ${card('⏳ Casos abiertos más críticos', 'Los 20 más pasados de su meta (o más cerca de vencer)', `<div class="ops-tw">${tbl('tp-cur', colsCurso, curso, 'No hay casos abiertos en estos tramos.')}</div>`)}`;
+  }
+  /* ---- Excel: resumen, cada tabla, motivos, tendencia, detalle por cliente y fechas a revisar ---- */
+  function tpExcel() {
+    const base = tpBase(), U = unidadDias(), wb = XLSX.utils.book_new(), F = tpF();
+    const add = (name, data, cols) => { const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = (cols || Object.keys(data[0] || { x: 1 })).map(h => ({ wch: Math.max(12, Math.min(40, String(h).length + 4)) })); if (data.length) ws['!autofilter'] = { ref: ws['!ref'] }; XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31)); };
+    const fila = (s) => ({ Casos: s.n, Terminados: s.hechos, [`Mediana (${U})`]: s.mediana ?? '', Promedio: s.promedio ?? '', 'Más rápido': s.min ?? '', 'Más lento': s.max ?? '', [`Meta (${U})`]: s.meta ?? '', '% en meta': s.enMeta ?? '', 'En curso': s.curso, 'Vencidos en curso': s.vencidos, 'Por vencer': s.porVencer, 'Obs. promedio por caso': s.obsProm ?? '', '% sin observaciones': s.sinObs ?? '', [`Pocos casos (<${MIN_CASOS})`]: s.pocos ? 'Sí' : '' });
+    add('Resumen', Object.keys(TRAMOS).map(k => ({ Tramo: TRAMOS[k].l, ...fila(tpStats(tpCasos(k, base))) })));
+    const grp = (name, k, heads) => add(name, tpGrupos(k, base).map(g => ({ ...Object.fromEntries(heads.map((h, i) => [h, g.ks[i] || '(sin registrar)'])), ...fila(g.s) })));
+    grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
+    grp('Validación legal', 'val', ['Asistente legal']); grp('Firma RL', 'rl', ['Empresa']); grp('Desembolso', 'des', ['Banco']);
+    add('Motivos de demora', tpMotivos(base).map(m => ({ Motivo: m.motivo, Casos: m.n, '%': m.pct, '% acumulado': m.acum, 'Fuera de meta': m.fuera })));
+    const T = tpTendencia(base); add('Tendencia', T.filas.map(f => ({ Tramo: f.l, ...Object.fromEntries(T.meses.flatMap((m, i) => [[`${mesTxt(m)} mediana`, f.cel[i].med ?? ''], [`${mesTxt(m)} % meta`, f.cel[i].ok ?? ''], [`${mesTxt(m)} casos`, f.cel[i].n]])) })));
+    const xd = (s) => s ? xlDate(s) : '';
+    add('Detalle por cliente', base.map(o => { const x = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, Banco: o.banco, 'Ejecutivo de banco': o.ejecBanco, 'Bono MiVivienda': Number(o.bono) > 0 ? 'Sí' : 'No', Notaría: o.con_notaria, Abogado: o.con_abogado, 'Asistente legal': o.con_asistente, 'Motivo de demora': o.con_motivoDemora || '', 'Obs. banco': o.con_banObs ?? '', 'Obs. notaría': o.con_notObs ?? '', 'Espera cliente banco': o.con_banPausa ?? '', 'Espera cliente notaría': o.con_notPausa ?? '' };
+      Object.entries(TRAMOS).forEach(([k, t]) => { const r = tramo(o, k); x[`${t.l} · inicio`] = xd(o[t.ini]); x[`${t.l} · fin`] = xd(o[t.fin]); x[`${t.l} · días`] = r.dias ?? ''; x[`${t.l} · estado`] = r.dias == null ? '' : (r.enCurso ? 'En curso · ' : 'Terminado · ') + ({ verde: 'en meta', amarillo: 'por vencer', rojo: 'fuera de meta' }[r.sem] || ''); });
+      return x; }));
+    add('Fechas a revisar', tpProblemas(base).map(p => ({ ID: p.o.id, Cliente: p.o.cliente, Problema: p.txt })));
+    const filtros = [F.desde && 'desde ' + mesTxt(F.desde), F.hasta && 'hasta ' + mesTxt(F.hasta), F.banco && 'banco ' + F.banco, F.fin && (F.fin === 'bono' ? 'con bono' : 'sin bono'), F.foco && F.foco.slice(2), ui.proy && 'proyecto ' + ui.proy].filter(Boolean).join(' · ') || 'ninguno';
+    add('Metodología', [{ Concepto: 'Generado', Detalle: new Date().toLocaleString('es-PE') + ' por ' + (S.actor || '') }, { Concepto: 'Filtros', Detalle: filtros }, { Concepto: 'Unidad', Detalle: U + (+S.params.diasHabiles ? ' (lunes a viernes, sin feriados nacionales del Perú ni los adicionales configurados)' : '') },
+      ...Object.values(TRAMOS).map(t => ({ Concepto: t.l, Detalle: `Desde "${CRM.FIELD_LABEL[t.ini]}" hasta "${CRM.FIELD_LABEL[t.fin]}". Meta: ${S.params[t.meta]} ${U}.${t.pausa ? ' Se descuentan los días esperando al cliente.' : ''}` })),
+      { Concepto: 'Mediana', Detalle: 'El valor del caso del medio. No se distorsiona por un caso extremo.' }, { Concepto: '% en meta', Detalle: 'Casos terminados con días ≤ meta, sobre el total de terminados.' },
+      { Concepto: 'Período', Detalle: 'Los casos terminados se filtran por la fecha de fin del tramo. Los casos en curso se incluyen siempre, contados hasta hoy.' }]);
+    XLSX.writeFile(wb, `Tiempos_y_efectividad_${iso(today())}.xlsx`, { cellDates: true }); toast('Excel generado');
+  }
+  /* ---- Informe PDF: página lista para imprimir o "Guardar como PDF" ---- */
+  function tpInforme() {
+    const base = tpBase(), U = unidadDias(), F = tpF(), P = S.params;
+    const titulo = F.foco ? (F.foco.startsWith('b:') ? 'Informe de desempeño · Banco ' + F.foco.slice(2) : 'Informe de desempeño · ' + F.foco.slice(2)) : 'Informe de tiempos y efectividad';
+    const periodo = F.desde || F.hasta ? `Casos terminados ${F.desde ? 'desde ' + mesTxt(F.desde) : ''} ${F.hasta ? 'hasta ' + mesTxt(F.hasta) : ''}` : 'Todos los casos registrados';
+    const filtros = [F.banco && 'Banco: ' + F.banco, F.fin && (F.fin === 'bono' ? 'Con bono MiVivienda' : 'Sin bono'), ui.proy && 'Proyecto: ' + ui.proy].filter(Boolean).join(' · ');
+    const pctTxt = (p) => p == null ? '—' : `<span class="b ${p >= 80 ? 'v' : p >= 60 ? 'a' : 'r'}">${p}%</span>`;
+    const res = Object.keys(TRAMOS).map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
+    const top = res.filter(x => ['ban', 'not', 'abo', 'rl'].includes(x.k));
+    const barras = (k, heads) => { const G = tpGrupos(k, base).filter(g => g.s.mediana != null), mx = Math.max(1, ...G.map(g => Math.max(g.s.mediana, g.s.meta || 0)));
+      if (!G.length) return '<p class="m">Sin casos terminados en este tramo.</p>';
+      return `<table><thead><tr>${heads.map(h => `<th>${h}</th>`).join('')}<th>Mediana vs. meta (${U})</th><th class="r">Casos</th><th class="r">% en meta</th><th class="r">En curso</th></tr></thead><tbody>${G.map(g => `<tr>${heads.map((h, i) => `<td>${esc(g.ks[i] || '(sin registrar)')}</td>`).join('')}<td style="width:34%"><div class="bar"><i class="${g.s.meta && g.s.mediana > g.s.meta ? 'r' : 'v'}" style="width:${g.s.mediana * 100 / mx}%"></i>${g.s.meta ? `<u style="left:${g.s.meta * 100 / mx}%"></u>` : ''}</div><small>${g.s.mediana}${g.s.pocos ? ' · pocos casos' : ''}</small></td><td class="r">${g.s.hechos}</td><td class="r">${pctTxt(g.s.enMeta)}</td><td class="r">${g.s.curso}${g.s.vencidos ? ` (${g.s.vencidos} venc.)` : ''}</td></tr>`).join('')}</tbody></table>`; };
+    // hallazgos automáticos para el resumen ejecutivo
+    const hall = [];
+    top.forEach(({ k, s }) => { if (s.enMeta != null && !s.pocos) hall.push(`<b>${TRAMOS[k].l}:</b> mediana de ${s.mediana} ${U} (meta ${s.meta}); ${s.enMeta}% de los casos terminados cumplió la meta.`); });
+    ['ban', 'not', 'abo'].forEach(k => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.enMeta != null); if (G.length < 2) return; const mej = [...G].sort((a, b) => b.s.enMeta - a.s.enMeta || a.s.mediana - b.s.mediana)[0], peor = [...G].sort((a, b) => a.s.enMeta - b.s.enMeta || b.s.mediana - a.s.mediana)[0];
+      if (mej !== peor) hall.push(`<b>${TRAMOS[k].c}:</b> mejor desempeño ${esc(mej.ks.filter(Boolean).join(' · '))} (${mej.s.enMeta}% en meta, mediana ${mej.s.mediana}); a mejorar ${esc(peor.ks.filter(Boolean).join(' · '))} (${peor.s.enMeta}% en meta, mediana ${peor.s.mediana}).`); });
+    const venc = res.reduce((t, x) => t + x.s.vencidos, 0); if (venc) hall.push(`<b>${venc} casos abiertos ya superaron su meta</b> y requieren seguimiento (ver lista al final).`);
+    const mot = tpMotivos(base); if (mot.length) hall.push(`<b>Principal causa de demora:</b> ${esc(mot[0].motivo)} (${mot[0].pct}% de los casos con motivo registrado)${mot[1] ? `, seguida de ${esc(mot[1].motivo)} (${mot[1].pct}%)` : ''}.`);
+    const falt = tpFaltan(base), probl = tpProblemas(base); if (falt.length || probl.length) hall.push(`<b>Calidad de datos:</b> ${[...falt, probl.length ? `${probl.length} ${probl.length === 1 ? 'fecha' : 'fechas'} por revisar` : ''].filter(Boolean).join('; ')}.`);
+    const T = tpTendencia(base);
+    const curso = Object.keys(TRAMOS).flatMap(k => tpCasos(k, base).filter(x => x.t.enCurso && x.t.sem === 'rojo').map(x => ({ ...x, k }))).sort((a, b) => (b.t.dias - b.t.meta) - (a.t.dias - a.t.meta)).slice(0, 25);
+    const sec = (t, h) => `<section><h2>${t}</h2>${h}</section>`;
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(titulo)} · ${fdate(iso(today()))}</title><style>
+      @page{size:A4;margin:14mm 12mm}*{box-sizing:border-box}body{font:11px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1d2b2a;margin:0;padding:18px;background:#fff}
+      header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #0f6f6a;padding-bottom:8px;margin-bottom:12px}h1{font-size:19px;margin:0;color:#0f6f6a}header p{margin:2px 0 0;color:#5b6b6a}
+      .logo{background:#0f6f6a;color:#fff;font-weight:800;border-radius:8px;width:38px;height:38px;display:grid;place-items:center;font-size:14px}
+      h2{font-size:13px;margin:16px 0 6px;color:#0f6f6a;border-bottom:1px solid #d9e2e1;padding-bottom:3px}section{break-inside:avoid-page}
+      .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kp div{border:1px solid #d9e2e1;border-radius:8px;padding:8px}.kp b{font-size:20px;display:block}.kp small{color:#5b6b6a}
+      table{width:100%;border-collapse:collapse;margin:4px 0}th{background:#eef4f3;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#405250}th,td{padding:4px 6px;border-bottom:1px solid #e3e9e8;vertical-align:middle}.r{text-align:right}
+      .b{padding:1px 6px;border-radius:9px;font-weight:600}.b.v{background:#dff3e6;color:#156b35}.b.a{background:#fbefd0;color:#8a5a00}.b.r{background:#fbe0de;color:#a3241b}
+      .bar{position:relative;height:9px;background:#eef2f1;border-radius:5px;margin-bottom:1px}.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px}.bar i.v{background:#2e9e5b}.bar i.r{background:#d9534f}.bar u{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed #1d2b2a}
+      ul{margin:4px 0;padding-left:18px}li{margin:2px 0}.m{color:#5b6b6a}footer{margin-top:16px;border-top:1px solid #d9e2e1;padding-top:6px;color:#5b6b6a;font-size:9.5px}
+      @media print{body{padding:0}.np{display:none}}</style></head><body>
+      <p class="np" style="background:#fff8e1;border:1px solid #f0d58a;padding:8px;border-radius:6px">Para guardarlo como PDF elige <b>"Guardar como PDF"</b> en Destino de la ventana de impresión.</p>
+      <header><div><h1>${esc(titulo)}</h1><p>${esc(periodo)}${filtros ? ' · ' + esc(filtros) : ''} · Tiempos en ${U}</p></div><div style="text-align:right"><div class="logo" style="margin-left:auto">MG</div><p>Grupo MG · Contratos y Cobranzas<br>${fdate(iso(today()))}</p></div></header>
+      ${sec('Indicadores principales', `<div class="kp">${top.map(({ k, s }) => `<div><small>${esc(TRAMOS[k].l)}</small><b>${s.mediana ?? '—'}</b><small>mediana · meta ${s.meta ?? '—'} · ${s.enMeta == null ? '—' : s.enMeta + '% en meta'} · ${s.curso} en curso</small></div>`).join('')}</div>`)}
+      ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
+      ${sec('Ejecutivos de banco · banco → notaría', barras('ban', ['Banco', 'Ejecutivo']))}
+      ${sec('Notarías · llegada → firma del cliente', barras('not', ['Notaría']))}
+      ${sec('Abogados de notaría · asignación → firma del cliente', barras('abo', ['Notaría', 'Abogado']))}
+      ${sec('Equipo interno', barras('val', ['Asistente legal']) + barras('rl', ['Empresa (firma del representante legal)']))}
+      ${sec('Desembolso · firma RL → desembolso', barras('des', ['Banco']))}
+      ${sec('Resumen por tramo', `<table><thead><tr><th>Tramo</th><th class="r">Meta</th><th class="r">Terminados</th><th class="r">Mediana</th><th class="r">Promedio</th><th class="r">% en meta</th><th class="r">En curso</th><th class="r">Vencidos</th><th class="r">% sin obs.</th></tr></thead><tbody>${res.map(({ k, s }) => `<tr><td>${esc(TRAMOS[k].l)}</td><td class="r">${s.meta ?? '—'}</td><td class="r">${s.hechos}</td><td class="r">${s.mediana ?? '—'}</td><td class="r">${s.promedio ?? '—'}</td><td class="r">${pctTxt(s.enMeta)}</td><td class="r">${s.curso}</td><td class="r">${s.vencidos}</td><td class="r">${s.sinObs == null ? '—' : s.sinObs + '%'}</td></tr>`).join('')}</tbody></table>`)}
+      ${mot.length ? sec('Motivos de demora', `<table><thead><tr><th>Motivo</th><th style="width:35%"></th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}</td><td><div class="bar"><i class="r" style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td></tr>`).join('')}</tbody></table>`) : ''}
+      ${sec('Tendencia de los últimos 6 meses (mediana · % en meta)', `<table><thead><tr><th>Tramo</th>${T.meses.map(m => `<th class="r">${mesTxt(m)}</th>`).join('')}</tr></thead><tbody>${T.filas.map(f => `<tr><td>${esc(f.l)}</td>${f.cel.map(c => `<td class="r">${c.n ? `${c.med} · ${c.ok}%` : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table>`)}
+      ${sec('Casos abiertos fuera de meta', curso.length ? `<table><thead><tr><th>Cliente</th><th>Tramo</th><th>Quién lo tiene</th><th>Desde</th><th class="r">Días / meta</th><th>Motivo</th></tr></thead><tbody>${curso.map(x => `<tr><td>${esc(x.o.cliente || x.o.id)} <span class="m">${esc(x.o.proyecto || '')} ${esc(x.o.unidad || '')}</span></td><td>${esc(TRAMOS[x.k].l)}</td><td>${esc(TRAMOS[x.k].quien(x.o).filter(Boolean).reverse().join(' · ') || '—')}</td><td>${fdate(x.t.ini)}</td><td class="r"><b>${x.t.dias}</b> / ${x.t.meta}</td><td>${esc(x.o.con_motivoDemora || '—')}</td></tr>`).join('')}</tbody></table>` : '<p class="m">No hay casos abiertos fuera de meta. 👏</p>')}
+      <footer><b>Cómo se mide:</b> cada tramo va de una fecha a otra de la ficha del cliente, en ${U}${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, descontando los días que se esperó al cliente. Mediana = caso del medio; % en meta = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. "Pocos casos" = menos de ${MIN_CASOS} terminados. Generado por ${esc(S.actor || '')} desde el CRM de Contratos y Cobranzas.</footer>
+      </body></html>`;
+    const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para generar el informe');
+    w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
   }
 
   /* ---- Resumen de operaciones (administración): lo más importante de cada venta, en pantalla y en Excel ---- */
@@ -832,7 +1003,7 @@
     { h: 'Unidad / Dpto.', v: r => r.o.unidad, s: 1 }, { h: 'Cliente', v: r => r.o.cliente, s: 1 }, { h: 'DNI', v: r => r.o.dni },
     { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n', s: 1 },
     { h: 'Ejecutivo de ventas', v: r => r.o.vendedor }, { h: 'Jefe de ventas', v: r => r.o.jefeVentas }, { h: 'Banco', v: r => r.o.banco, s: 1 }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
-    { h: 'Ejecutivo recibe el caso', v: r => r.o.ban_fRecibe, t: 'd' }, { h: 'Llega a notaría', v: r => r.o.con_fLlegaNotaria, t: 'd' }, { h: 'Días banco → notaría', v: r => tramo(r.o, 'ban').dias, t: 'i', x: r => tramo(r.o, 'ban') }, { h: 'Notaría', v: r => r.o.con_notaria },
+    { h: 'Ejecutivo recibe el caso', v: r => r.o.fRecibeBanco, t: 'd' }, { h: 'Llega a notaría', v: r => r.o.con_fLlegaNotaria, t: 'd' }, { h: 'Días banco → notaría', v: r => tramo(r.o, 'ban').dias, t: 'i', x: r => tramo(r.o, 'ban') }, { h: 'Notaría', v: r => r.o.con_notaria },
     { h: 'Kardex', v: r => r.o.con_kardexMonto }, { h: 'Abogado a cargo', v: r => r.o.con_abogado }, { h: 'Asignación del abogado', v: r => r.o.con_fAsignaAbogado, t: 'd' },
     { h: 'Días notaría → firma cliente', v: r => tramo(r.o, 'not').dias, t: 'i', x: r => tramo(r.o, 'not') }, { h: 'Días abogado → firma cliente', v: r => tramo(r.o, 'abo').dias, t: 'i', x: r => tramo(r.o, 'abo') },
     { h: 'Firma cliente', v: r => r.o.con_fFirmaCliente, t: 'd' }, { h: 'Firma inmobiliaria', v: r => r.o.con_fFirmaRL, t: 'd' },
@@ -1554,7 +1725,7 @@
   function applyPerms() {
     $$('[data-act]').forEach(el => { const k = ACT_PERM[el.dataset.act]; if (k && el.dataset.act !== 'step') el.hidden = !can(k); });
     $$('#view [data-fk]').forEach(el => el.disabled = !can('a_edit'));
-    $$('#view [data-pk]').forEach(el => el.disabled = !can('a_params'));
+    $$('#view [data-pk], #view [data-pt]').forEach(el => el.disabled = !can('a_params'));
     const f = $('#seg-form'); if (f) f.closest('details').hidden = !can('a_seg');
     $$('#view .chk li.tap').forEach(li => li.classList.toggle('ro', !can('a_edit')));
     if (CL.enabled) $$('[data-act=reset],[data-act=export-js],[data-act=dismiss-banner]').forEach(el => el.hidden = true);
@@ -2003,7 +2174,7 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos banco y notaría', '', r.view === 'tiempos'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y efectividad', '', r.view === 'tiempos'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -2211,6 +2382,9 @@
     if (a === 'acta') return openActa(getOp(el.dataset.op));
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
+    if (a === 'tp-excel') return tpExcel();
+    if (a === 'tp-pdf') return tpInforme();
+    if (a === 'tp-limpiar') { ui.tp = null; return render(true); }
     if (a === 'export-cf') return exportCf();
     if (a === 'export-ins') return exportIns();
     if (a === 'ins-page') { insFilter().page = +el.dataset.p; return refresh('rg-ins'); }
@@ -2296,6 +2470,8 @@
     }
     if (t.dataset.emp !== undefined) { if (!can('a_params')) { toast(NOPERM); return render(true); } setEmpresaProyecto(t.dataset.emp, t.value.trim()); return toast(`Empresa de ${t.dataset.emp} guardada`); }
     if (t.id === 'n-proyecto') { const e = $('#n-empresa'); if (e && !e.value) e.value = empEnProy(t.value.trim()); return; }
+    if (t.dataset.tpf) { tpF()[t.dataset.tpf] = t.value; return render(true); }
+    if (t.dataset.pt) { if (!can('a_params')) { toast(NOPERM); return render(true); } S.params[t.dataset.pt] = t.value.trim(); commit(); render(true); return toast('Guardado'); }
     if (t.dataset.pk) { if (!can('a_params')) { toast(NOPERM); return render(true); } S.params[t.dataset.pk] = Math.max(0, Number(t.value) || 0); commit(); return toast('Plazo actualizado'); }
     if (t.id === 'gproy') { ui.proy = t.value; return render(true); }
     if (t.id === 'actor') {

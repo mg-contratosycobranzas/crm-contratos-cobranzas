@@ -50,7 +50,7 @@
       { k: 'proyecto', l: 'Proyecto', t: 'text', list: 'proyecto' }, { k: 'empresa', l: 'Empresa (razón social)', t: 'text', list: 'empresa' }, { k: 'unidad', l: 'Unidad', t: 'text' },
       { k: 'fechaInicio', l: 'Fecha de inicio', t: 'date' },
       { k: 'vendedor', l: 'Vendedor', t: 'text', list: 'vendedor' }, { k: 'jefeVentas', l: 'Jefe de ventas', t: 'text', list: 'jefeVentas' },
-      { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo / asesor de banco', t: 'text', list: 'ejecBanco' }, { k: 'ban_fRecibe', l: 'Fecha en que el ejecutivo de banco recibe el caso', t: 'date' },
+      { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo / asesor de banco', t: 'text', list: 'ejecBanco' }, { k: 'fRecibeBanco', l: 'Fecha en que el ejecutivo de banco recibe el caso', t: 'date' },
       { k: 'montoBanco', l: 'Monto a financiar (S/)', t: 'number' }, { k: 'bono', l: 'Bono MiVivienda (S/)', t: 'number' }, { k: 'precio', l: 'Precio de venta (S/)', t: 'number' },
       { k: 'observaciones', l: 'Observaciones', t: 'textarea', w: 2 }
     ],
@@ -72,6 +72,9 @@
       { k: 'con_estadoKardex', l: 'Estado del kardex', t: 'select', o: ['Pendiente', 'En proceso', 'Completo', 'Observado', 'No corresponde'] },
       { k: 'con_notaria', l: 'Notaría', t: 'text', list: 'notaria' }, { k: 'con_fLlegaNotaria', l: 'Fecha en que llega a notaría (envío del banco)', t: 'date' },
       { k: 'con_abogado', l: 'Abogado / doctor a cargo en notaría', t: 'text', list: 'abogado' }, { k: 'con_fAsignaAbogado', l: 'Fecha de asignación del abogado', t: 'date' },
+      { k: 'con_banObs', l: 'N° de observaciones / devoluciones del banco', t: 'number' }, { k: 'con_banPausa', l: 'Días hábiles esperando al cliente (en el banco)', t: 'number' },
+      { k: 'con_notObs', l: 'N° de observaciones de la notaría', t: 'number' }, { k: 'con_notPausa', l: 'Días hábiles esperando al cliente (en notaría)', t: 'number' },
+      { k: 'con_motivoDemora', l: 'Motivo principal de demora', t: 'select', o: ['Falta documento del cliente', 'Tasación', 'Evaluación / aprobación del banco', 'Observación en minuta o contrato', 'Agenda de la notaría', 'Cliente no disponible para firmar', 'Firma del representante legal', 'Otro'] },
       { k: 'con_fFirmaCliente', l: 'Fecha firma cliente', t: 'date' }, { k: 'con_fFirmaRL', l: 'Fecha firma representante legal', t: 'date' },
       { k: 'con_datosCRM', l: 'Datos ingresados al CRM Evolta', t: 'select', o: ['INGRESADO', 'NO INGRESADO'] },
       { k: 'con_fCulm', l: 'Fecha de culminación', t: 'date' }
@@ -135,7 +138,7 @@
   const NUM_KEYS = new Set();
   Object.values(FIELDS).forEach(a => a.forEach(f => { if (f.t === 'number') NUM_KEYS.add(f.k); }));
 
-  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
+  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, metaVal: 3, metaBan: 15, metaNot: 10, metaAbo: 10, metaRl: 3, metaDes: 15, diasHabiles: 1, feriadosExtra: '', topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
   const DEFAULT_USERS = [
     { name: 'Milagros Valles', stage: JEFATURA, rol: 'Jefa de Administración de Contratos y Cobranzas', admin: true },
     { name: 'Jonathan', stage: 'cob', rol: 'Asistente de Cobranza' },
