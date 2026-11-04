@@ -929,8 +929,8 @@
     const sel = (k, label, opts) => `<select data-tpf="${k}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const P = S.params, mf = (k, l) => `<label class="f">${l}<input type="number" min="0" value="${P[k] ?? ''}" data-pk="${k}"></label>`;
     return `${pageHead('Tiempos y productividad', 'Eficacia, eficiencia y productividad de cada banco, ejecutivo, notaría, abogado y del equipo interno, tramo por tramo.',
-      `<button class="btn" data-act="tp-excel">⬇️ Excel</button> <button class="btn pri" data-act="tp-pdf">🖨️ Informe PDF</button>`,
-      `Cada tramo se mide con dos fechas de la ficha del cliente, en <b>${U}</b>${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, y se le resta lo que se esperó al cliente. <b>Mediana</b> = el caso del medio (no la distorsiona un caso extremo). <b>% en meta</b> = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. Con menos de ${MIN_CASOS} casos terminados verás "pocos casos". El informe PDF se guarda con "Guardar como PDF" en la ventana de impresión.`)}
+      `<button class="btn" data-act="tp-excel">⬇️ Excel</button> <button class="btn" data-act="tp-pdf" title="Varias páginas con todas las tablas">🖨️ Informe detallado</button> <button class="btn pri" data-act="tp-resumen" title="Una página, visual, para presentar">📄 Resumen ejecutivo</button>`,
+      `Cada tramo se mide con dos fechas de la ficha del cliente, en <b>${U}</b>${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, y se le resta lo que se esperó al cliente. <b>Mediana</b> = el caso del medio (no la distorsiona un caso extremo). <b>% en meta</b> = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. Con menos de ${MIN_CASOS} casos terminados verás "pocos casos". Hay dos informes: el <b>Resumen ejecutivo</b> (una página, para presentar) y el <b>Informe detallado</b> (todas las tablas). Ambos se guardan con "Guardar como PDF" en la ventana de impresión y respetan los filtros.`)}
       <div class="filters">
         <label class="small">Terminados desde <input type="month" data-tpf="desde" value="${esc(F.desde)}"></label><label class="small">hasta <input type="month" data-tpf="hasta" value="${esc(F.hasta)}"></label>
         ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(b => [b, b]))}${sel('fin', 'Todo financiamiento', [['bono', 'Con bono MiVivienda'], ['sinbono', 'Sin bono']])}
@@ -980,6 +980,75 @@
     XLSX.writeFile(wb, `Tiempos_y_productividad_${iso(today())}.xlsx`, { cellDates: true }); toast('Excel generado');
   }
   /* ---- Informe PDF: página lista para imprimir o "Guardar como PDF" ---- */
+  /* ---- Resumen ejecutivo: una página, muy visual, presentada por el Área de Contratos y Cobranzas ---- */
+  function tpResumen() {
+    const base = tpBase(), U = unidadDias(), F = tpF(), P = S.params, mE = +P.metaEficacia, mI = +P.metaEficiencia, mP = metaProd();
+    const COL = { verde: '#1c8658', amar: '#b7791f', rojo: '#c0392b' };
+    const col = (v, m) => v == null ? '#9aa8a6' : COL[prodColor(v, m)];
+    const foco = F.foco ? (F.foco.startsWith('b:') ? 'Banco ' + F.foco.slice(2) : F.foco.slice(2)) : '';
+    const periodo = F.desde || F.hasta ? `${F.desde ? mesTxt(F.desde) : 'Inicio'} – ${F.hasta ? mesTxt(F.hasta) : 'hoy'}` : 'Todo el historial';
+    const filtros = [F.banco && 'Banco ' + F.banco, F.fin && (F.fin === 'bono' ? 'Con bono MiVivienda' : 'Sin bono'), ui.proy && 'Proyecto ' + ui.proy].filter(Boolean).join(' · ');
+    // indicador global: todos los tramos menos "abogado" (es parte del tramo de notaría y lo contaría dos veces)
+    const glob = prodDe(['val', 'ban', 'not', 'rl', 'des'].flatMap(k => tpCasos(k, base).map(x => ({ cerrado: !x.t.enCurso, dias: x.t.dias, meta: x.t.meta, vencido: x.t.sem === 'rojo' }))));
+    const dona = (v, m, l, q) => { const R = 44, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, v || 0));
+      return `<div class="g"><svg viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="${R}" fill="none" stroke="#e7ecea" stroke-width="12"/><circle cx="55" cy="55" r="${R}" fill="none" stroke="${col(v, m)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${p / 100 * C} ${C}" transform="rotate(-90 55 55)"/><text x="55" y="61" text-anchor="middle" font-size="22" font-weight="700" fill="#17302d">${v == null ? '—' : v + '%'}</text></svg><b>${l}</b><span>${q}</span><em style="color:${col(v, m)}">${v == null ? 'Sin datos' : v >= m ? '✔ Cumple la meta' : 'Meta ' + m + '%'}</em></div>`; };
+    const tr = ['ban', 'not', 'abo', 'val', 'rl', 'des'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
+    const barras = tr.map(({ k, s }) => `<div class="tr"><span class="tl">${esc(TRAMOS[k].l.replace(' (interno)', ''))}${/interno/.test(TRAMOS[k].l) ? ' <i>interno</i>' : ''}</span><div class="tb"><i style="width:${s.productividad ?? 0}%;background:${col(s.productividad, mP)}"></i><u style="left:${mP}%"></u></div><b style="color:${col(s.productividad, mP)}">${s.productividad == null ? '—' : s.productividad + '%'}</b><small>${s.mediana == null ? '' : s.mediana + ' d'}</small></div>`).join('');
+    // destacados y a mejorar (solo grupos con casos suficientes)
+    const lideres = [['ban', 'Ejecutivo de banco'], ['not', 'Notaría'], ['abo', 'Abogado']].map(([k, l]) => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.productividad != null).sort((a, b) => b.s.productividad - a.s.productividad); return { l, mej: G[0], peor: G.length > 1 ? G[G.length - 1] : null }; }).filter(x => x.mej);
+    const nom = (g) => esc(g.ks.filter(Boolean).reverse().join(' · ') || '(sin registrar)');
+    const C = cicloResumen(base);
+    const ciclo = C.segs.some(x => x.med) ? `<div class="cy">${C.segs.filter(x => x.med).map(x => `<i style="flex:${x.med};background:${CICLO_COL[x.i]}" title="${esc(x.de)} → ${esc(x.a)}">${x.med}</i>`).join('')}</div><div class="cyl">${C.segs.filter(x => x.med).map(x => `<span><b style="background:${CICLO_COL[x.i]}"></b>${esc(x.de.replace('Ingreso de la venta', 'Venta').replace('Firma del representante legal', 'Firma RL'))} → ${esc(x.a.replace('Firma del representante legal', 'Firma RL').replace('Inscripción SUNARP', 'SUNARP'))}</span>`).join('')}</div>` : '<p class="m">Aún sin fechas suficientes para el ciclo.</p>';
+    const venc = tr.filter(x => x.k !== 'abo').reduce((t, x) => t + x.s.vencidos, 0), mot = tpMotivos(base), CG = cargaDatos(), sobre = CG.filas.filter(f => f.estado === 'alta');
+    const largo = C.suma ? [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0] : null;
+    const alertas = [
+      venc ? ['🔴', `<b>${venc} casos abiertos</b> superaron su meta de tiempo.`] : ['🟢', 'No hay casos abiertos fuera de meta.'],
+      mot.length ? ['🔎', `Principal causa de demora: <b>${esc(mot[0].motivo)}</b> (${mot[0].pct}%).`] : null,
+      largo && largo.med ? ['⏱️', `Tramo más largo del ciclo: <b>${esc(largo.de)} → ${esc(largo.a)}</b> (${Math.round(largo.med * 100 / C.suma)}%).`] : null,
+      sobre.length ? ['⚖️', `${sobre.length === 1 ? 'Una persona' : sobre.length + ' personas'} con sobrecarga: <b>${sobre.map(f => esc(f.name)).join(', ')}</b>.`] : ['⚖️', 'Carga del equipo pareja.']].filter(Boolean);
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen ejecutivo · Contratos y Cobranzas · ${fdate(iso(today()))}</title><style>
+      @page{size:A4 portrait;margin:10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      body{font:11px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#17302d;margin:0;padding:16px;background:#fff}
+      .pg{max-width:190mm;margin:0 auto;display:grid;gap:12px}
+      .hd{background:#0f6f6a;color:#fff;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+      .hd small{display:block;opacity:.85;font-size:10px;letter-spacing:.08em;text-transform:uppercase}.hd h1{margin:2px 0 0;font-size:20px}.hd p{margin:3px 0 0;opacity:.9}
+      .hd .lg{background:#fff;color:#0f6f6a;font-weight:800;border-radius:10px;width:46px;height:46px;display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+      .gs{display:grid;grid-template-columns:repeat(3,1fr) 1.15fr;gap:10px;align-items:stretch}
+      .g,.cyc{border:1px solid #dfe7e5;border-radius:12px;padding:10px;display:grid;justify-items:center;text-align:center;gap:2px}.g svg{width:96px;height:96px}.g b{font-size:13px}.g span{color:#5d716e;font-size:10px}.g em{font-style:normal;font-weight:600;font-size:10.5px}
+      .g.x{position:relative}.op{position:absolute}
+      .cyc{justify-items:start;text-align:left;background:#f4f8f7}.cyc .n{font-size:30px;font-weight:800;line-height:1}.cyc span{color:#5d716e}
+      h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#0f6f6a;margin:0 0 6px}
+      .bx{border:1px solid #dfe7e5;border-radius:12px;padding:12px 14px}
+      .tr{display:grid;grid-template-columns:150px 1fr 42px 34px;align-items:center;gap:8px;margin:5px 0}.tl{font-size:10.5px}.tl i{font-style:normal;color:#5d716e;font-size:9px;border:1px solid #cfd9d7;border-radius:6px;padding:0 4px}
+      .tb{position:relative;height:12px;background:#eef2f1;border-radius:6px}.tb i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}.tb u{position:absolute;top:-3px;bottom:-3px;border-left:2px dashed #17302d}
+      .tr b{text-align:right;font-size:12px}.tr small{color:#5d716e;text-align:right}
+      .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+      .ld{display:grid;gap:6px}.ld div{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:10.5px}.ld .t{color:#5d716e;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}
+      .pill{font-weight:700;border-radius:10px;padding:1px 8px;color:#fff;font-size:10.5px}
+      .cy{display:flex;height:22px;border-radius:6px;overflow:hidden}.cy i{display:grid;place-items:center;color:#fff;font-style:normal;font-weight:700;font-size:10px;min-width:18px}
+      .cyl{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:9.5px;color:#405250}.cyl b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+      .al{display:grid;gap:6px;margin:0;padding:0;list-style:none}.al li{display:flex;gap:8px;align-items:flex-start;font-size:11px}
+      .ft{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-top:2px solid #0f6f6a;padding-top:8px;font-size:9.5px;color:#5d716e}.ft b{color:#17302d;font-size:11px}
+      .sig{text-align:center;min-width:170px}.sig div{border-top:1px solid #17302d;margin-top:26px;padding-top:3px;color:#17302d}
+      .m{color:#5d716e;margin:0}.np{background:#fff8e1;border:1px solid #f0d58a;padding:8px;border-radius:6px;margin-bottom:10px}
+      @media print{body{padding:0}.np{display:none}}</style></head><body>
+      <p class="np">Para guardarlo como PDF elige <b>"Guardar como PDF"</b> en Destino de la ventana de impresión.</p>
+      <div class="pg">
+        <div class="hd"><div><small>Área de Contratos y Cobranzas presenta</small><h1>Resumen ejecutivo de productividad${foco ? ' · ' + esc(foco) : ''}</h1><p>${esc(periodo)}${filtros ? ' · ' + esc(filtros) : ''} · ${fdate(iso(today()))}</p></div><div class="lg">MG</div></div>
+        <div class="gs">${dona(glob.eficacia, mE, 'Eficacia', '¿Se terminó lo que tocaba?')}${dona(glob.eficiencia, mI, 'Eficiencia', '¿Con cuánto tiempo?')}${dona(glob.productividad, mP, 'Productividad', 'Eficacia × Eficiencia')}
+          <div class="cyc"><h2>Ciclo de la venta</h2><div class="n">${C.desemb.med ?? '—'}</div><span>${U} de la venta al desembolso (mediana, ${C.desemb.n} casos)</span><div style="margin-top:6px"><b>${C.insc.med ?? '—'}</b> <span>${U} hasta la inscripción</span></div></div></div>
+        <div class="bx"><h2>Productividad por tramo <span class="m" style="text-transform:none;letter-spacing:0;font-weight:400">· la línea punteada es la meta (${mP}%) · días = mediana</span></h2>${barras}</div>
+        <div class="bx"><h2>Ciclo completo de la venta (mediana en ${U})</h2>${ciclo}</div>
+        <div class="two">
+          <div class="bx"><h2>Destacados y a mejorar</h2>${lideres.length ? `<div class="ld">${lideres.map(x => `<div><span class="t">${x.l}</span><span>⭐ ${nom(x.mej)}</span><span class="pill" style="background:${col(x.mej.s.productividad, mP)}">${x.mej.s.productividad}%</span></div>${x.peor && x.peor !== x.mej ? `<div><span class="t"></span><span>↗ ${nom(x.peor)}</span><span class="pill" style="background:${col(x.peor.s.productividad, mP)}">${x.peor.s.productividad}%</span></div>` : ''}`).join('')}</div>` : '<p class="m">Faltan casos terminados para comparar (mínimo 3 por cada uno).</p>'}</div>
+          <div class="bx"><h2>Puntos de atención</h2><ul class="al">${alertas.map(([i, t]) => `<li><span>${i}</span><span>${t}</span></li>`).join('')}</ul></div></div>
+        <div class="ft"><div><b>Área de Contratos y Cobranzas · Grupo MG</b><br>Productividad = Eficacia × Eficiencia (ISO 9000:2015; Gutiérrez Pulido). Metas: eficacia ${mE}%, eficiencia ${mI}%, productividad ${mP}%. Tiempos en ${U}.<br>Generado desde el CRM por ${esc(S.actor || '')}. El detalle completo está en el Informe detallado.</div>
+          <div class="sig"><div>Jefatura del Área de Contratos y Cobranzas</div></div></div>
+      </div></body></html>`;
+    const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para generar el resumen');
+    w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
+  }
+
   function tpInforme() {
     const base = tpBase(), U = unidadDias(), F = tpF(), P = S.params;
     const titulo = F.foco ? (F.foco.startsWith('b:') ? 'Informe de productividad · Banco ' + F.foco.slice(2) : 'Informe de productividad · ' + F.foco.slice(2)) : 'Informe de tiempos y productividad';
@@ -1015,7 +1084,7 @@
       ul{margin:4px 0;padding-left:18px}li{margin:2px 0}.m{color:#5b6b6a}footer{margin-top:16px;border-top:1px solid #d9e2e1;padding-top:6px;color:#5b6b6a;font-size:9.5px}
       @media print{body{padding:0}.np{display:none}}</style></head><body>
       <p class="np" style="background:#fff8e1;border:1px solid #f0d58a;padding:8px;border-radius:6px">Para guardarlo como PDF elige <b>"Guardar como PDF"</b> en Destino de la ventana de impresión.</p>
-      <header><div><h1>${esc(titulo)}</h1><p>${esc(periodo)}${filtros ? ' · ' + esc(filtros) : ''} · Tiempos en ${U}</p></div><div style="text-align:right"><div class="logo" style="margin-left:auto">MG</div><p>Grupo MG · Contratos y Cobranzas<br>${fdate(iso(today()))}</p></div></header>
+      <header><div><p style="margin:0 0 2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#0f6f6a;font-weight:700">Área de Contratos y Cobranzas presenta</p><h1>${esc(titulo)}</h1><p>${esc(periodo)}${filtros ? ' · ' + esc(filtros) : ''} · Tiempos en ${U}</p></div><div style="text-align:right"><div class="logo" style="margin-left:auto">MG</div><p>Grupo MG · Área de Contratos y Cobranzas<br>${fdate(iso(today()))}</p></div></header>
       ${sec('Indicadores principales', `<div class="kp">${top.map(({ k, s }) => `<div><small>${esc(TRAMOS[k].l)}</small><b>${s.productividad == null ? '—' : pctTxt(s.productividad, mP)}</b><small>productividad · eficacia ${s.eficacia ?? '—'}% × eficiencia ${s.eficiencia ?? '—'}% · mediana ${s.mediana ?? '—'} ${U}</small></div>`).join('')}</div>`)}
       ${(() => { const C = cicloResumen(base); if (!C.segs.some(x => x.n)) return ''; return sec('Ciclo completo de la venta', `<p>Mediana de la venta al desembolso: <b>${C.desemb.med ?? '—'} ${U}</b> (${C.desemb.n} casos) · a la inscripción: <b>${C.insc.med ?? '—'} ${U}</b> (${C.insc.n} casos).</p><div style="display:flex;height:22px;border-radius:5px;overflow:hidden;margin:6px 0">${C.segs.filter(x => x.med).map(x => `<div style="flex:${x.med};background:${CICLO_COL[x.i]};color:#fff;font-size:10px;display:grid;place-items:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${x.med}</div>`).join('')}</div><table><tbody>${C.segs.map(x => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${CICLO_COL[x.i]};-webkit-print-color-adjust:exact;print-color-adjust:exact"></span> ${esc(x.de)} → ${esc(x.a)}</td><td class="r"><b>${x.med ?? '—'}</b> ${U}</td><td class="r">${x.med && C.suma ? Math.round(x.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${x.n} casos</td></tr>`).join('')}</tbody></table>`); })()}
       ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
@@ -2510,6 +2579,7 @@
     if (a === 'tp-excel') return tpExcel();
     if (a === 'carga-excel') return cargaExcel();
     if (a === 'tp-pdf') return tpInforme();
+    if (a === 'tp-resumen') return tpResumen();
     if (a === 'tp-limpiar') { ui.tp = null; return render(true); }
     if (a === 'export-cf') return exportCf();
     if (a === 'export-ins') return exportIns();
