@@ -51,8 +51,8 @@
     clearTimeout(saveT);
     saveT = setTimeout(() => { if (CL.enabled) return syncLocal(); try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { /* sin almacenamiento */ } }, 150);
   }
-  function recompute() { D = new Map(S.ops.map(o => [o.id, derive(o, S.params)])); }
-  function commit() { const antes = D; recompute(); save(); if (S.actor) autoAsignarLlegadas(antes); }
+  function recompute() { D = new Map(S.ops.map(o => [o.id, derive(o, S.params)])); FALT = new Map(); }
+  function commit() { const antes = D; recompute(); save(); if (S.actor) { autoAsignarLlegadas(antes); setTimeout(() => avisoAvance(antes), 350); } }
   const getOp = (id) => S.ops.find(o => o.id === id);
   const user = (n) => S.users.find(u => u.name === n);
 
@@ -559,6 +559,7 @@
         <div class="m-act">${main}<button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="Llamada" title="Anotar llamada">📞</button><button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="WhatsApp" title="Anotar WhatsApp">💬</button></div></div>`; };
     return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
       <div class="gauge mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="${pct / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${pct >= 100 ? 'var(--f-verde)' : 'var(--accent)'}"/><text x="50" y="57" text-anchor="middle" class="g-big">${hoy}</text></svg><div><b>Acciones de hoy</b><span class="small muted">Meta: ${meta}</span></div></div></div>
+    ${faltaHtml()}
     ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : 'Hoy · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div><button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button></div>`; }).join('')}</div></div>` : ''}
     ${(() => { // jefatura: cierres firmados que esperan V°B° · responsable: sus cierres observados
       const ing = S.ops.filter(o => pendienteIngreso(o) && (isJefe() ? o.aprob.estado === 'pendiente' : o.aprob.por === S.actor));
@@ -624,7 +625,7 @@
   /* ---- Usuarios ---- */
   function vUsuarios() {
     return `${pageHead('Equipo', 'Cada persona, su etapa y lo que tiene en cartera.', `<button class="btn pri" data-act="user-add">+ Agregar usuario</button>`, 'Cada tarjeta es una persona del equipo. Los números muestran cuántos expedientes tiene ahora (<b>en cartera</b>), cuántos son urgentes y cuántos ya cerró. Toca una tarjeta para ver qué hace y qué le falta.')}
-    <div class="grid ucards">${S.users.map(u => {
+    ${equipoDatosHtml()}<div class="grid ucards">${S.users.map(u => {
       const st = userStats(u), k = u.stage;
       return `<a class="card ucard" href="#/usuario/${encodeURIComponent(u.name)}" style="--sc:${colVar(k)}">
         <div style="display:flex;gap:12px;align-items:center"><span class="avatar">${initials(u.name)}</span><div><b>${esc(u.name)}</b><div class="small muted">${esc(u.rol || '')}</div></div></div>
@@ -715,7 +716,8 @@
     else if (f.t === 'textarea') inp = `<textarea rows="2" ${base}>${esc(v)}</textarea>`;
     else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${listaDe(op, f)}"` : ''} value="${esc(v)}" ${f.k === 'empresa' && !v && empresaDe(op) ? `placeholder="${esc(empresaDe(op))} (del proyecto)"` : ''} ${base}>`;
     const fromPdf = mark && op.evolta && (op.evolta.campos || []).includes(f.k);
-    return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${mark && v === '' ? 'falta' : ''}"><span>${f.l}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
+    const oblig = faltantes(op).out.find(x => x.k === f.k);
+    return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${(mark && v === '') || oblig ? 'falta' : ''}"><span>${f.l}${oblig ? ` <em class="req" title="${esc(oblig.por)}">obligatorio</em>` : ''}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
   function kvFor(key, o, d) {
     const kv = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
@@ -1008,6 +1010,7 @@
       venc ? ['🔴', `<b>${venc} casos abiertos</b> superaron su meta de tiempo.`] : ['🟢', 'No hay casos abiertos fuera de meta.'],
       mot.length ? ['🔎', `Principal causa de demora: <b>${esc(mot[0].motivo)}</b> (${mot[0].pct}%).`] : null,
       largo && largo.med ? ['⏱️', `Tramo más largo del ciclo: <b>${esc(largo.de)} → ${esc(largo.a)}</b> (${Math.round(largo.med * 100 / C.suma)}%).`] : null,
+      (() => { const Q = calidadDatos(); return Q.pct == null ? null : [Q.pct >= 95 ? '🏅' : '📝', `Datos completos del área: <b>${Q.pct}%</b>${Q.pct < 95 ? ` · faltan ${Q.req - Q.ok} datos obligatorios` : ''}.`]; })(),
       sobre.length ? ['⚖️', `${sobre.length === 1 ? 'Una persona' : sobre.length + ' personas'} con sobrecarga: <b>${sobre.map(f => esc(f.name)).join(', ')}</b>.`] : ['⚖️', 'Carga del equipo pareja.']].filter(Boolean);
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen ejecutivo · Contratos y Cobranzas · ${fdate(iso(today()))}</title><style>
       @page{size:A4 portrait;margin:10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1105,6 +1108,80 @@
       </body></html>`;
     const w = window.open('', '_blank'); if (!w) return toast('Permite las ventanas emergentes para generar el informe');
     w.document.write(html); w.document.close(); w.focus(); setTimeout(() => w.print(), 500);
+  }
+
+  /* ---- Datos completos: qué datos obligatorios faltan, quién debe llenarlos y cuánto lleva cada persona ----
+     Siempre: DNI, banco, ejecutivo de banco y fecha en que el banco recibe el caso.
+     Contratos (en orden): notaría + llegada, abogado + asignación, firma del cliente, firma del representante legal.
+       Son obligatorios cuando Contratos ya culminó o cuando ya se registró un paso posterior.
+     Motivo de demora: cuando el caso pasó su meta de tiempo en el banco o la notaría. */
+  const REQ_GEN = ['dni', 'banco', 'ejecBanco', 'fRecibeBanco'];
+  const REQ_CON = [['con_notaria', 'con_fLlegaNotaria'], ['con_abogado', 'con_fAsignaAbogado'], ['con_fFirmaCliente'], ['con_fFirmaRL']];
+  let FALT = new Map();
+  function faltantes(o, d) {
+    if (FALT.has(o.id)) return FALT.get(o.id);
+    d = d || D.get(o.id); const req = [];
+    if (d) {
+      const quien = (k) => (k.startsWith('con_') ? d.owner.con : d.owner.cob) || 'Sin asignar';
+      const add = (k, por) => req.push({ k, l: CRM.FIELD_LABEL[k] || k, quien: quien(k), por, ok: filled(o[k]) });
+      REQ_GEN.forEach(k => add(k, 'Dato básico del cliente'));
+      const conHecho = !!(d.done && d.done.con);
+      REQ_CON.forEach((grp, i) => { const despues = REQ_CON.slice(i + 1).flat().some(k => filled(o[k])); if (conHecho || despues) grp.forEach(k => add(k, conHecho ? 'Contratos ya culminó' : 'Ya se registró un paso posterior')); });
+      if (['ban', 'not', 'abo'].some(k => tramo(o, k).sem === 'rojo')) add('con_motivoDemora', 'El caso pasó su meta de tiempo');
+    }
+    const r = { req, out: req.filter(x => !x.ok) }; FALT.set(o.id, r); return r;
+  }
+  // % de datos completos por persona (y del área) sobre los datos que le toca llenar
+  function calidadDatos() {
+    const per = new Map(), add = (n) => { if (!per.has(n)) per.set(n, { name: n, req: 0, ok: 0, items: [] }); return per.get(n); };
+    S.users.filter(u => STAGE[u.stage] && u.stage !== JEFATURA).forEach(u => add(u.name));
+    let req = 0, ok = 0;
+    rows().forEach(r => faltantes(r.o, r.d).req.forEach(x => { const p = add(x.quien); p.req++; req++; if (x.ok) { p.ok++; ok++; } else p.items.push({ o: r.o, ...x }); }));
+    const filas = [...per.values()].map(p => ({ ...p, pct: p.req ? Math.round(p.ok * 100 / p.req) : null }));
+    filas.sort((a, b) => (a.name === 'Sin asignar') - (b.name === 'Sin asignar') || (b.pct ?? -1) - (a.pct ?? -1));
+    return { filas, req, ok, pct: req ? Math.round(ok * 100 / req) : null };
+  }
+  const pctDatosBadge = (p) => p == null ? '<span class="muted">—</span>' : `<span class="badge ${p >= 95 ? 'verde' : p >= 80 ? 'amar' : 'rojo'}">${p}%</span>`;
+  const medalla = (p) => p && p.req && p.pct === 100 ? '<span class="medal" title="Todos sus datos obligatorios están completos">🏅 Datos al día</span>' : '';
+  // Mi día: lo que le falta completar a quien está trabajando
+  function faltaHtml() {
+    const Q = calidadDatos(), yo = Q.filas.find(f => f.name === S.actor);
+    if (isJefe()) {
+      const pend = Q.filas.filter(f => f.items.length);
+      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>`;
+    }
+    if (!yo || !yo.req) return '';
+    const porCli = new Map(); yo.items.forEach(x => { if (!porCli.has(x.o.id)) porCli.set(x.o.id, { o: x.o, L: [] }); porCli.get(x.o.id).L.push(x); });
+    const L = [...porCli.values()];
+    return `<h2 class="sec">📝 Te falta completar ${pctDatosBadge(yo.pct)} ${medalla(yo)}</h2><div class="card"><div class="card-b">${L.length ? L.slice(0, 8).map(c => `<div class="agrow"><div><a href="#/cliente/${c.o.id}"><b>${esc(c.o.cliente)}</b></a> <span class="small muted">${esc(c.o.proyecto || '')} ${esc(c.o.unidad || '')}</span><div class="small">${c.L.map(x => `<span class="falta-chip" title="${esc(x.por)}">${esc(x.l)}</span>`).join(' ')}</div></div><button class="btn sm pri" data-act="completar" data-op="${c.o.id}" data-k="${c.L[0].k}">Completar ›</button></div>`).join('') + (L.length > 8 ? `<p class="small muted" style="margin:6px 0 0">Y ${L.length - 8} clientes más.</p>` : '') : '<div class="empty">🏅 ¡Tienes todos tus datos completos! Sigue así.</div>'}</div></div>`;
+  }
+  // Equipo: % de datos completos de cada persona
+  function equipoDatosHtml() {
+    const Q = calidadDatos(); if (!Q.req) return '';
+    return `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>📝 Datos completos</h2><span class="small muted">Área: ${pctDatosBadge(Q.pct)} · ${Q.ok} de ${Q.req} datos obligatorios</span></div><div class="ops-tw">${tbl('rg-datos', [
+      { h: 'Persona', s: f => f.name, f: f => f.name === 'Sin asignar' ? '<i class="muted">Sin responsable</i>' : `<b>${esc(f.name)}</b> ${medalla(f)}` },
+      { h: 'Datos completos', s: f => f.pct ?? -1, f: f => f.pct == null ? '<span class="muted">Sin datos obligatorios aún</span>' : `<div class="dc-bar"><i style="width:${f.pct}%;background:var(--${f.pct >= 95 ? 'verde' : f.pct >= 80 ? 'amar' : 'rojo'})"></i></div>${pctDatosBadge(f.pct)} <span class="small muted">${f.ok} de ${f.req}</span>` },
+      { h: 'Faltan', cls: 'r', s: f => f.items.length, f: f => f.items.length ? `<b>${f.items.length}</b>` : '<span class="muted">0</span>' },
+      { h: 'Lo que más falta', f: f => { const c = {}; f.items.forEach(x => c[x.l] = (c[x.l] || 0) + 1); const t = Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 2); return t.length ? t.map(([l, n]) => `${esc(l)} <span class="muted">(${n})</span>`).join(' · ') : '<span class="muted">—</span>'; } }], Q.filas, 'Sin datos.')}</div>
+      <p class="small muted" style="margin:8px 16px 12px">Son obligatorios: DNI, banco, ejecutivo de banco y fecha en que el banco recibe el caso; en Contratos, notaría, abogado y sus fechas, y las firmas, cuando ya corresponde; y el motivo de demora cuando el caso pasó su meta.</p></div>`;
+  }
+  // al pasar de etapa con datos vacíos: avisa y lleva a completarlos
+  function avisoAvance(antes) {
+    if (!antes || !S.actor) return;
+    const idx = (e) => e === 'cerrado' ? 99 : STAGES.findIndex(s => s.key === e);
+    const sub = S.ops.map(o => { const a = antes.get(o.id), d = D.get(o.id); return a && d && idx(d.etapa) > idx(a.etapa) ? { o, d, F: faltantes(o, d).out } : null; }).filter(x => x && x.F.length)[0];
+    if (!sub) return;
+    const { o, d, F } = sub;
+    modal({ title: '⚠️ Faltan datos obligatorios', ok: 'Completar ahora', cancel: 'Después',
+      body: `<p style="margin-top:0"><b>${esc(o.cliente)}</b> pasó a <b>${d.etapa === 'cerrado' ? 'Cerrado' : STAGE[d.etapa].name}</b>, pero le faltan estos datos:</p><ul>${F.map(x => `<li><b>${esc(x.l)}</b> <span class="small muted">· ${esc(x.por)}${x.quien && x.quien !== 'Sin asignar' ? ' · le toca a ' + esc(x.quien) : ''}</span></li>`).join('')}</ul><p class="small muted">Sin estos datos el caso no se puede medir en Tiempos y productividad.</p>`,
+      onOk: () => { setTimeout(() => irAlDato(o.id, F[0].k), 50); } });
+  }
+  // abre la ficha del cliente y lleva el cursor al dato
+  function irAlDato(id, k) {
+    const go = () => { const L = $$(`#view [data-fk="${k}"]`), f = L[L.length - 1]; if (!f) return;
+      let p = f.parentElement; while (p) { if (p.tagName === 'DETAILS') p.open = true; p = p.parentElement; }
+      f.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => { f.focus({ preventScroll: true }); const lb = f.closest('.f'); if (lb) { lb.classList.add('resalta'); setTimeout(() => lb.classList.remove('resalta'), 2500); } }, 350); };
+    if (location.hash !== '#/cliente/' + id) { location.hash = '#/cliente/' + id; setTimeout(go, 250); } else go();
   }
 
   /* ---- Ciclo completo de la venta: de la venta al desembolso y la inscripción, hito por hito ---- */
@@ -2580,6 +2657,7 @@
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
+    if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'carga-excel') return cargaExcel();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-resumen') return tpResumen();

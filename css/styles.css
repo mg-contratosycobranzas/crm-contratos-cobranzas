@@ -540,3 +540,9 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .prod-f .pf b{font-size:15px}.prod-f .pf em{font-style:normal;color:var(--accent,#2c6db4);font-weight:600}.prod-f .pf span{font-size:13px}.prod-f .pf small{font-size:12px;color:var(--muted)}.prod-f .pf small.m{color:var(--ink);font-weight:600}
 .prod-f .op{align-self:center;font-size:22px;color:var(--muted)}.prod-ref{margin:4px 0 0;padding-left:18px;line-height:1.5}.prod-ref li{margin:2px 0}
 .txt-verde{color:var(--verde)}
+
+/* Datos completos */
+.falta-chip{display:inline-block;background:var(--amar-bg);color:var(--amar);border-radius:6px;padding:1px 7px;margin:3px 3px 0 0;font-size:12px}
+.medal{display:inline-block;background:var(--verde-bg);color:var(--verde);border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600;vertical-align:middle}
+.dc-bar{display:inline-block;vertical-align:middle;width:140px;max-width:40vw;height:8px;background:var(--line2);border-radius:4px;margin-right:8px;overflow:hidden}.dc-bar i{display:block;height:100%}
+.f em.req{font-style:normal;font-size:10.5px;font-weight:650;color:var(--amar);background:var(--amar-bg);border-radius:5px;padding:0 5px;margin-left:4px}
