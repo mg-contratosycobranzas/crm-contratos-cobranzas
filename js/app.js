@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -192,7 +192,7 @@
   const sbadge = (k) => { const s = STAGE[k]; return `<span class="sbadge" style="--sc:${colVar(k)}"><i>${s.n}</i>${s.name}</span>`; };
   const alertBadge = (a) => a ? alertChip(a) : '';
   const semBadge = (s) => ({ ROJO: `<span class="badge rojo">Vencido</span>`, AMARILLO: `<span class="badge amar">Por vencer</span>`, VERDE: `<span class="badge verde">En plazo</span>`, COMPLETADO: `<span class="badge verde">Completado</span>` }[s] || '<span class="muted">—</span>');
-  const stateChip = (st) => st === 'culminada' ? `<span class="badge verde">Culminada</span>` : st === 'actual' ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">En curso</span>` : `<span class="badge gris">Por llegar</span>`;
+  const stateChip = (st) => st === 'espera' ? '<span class="badge bf">⏸️ En espera · Bien futuro</span>' : st === 'culminada' ? `<span class="badge verde">Culminada</span>` : st === 'actual' ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">En curso</span>` : `<span class="badge gris">Por llegar</span>`;
   const cumpBadge = (c) => c === 'FUERA DE PLAZO' ? `<span class="badge rojo">Fuera de plazo</span>` : c === 'PROXIMO A VENCER' ? `<span class="badge amar">Próximo a vencer</span>` : c ? `<span class="badge verde">Dentro del plazo</span>` : '<span class="muted">—</span>';
   const respCell = (n) => n === 'Sin asignar' ? `<span class="badge rojo plain">Sin asignar</span>` : (n === '—' ? '—' : userLink(n));
   const userLink = (n) => `<a href="#/usuario/${encodeURIComponent(n)}">${esc(n)}</a>`;
@@ -549,7 +549,7 @@
       if (e.orig) return ` · <span class="cl-wait">⏰ pasó la fecha estimada de desembolso (${fdate(e.orig)})</span>`;
       const n = diff(pd(e.fecha), today());
       return ` · <span class="${n <= 15 ? 'cl-wait' : ''}">⏰ desembolso ${n < 0 ? `vencido hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} días`} (${e.tipo.toLowerCase()})</span>`; };
-    const ag = agenda(S.actor).filter(x => x.cat === 'vencido' || x.cat === 'hoy');
+    const ag = agenda(S.actor).filter(x => x.cat === 'vencido' || x.cat === 'hoy' || (x.bf && x.cat === 'semana'));
     const st = k !== JEFATURA && STAGE[k].ownerKey ? STAGE[k] : null;
     const pool = st ? all.filter(r => r.d.state[k] === 'actual' && r.d.owner[k] === 'Sin asignar') : [];
     const meta = S.params.metaDia || 8, pct = Math.min(100, hoy / meta * 100), R = 38, C = 2 * Math.PI * R;
@@ -560,7 +560,7 @@
     return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
       <div class="gauge mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="${pct / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${pct >= 100 ? 'var(--f-verde)' : 'var(--accent)'}"/><text x="50" y="57" text-anchor="middle" class="g-big">${hoy}</text></svg><div><b>Acciones de hoy</b><span class="small muted">Meta: ${meta}</span></div></div></div>
     ${faltaHtml()}
-    ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : 'Hoy · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div><button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button></div>`; }).join('')}</div></div>` : ''}
+    ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : x.cat === 'hoy' ? 'Hoy · ' : '⏸️ Pronto · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div>${x.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${x.opId}">▶️ Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button>`}</div>`; }).join('')}</div></div>` : ''}
     ${(() => { // jefatura: cierres firmados que esperan V°B° · responsable: sus cierres observados
       const ing = S.ops.filter(o => pendienteIngreso(o) && (isJefe() ? o.aprob.estado === 'pendiente' : o.aprob.por === S.actor));
       const ingHtml = ing.length ? `<h2 class="sec">${isJefe() ? 'Clientes nuevos por aprobar' : 'Mis clientes ingresados'} <span class="badge amar plain">${ing.length}</span></h2><div class="card"><div class="card-b">${ing.map(o => `<div class="agrow"><div><a href="#/cliente/${o.id}"><b>${esc(o.cliente)}</b></a> <span class="small muted">${esc(o.proyecto || '')} ${esc(o.unidad || '')}</span><div class="small muted">${o.aprob.estado === 'observado' ? `↩️ Observado: ${esc(o.aprob.obs.motivo)}` : `${isJefe() ? `Ingresado por ${esc(o.aprob.nombre || o.aprob.por)} · ` : '⏳ Esperando V°B° · '}${fechaHora(o.aprob.ts)}`}</div></div>${isJefe() ? `<button class="btn sm pri" data-act="ing-ok" data-op="${o.id}">✅ V°B°</button> <a class="btn sm" href="#/cliente/${o.id}">Revisar</a>` : `<a class="btn sm" href="#/cliente/${o.id}">Abrir</a>`}</div>`).join('')}</div></div>` : '';
@@ -599,7 +599,7 @@
     const owners = [...new Set([...S.users.filter(u => u.stage === key).map(u => u.name), ...S.ops.map(o => st.ownerKey ? o[st.ownerKey] : st.fixedOwner).filter(Boolean)])];
     const build = () => {
       const all = rows().filter(r => (!F.proy || r.o.proyecto === F.proy) && (!F.resp || r.d.owner[key] === F.resp) && match(r, F.q));
-      const cnt = { actual: 0, culminada: 0, porllegar: 0, todas: all.length }; all.forEach(r => cnt[r.d.state[key]]++);
+      const cnt = { actual: 0, culminada: 0, porllegar: 0, espera: 0, todas: all.length }; all.forEach(r => cnt[r.d.state[key]]++);
       const list = F.estado === 'todas' ? all : all.filter(r => r.d.state[key] === F.estado);
       const cols = [
         { h: 'Cliente', f: r => opLink(r.o), s: r => r.o.cliente }, { h: 'Responsable', f: r => respCell(r.d.owner[key]), s: r => r.d.owner[key] },
@@ -608,7 +608,7 @@
         { h: 'Siguiente paso', f: r => r.d.state[key] === 'culminada' ? '<span class="muted">—</span>' : esc((r.d.check[key].find(x => !x.done) || { label: st.accion }).label), },
         { h: 'Alerta', f: r => r.d.etapa === key ? alertBadge(r.d.alerta) : '<span class="muted">—</span>', s: r => r.d.alerta }];
       const chip = (v, l) => `<button class="chipb ${F.estado === v ? 'on' : ''}" data-act="chip" data-v="etapa-${key}" data-k="estado" data-val="${v}" data-r="${id}">${l}<b>${cnt[v]}</b></button>`;
-      return `<div class="chips" style="margin-bottom:12px">${chip('actual', 'En curso en esta etapa')}${chip('culminada', 'Culminadas')}${chip('porllegar', 'Por llegar')}${chip('todas', 'Todas')}</div>${tbl(id, cols, list)}`;
+      return `<div class="chips" style="margin-bottom:12px">${chip('actual', 'En curso en esta etapa')}${key === 'for' && cnt.espera ? chip('espera', '⏸️ En espera · bien futuro') : ''}${chip('culminada', 'Culminadas')}${chip('porllegar', 'Por llegar')}${chip('todas', 'Todas')}</div>${tbl(id, cols, list)}`;
     };
     return `<div class="crumb muted"><a href="#/resumen">Resumen</a> / Etapas</div>
     ${pageHead(`<span style="color:${colVar(key)}">Etapa ${st.n}</span> · ${st.name}`, esc(st.desc), key === 'pos' ? `<a class="btn" href="${ACTAS_URL}" target="_blank" rel="noopener">📝 Generador de actas ↗</a>` : '', `${key === 'pos' ? 'Para un acta con los datos ya llenos, ábrela desde la ficha del cliente → 5 Postventa → "Generar acta de entrega". ' : ''}Cada fila es un cliente. <b>En curso</b> = está en esta etapa ahora; <b>Culminadas</b> = ya la cerró; <b>Por llegar</b> = aún no llega. La barra de avance muestra cuántos pasos de la etapa están hechos. Toca el nombre para abrir su ficha.`)}
@@ -724,17 +724,17 @@
     if (key === 'cob') return kv('Inicial recibido', money(d.cobRecibido)) + kv('Días de atención', d.cobDiasAt ?? '—') + kv('Plazo objetivo', S.params.plazo + ' días');
     if (key === 'con') return kv('Estado de atención', d.conEstado) + kv('Estado de firma', d.conFirma) + kv('Días desde validación', d.conDias ?? '—') + kv('Cumplimiento', cumpBadge(d.conCump));
     if (key === 'fin') return kv('Semáforo carta fianza', semBadge(d.semCF)) + kv('Límite carta fianza', o.fin_fSolicitud ? fdate(iso(CRM.addDays(pd(o.fin_fSolicitud), S.params.slaCF))) : '—');
-    if (key === 'for') return kv('Semáforo minuta lev.', semBadge(d.semMin)) + kv('Semáforo notarial', semBadge(d.semNot)) + kv('Límite notarial', o.for_fIngresoNotaria ? fdate(iso(CRM.addDays(pd(o.for_fIngresoNotaria), S.params.slaNot))) : '—');
+    if (key === 'for') return kv('Semáforo minuta lev.', semBadge(d.semMin)) + kv('Semáforo notarial', d.espera ? '<span class="badge bf">Detenido</span>' : semBadge(d.semNot)) + kv('Límite notarial', d.espera ? 'En espera' : d.notIni ? fdate(iso(CRM.addDays(pd(d.notIni), S.params.slaNot))) : '—');
     return '';
   }
   // quién puede marcar pasos a mano ve "Marcar ✓ / Deshacer"; el resto ve el dato que debe completar
   const stepLabel = (c) => can('a_pasos') ? (c.done ? 'Deshacer' : (c.set || c.choose) ? 'Marcar ✓' : 'Completar') : (c.done ? '' : c.choose ? 'Elegir' : 'Completar dato');
-  const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span><em>${stepLabel(c)}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
+  const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span>${c.espera ? '<span class="bf-tag">En espera · bien futuro</span>' : ''}<em>${stepLabel(c)}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
   const stageHead = (key, d) => `${stateChip(d.state[key])}<span class="small muted">Responsable: <b style="color:var(--ink)">${respCell(d.owner[key])}</b></span>${bar(d.progress[key])}`;
   const headHtml = (o, d) => `<div class="t"><h1>${esc(o.cliente)}</h1>${d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(d.etapa)}${alertBadge(d.alerta)}</div>
     <div class="meta"><span><b>ID</b>${o.id}</span><span><b>DNI</b>${esc(o.dni || '—')}</span><span><b>Proyecto</b>${esc(o.proyecto || '—')} ${esc(o.unidad || '')}</span><span><b>Vendedor</b>${esc(o.vendedor || '—')}</span><span><b>Banco</b>${esc(o.banco || '—')}</span><span><b>Precio</b>${money(o.precio)}</span><span><b>Financia banco</b>${money(o.montoBanco)}</span><span><b>Días en proceso</b>${d.diasTotal ?? '—'}</span></div>
     <div class="next" ${d.etapa !== 'cerrado' ? `style="--sc:${colVar(d.etapa)}"` : ''}><div><span class="nx-l">Qué sigue</span><b>${esc(d.siguiente)}</b></div><div><span class="nx-l">Responsable</span><b>${respCell(d.responsable)}</b></div>${d.cuello !== 'N/A' ? `<div><span class="nx-l">Se traba en</span><b>${esc(CUELLO_LABEL[d.cuello] || d.cuello)}</b></div>` : ''}${d.etapa !== 'cerrado' ? `<a class="btn pri sm" data-act="gostage" data-s="${d.etapa}" href="#/cliente/${o.id}">Ir a la etapa ›</a>` : ''}</div>`;
-  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
+  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : st === 'espera' ? '⏸' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : st === 'espera' ? 'En espera · bien futuro' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
 
   function timelineItems(o) {
     const items = [];
@@ -1072,6 +1072,8 @@
     top.forEach(({ k, s }) => { if (s.productividad != null && !s.pocos) hall.push(`<b>${TRAMOS[k].l}:</b> productividad ${s.productividad}% (eficacia ${s.eficacia}% × eficiencia ${s.eficiencia}%; meta ${mP}%) · mediana ${s.mediana} ${U}.${s.productividad < mP ? ` Lo que más la baja: ${s.eficacia < mE ? 'casos abiertos fuera de plazo (eficacia)' : 'el tiempo que toma cada caso (eficiencia)'}.` : ''}`); });
     ['ban', 'not', 'abo'].forEach(k => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.productividad != null); if (G.length < 2) return; const mej = [...G].sort((a, b) => b.s.productividad - a.s.productividad || a.s.mediana - b.s.mediana)[0], peor = [...G].sort((a, b) => a.s.productividad - b.s.productividad || b.s.mediana - a.s.mediana)[0];
       if (mej !== peor) hall.push(`<b>${TRAMOS[k].c}:</b> mayor productividad ${esc(mej.ks.filter(Boolean).join(' · '))} (${mej.s.productividad}%); a mejorar ${esc(peor.ks.filter(Boolean).join(' · '))} (${peor.s.productividad}%: eficacia ${peor.s.eficacia}%, eficiencia ${peor.s.eficiencia}%).`); });
+    { const E = base.filter(o => (D.get(o.id) || {}).state && D.get(o.id).state.for === 'espera'); if (E.length) { const pr = [...new Set(E.map(o => o.proyecto).filter(Boolean))], fx = E.map(o => o.for_bfReapertura).filter(Boolean).sort()[0];
+      hall.push(`<b>${E.length} ${E.length === 1 ? 'venta en espera' : 'ventas en espera'} por bien futuro</b> (${esc(pr.join(', ') || 'sin proyecto')}${fx ? `; próxima reapertura ${fdate(fx)}` : ''}): aún no se pueden inscribir y no cuentan como vencidas.`); } }
     const venc = res.reduce((t, x) => t + x.s.vencidos, 0); if (venc) hall.push(`<b>${venc} casos abiertos ya superaron su meta</b> y requieren seguimiento (ver lista al final).`);
     const mot = tpMotivos(base); if (mot.length) hall.push(`<b>Principal causa de demora:</b> ${esc(mot[0].motivo)} (${mot[0].pct}% de los casos con motivo registrado)${mot[1] ? `, seguida de ${esc(mot[1].motivo)} (${mot[1].pct}%)` : ''}.`);
     const falt = tpFaltan(base), probl = tpProblemas(base); if (falt.length || probl.length) hall.push(`<b>Calidad de datos:</b> ${[...falt, probl.length ? `${probl.length} ${probl.length === 1 ? 'fecha' : 'fechas'} por revisar` : ''].filter(Boolean).join('; ')}.`);
@@ -1491,22 +1493,22 @@
   // estado: el elegido por la asistente; si no hay, se deduce de las fechas
   const insEstado = (o) => o.for_estadoIns || (o.for_fInscripcion || o.for_fIndep ? 'Inscrito' : o.for_fIngresoNotaria ? 'Ingresado a notaría' : 'Pendiente');
   const INS_GRUPO = { Inscrito: 'ok', 'En calificación (SUNARP)': 'cal', Observado: 'obs', 'Sin respuesta': 'obs', 'Ingresado a notaría': 'not', 'Docs enviados a notaría': 'not', 'Pendiente conformidad de notaría (adenda)': 'not', 'Email enviado': 'not', Pendiente: 'pend' };
-  const INS_BADGE = { ok: 'verde', cal: '', obs: 'rojo', not: 'amar', pend: 'gris' };
+  const INS_BADGE = { ok: 'verde', cal: '', obs: 'rojo', not: 'amar', pend: 'gris', bf: 'bf' };
   const insFilter = () => flt('inscripciones', { q: '', emp: '', proy: '', bco: '', not: '', grp: '', page: 1, size: '20' });
   const INS_COLS = [
     { h: 'Proyecto', v: r => r.o.proyecto }, { h: 'Empresa', v: r => empresaDe(r.o) || r.ep[r.o.proyecto] || '' }, { h: 'Dpto.', v: r => r.o.unidad },
     { h: 'Comprador', v: r => r.o.cliente }, { h: 'DNI', v: r => r.o.dni }, { h: 'Banco financia', v: r => r.o.banco }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
     { h: 'Celular ejecutivo', v: r => r.o.con_bcoTel }, { h: 'Email ejecutivo', v: r => r.o.con_bcoCorreo }, { h: 'Carta N°', v: r => r.o.fin_nCarta },
-    { h: 'Estado', v: r => insEstado(r.o) }, { h: 'Notaría', v: r => r.o.con_notaria }, { h: 'Abogado', v: r => r.o.con_abogado },
+    { h: 'Estado', v: r => insEstado(r.o) }, { h: 'Bien futuro', v: r => r.d.state.for === 'espera' ? `En espera · reapertura ${fdate(r.o.for_bfReapertura) || 'sin fecha'}${r.o.for_bfMotivo ? ' · ' + r.o.for_bfMotivo : ''}` : r.o.for_bfReabierto ? `Reabierto el ${fdate(r.o.for_bfReabierto)}` : '' }, { h: 'Notaría', v: r => r.o.con_notaria }, { h: 'Abogado', v: r => r.o.con_abogado },
     { h: 'Correo / cel. notaría', v: r => [r.o.con_notEmail, r.o.con_notCel || r.o.con_notTel].filter(Boolean).join(' · ') }, { h: 'Kardex', v: r => r.o.con_kardexMonto },
     { h: 'Código', v: r => r.o.for_codigo }, { h: 'Título', v: r => r.o.for_titulo }, { h: 'Copia SUNARP en Evolta', v: r => r.o.for_copiaEvolta || 'PENDIENTE' }, { h: 'Ingreso notaría', v: r => r.o.for_fIngresoNotaria, t: 'd' },
-    { h: 'Días en trámite', v: r => r.o.for_fIngresoNotaria && !r.o.for_fInscripcion ? diff(today(), pd(r.o.for_fIngresoNotaria)) : null, t: 'i' },
+    { h: 'Días en trámite', v: r => r.d.notIni && !r.o.for_fInscripcion && r.d.state.for !== 'espera' ? diff(today(), pd(r.d.notIni)) : null, t: 'i' },
     { h: 'Inscripción', v: r => r.o.for_fInscripcion, t: 'd' }, { h: 'Observación', v: r => r.o.for_obsIns }];
   function insRows() {
-    const F = insFilter(), ep = empresaProy(), ord = { obs: 0, cal: 1, not: 2, pend: 3, ok: 4 };
-    return rows().filter(enFormalizacion).map(r => ({ ...r, ep, grp: INS_GRUPO[insEstado(r.o)] || 'pend' }))
+    const F = insFilter(), ep = empresaProy(), ord = { obs: 0, cal: 1, not: 2, pend: 3, bf: 4, ok: 5 };
+    return rows().filter(enFormalizacion).map(r => ({ ...r, ep, grp: r.d.state.for === 'espera' ? 'bf' : INS_GRUPO[insEstado(r.o)] || 'pend' }))
       .filter(r => match(r, F.q) && (!F.emp || (empresaDe(r.o) || ep[r.o.proyecto]) === F.emp) && (!F.proy || r.o.proyecto === F.proy) && (!F.bco || r.o.banco === F.bco) && (!F.not || r.o.con_notaria === F.not) && (!F.grp || r.grp === F.grp))
-      .sort((a, b) => ord[a.grp] - ord[b.grp] || String(a.o.for_fIngresoNotaria || '9').localeCompare(String(b.o.for_fIngresoNotaria || '9')));
+      .sort((a, b) => ord[a.grp] - ord[b.grp] || (a.grp === 'bf' ? String(a.o.for_bfReapertura || '9').localeCompare(String(b.o.for_bfReapertura || '9')) : 0) || String(a.o.for_fIngresoNotaria || '9').localeCompare(String(b.o.for_fIngresoNotaria || '9')));
   }
   function vInscripciones() {
     const F = insFilter(), id = 'rg-ins', sla = S.params.slaNot || 20;
@@ -1517,10 +1519,12 @@
       const ed = can('a_edit');
       const cols = INS_COLS.map(c => ({ h: c.h, cls: c.t === 'i' ? 'r' : '', s: r => c.v(r) ?? '', f: r => { const v = c.v(r);
         if (c.h === 'Estado') return ed ? `<select class="ins-sel b-${INS_BADGE[r.grp]}" data-ins="${r.o.id}">${CRM.ESTADOS_INS.map(e => `<option ${e === v ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>` : `<span class="badge ${INS_BADGE[r.grp]}">${esc(v)}</span>`;
+        if (c.h === 'Bien futuro') { if (!v) return '<span class="muted">—</span>'; if (r.d.state.for !== 'espera') return `<span class="small muted">${esc(v)}</span>`; const n = r.o.for_bfReapertura ? diff(pd(r.o.for_bfReapertura), today()) : null;
+          return `<span class="badge bf">⏸️ ${r.o.for_bfReapertura ? fdate(r.o.for_bfReapertura) : 'Sin fecha'}</span> <span class="small ${n != null && n <= 7 ? 'txt-amar' : 'muted'}">${n == null ? '' : n < 0 ? `pasó hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} d`}</span>${ed ? ` <button class="btn sm" data-act="bf-reabrir" data-op="${r.o.id}">▶️ Reabrir</button>` : ''}<div class="small muted">${esc(r.o.for_bfMotivo || '')}</div>`; }
         if (c.h === 'Días en trámite') return v == null ? '<span class="muted">—</span>' : `<span class="${v > sla ? 'txt-rojo' : v >= sla - (S.params.anticipo || 2) ? 'txt-amar' : ''}"><b>${v}</b> / ${sla}</span>`;
         return !filled(v) ? '<span class="muted">—</span>' : c.t === 'd' ? fdate(v) : c.h === 'Comprador' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>` : esc(v); } }));
       const pager = `<div class="pager"><span class="small muted">${all.length ? `${(F.page - 1) * size + 1}–${Math.min(F.page * size, all.length)} de ${all.length}` : '0 inscripciones'}</span><button class="btn sm" data-act="ins-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="ins-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
-      return `<div class="kpis ops-kpis">${kpi(all.length, 'En formalización', '')}${kpi(n('obs'), 'Observadas / sin respuesta', 'obs', 'txt-rojo')}${kpi(n('cal'), 'En calificación SUNARP', 'cal')}${kpi(n('not'), 'En notaría', 'not', 'txt-amar')}${kpi(n('pend'), 'Pendientes de iniciar', 'pend')}${kpi(n('ok'), 'Inscritas', 'ok')}</div>
+      return `<div class="kpis ops-kpis">${kpi(all.length, 'En formalización', '')}${kpi(n('obs'), 'Observadas / sin respuesta', 'obs', 'txt-rojo')}${kpi(n('cal'), 'En calificación SUNARP', 'cal')}${kpi(n('not'), 'En notaría', 'not', 'txt-amar')}${kpi(n('pend'), 'Pendientes de iniciar', 'pend')}${n('bf') || F.grp === 'bf' ? kpi(n('bf'), '⏸️ Bien futuro (en espera)', 'bf', 'txt-bf') : ''}${kpi(n('ok'), 'Inscritas', 'ok')}</div>${F.grp === 'bf' ? bfResumen(all.filter(r => r.grp === 'bf')) : ''}
         ${pager}<div class="ops-tw full ins-tw">${tbl(id + '-t', cols, page, 'No hay expedientes con estos filtros.')}</div>${all.length > size ? pager : ''}`;
     };
     const base = rows().filter(enFormalizacion).map(r => r.o), ep = empresaProy(), opts = (fn) => [...new Set(base.map(fn).filter(Boolean))].sort().map(x => [x, x]);
@@ -1703,6 +1707,41 @@
     });
     dlg.querySelector('#nkb-img').onchange = (e) => { const f = e.target.files[0]; if (f) { box.textContent = '🖼️ ' + f.name; fromImage(f); } };
     setTimeout(() => box.focus(), 60);
+  }
+
+  /* ---- Bien futuro (Formalización): ventas que aún no se pueden inscribir. Quedan "en espera" al 100%, con el plazo detenido,
+     y vuelven a "en curso" al reabrirlas (el plazo notarial se cuenta desde la reapertura). ---- */
+  const bfDias = (f) => f ? diff(pd(f), today()) : null;
+  function bfBar(o, d) {
+    if (d.state.for === 'espera') { const n = bfDias(o.for_bfReapertura);
+      return `<div class="bf-box"><span class="bf-ic">🏗️</span><div class="bf-tx"><b>Bien futuro: aún no se puede inscribir.</b><br>Motivo: <b>${esc(o.for_bfMotivo || 'sin motivo')}</b>. Reapertura estimada: <b>${o.for_bfReapertura ? fdate(o.for_bfReapertura) : 'sin fecha'}</b>${n == null ? '' : n < 0 ? ` (pasó hace ${-n} días)` : n === 0 ? ' (hoy)' : ` (en ${n} días)`}.${o.for_bfDesde ? ` En espera desde el ${fdate(o.for_bfDesde)}` : ''}${o.for_bfPor ? ` · lo registró ${esc(o.for_bfPor)}` : ''}.<br><span class="small muted">El plazo está detenido: no cuenta como fuera de plazo ni baja la productividad.</span></div>
+        ${can('a_edit') ? `<div class="bf-acc"><button class="btn sm bf-btn" data-act="bf-reabrir" data-op="${o.id}">▶️ Reabrir ahora</button><button class="btn sm" data-act="bf-editar" data-op="${o.id}">✏️ Cambiar fecha o motivo</button></div>` : ''}</div>`; }
+    if (d.state.for !== 'actual' || !can('a_edit')) return o.for_bfReabierto ? `<p class="small muted" style="margin:6px 0">Bien futuro reabierto el ${fdate(o.for_bfReabierto)}: el plazo notarial se cuenta desde esa fecha.</p>` : '';
+    return `<div class="ev-bar"><button class="btn sm bf-btn" data-act="bf-pausar" data-op="${o.id}">⏸️ Bien futuro: pasar a espera</button> <span class="small muted">Para ventas que aún no se pueden inscribir.${o.for_bfReabierto ? ` Reabierto el ${fdate(o.for_bfReabierto)}.` : ''}</span></div>`;
+  }
+  function bfDialogo(o, editar) {
+    const otros = editar ? [] : rows(true).filter(r => r.o.id !== o.id && r.o.proyecto && r.o.proyecto === o.proyecto && r.d.state.for === 'actual');
+    const fx = o.for_bfReapertura || '', mot = o.for_bfMotivo || CRM.BF_MOTIVOS[0];
+    modal({ title: editar ? '✏️ Bien futuro · cambiar fecha o motivo' : '⏸️ Pasar a espera · Bien futuro', ok: editar ? 'Guardar' : 'Pasar a espera',
+      body: `<div class="form"><label>Motivo<select id="bf-m">${CRM.BF_MOTIVOS.map(m => `<option ${m === mot ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+        <label>Fecha estimada de reapertura<input type="date" id="bf-f" value="${esc(fx)}" min="${iso(today())}"></label>
+        ${otros.length ? `<label class="bf-chk"><input type="checkbox" id="bf-todos"><span>Aplicar también a las <b>${otros.length} ventas más</b> del proyecto ${esc(o.proyecto)} que están en Formalización</span></label>` : ''}
+        <p class="small muted" style="margin:0">Los pasos ya hechos se conservan. El plazo se detiene y vuelve a contarse al reabrir. Aparecerá en Agenda y en Mi día 7 días antes de la fecha.</p></div>`,
+      onOk: () => {
+        const f = $('#bf-f').value, m = $('#bf-m').value; if (!f) { toast('Indica la fecha estimada de reapertura'); return false; }
+        const lista = [o, ...(($('#bf-todos') || {}).checked ? otros.map(r => r.o) : [])];
+        lista.forEach(x => applyMany(x.id, { for_bfEstado: 'En espera', for_bfMotivo: m, for_bfReapertura: f, for_bfDesde: x.for_bfEstado === 'En espera' && x.for_bfDesde ? x.for_bfDesde : iso(today()), for_bfPor: x.for_bfEstado === 'En espera' && x.for_bfPor ? x.for_bfPor : fullName(S.actor) }));
+        toast(editar ? '✓ Bien futuro actualizado' : `⏸️ ${lista.length === 1 ? 'Venta en espera' : lista.length + ' ventas en espera'} hasta el ${fdate(f)}`); rerenderOp(o.id);
+      } });
+  }
+  async function bfReabrir(o) {
+    if (!await ask(`¿Reabrir la formalización de ${o.cliente}? Vuelve a "En curso" y el plazo notarial se cuenta desde hoy.`, '▶️ Reabrir')) return;
+    applyMany(o.id, { for_bfEstado: '', for_bfReabierto: iso(today()) }); toast('▶️ Formalización reabierta'); rerenderOp(o.id);
+  }
+  function bfResumen(L) {
+    if (!L.length) return '';
+    const pr = [...new Set(L.map(r => r.o.proyecto).filter(Boolean))], fx = L.map(r => r.o.for_bfReapertura).filter(Boolean).sort()[0];
+    return `<div class="bf-res"><b>${L.length}</b> ${L.length === 1 ? 'venta en espera' : 'ventas en espera'} por bien futuro · <b>${pr.length}</b> ${pr.length === 1 ? 'proyecto' : 'proyectos'} (${esc(pr.join(', '))})${fx ? ` · próxima reapertura <b>${fdate(fx)}</b>` : ''}. No cuentan como vencidas.</div>`;
   }
 
   /* ---- Acta de entrega (Postventa): el Generador de Actas se abre dentro del CRM y se llena con los datos del cliente.
@@ -1912,7 +1951,7 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -1931,6 +1970,7 @@
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
+    const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
     STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
@@ -1939,7 +1979,9 @@
   /* ---- Agenda ---- */
   function agenda(u) {
     const T = iso(today());
-    return S.seguimientos.filter(s => s.fCompromiso && !s.resuelto && (!u || s.usuario === u)).map(s => ({ ...s, cat: s.fCompromiso < T ? 'vencido' : s.fCompromiso === T ? 'hoy' : diff(pd(s.fCompromiso), today()) <= 7 ? 'semana' : 'despues' })).sort((a, b) => a.fCompromiso.localeCompare(b.fCompromiso));
+    // bien futuro: aviso de reapertura desde 7 días antes
+    const bf = rows().filter(r => r.d.state.for === 'espera' && r.o.for_bfReapertura && diff(pd(r.o.for_bfReapertura), today()) <= 7 && (!u || r.d.owner.for === u)).map(r => ({ id: 'bf-' + r.o.id, bf: true, opId: r.o.id, etapa: 'for', usuario: r.d.owner.for, fCompromiso: r.o.for_bfReapertura, proxima: 'Reabrir formalización (bien futuro)' }));
+    return [...bf, ...S.seguimientos].filter(s => s.fCompromiso && !s.resuelto && (!u || s.usuario === u)).map(s => ({ ...s, cat: s.fCompromiso < T ? 'vencido' : s.fCompromiso === T ? 'hoy' : diff(pd(s.fCompromiso), today()) <= 7 ? 'semana' : 'despues' })).sort((a, b) => a.fCompromiso.localeCompare(b.fCompromiso));
   }
   function vAgenda() {
     const F = flt('agenda', { u: '' }), id = 'rg-ag';
@@ -1948,7 +1990,7 @@
       if (!items.length) return `<div class="tw"><div class="empty">No hay seguimientos con fecha de compromiso pendientes.<br>Se crean desde la ficha de cada cliente.</div></div>`;
       return groups.map(([k, l, c]) => { const g = items.filter(i => i.cat === k); if (!g.length) return ''; return `<h2 style="margin:18px 0 8px">${l} <span class="badge ${c} plain">${g.length}</span></h2>` + tbl(id + '-' + k, [
         { h: 'Compromiso', f: i => fdate(i.fCompromiso) }, { h: 'Cliente', f: i => { const o = getOp(i.opId); return o ? opLink(o) : esc(i.opId); } }, { h: 'Etapa', f: i => STAGE[i.etapa] ? sbadge(i.etapa) : '' },
-        { h: 'Responsable', f: i => userLink(i.usuario) }, { h: 'Pendiente', f: i => `${esc(i.proxima || i.nota)}` }, { h: '', cls: 'r', f: i => `<button class="btn sm" data-act="seg-done" data-id="${i.id}">Marcar cumplido</button>` }], g); }).join('');
+        { h: 'Responsable', f: i => userLink(i.usuario) }, { h: 'Pendiente', f: i => `${esc(i.proxima || i.nota)}` }, { h: '', cls: 'r', f: i => i.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${i.opId}">▶️ Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${i.id}">Marcar cumplido</button>` }], g); }).join('');
     };
     return `${pageHead('Agenda de seguimiento', 'Compromisos pendientes con clientes, por responsable.', '', 'Se llena cuando registras un seguimiento con <b>fecha compromiso</b>. Rojo = ya venció. Toca "Marcar cumplido" cuando lo resuelvas.')}
     <div class="filters"><select data-f="agenda" data-k="u" data-r="${id}"><option value="">Todo el equipo</option>${S.users.map(u => `<option ${F.u === u.name ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></div>${region(id, build)}`;
@@ -2632,7 +2674,7 @@
   }
   /* ---------- Excel de procesos e indicadores ---------- */
   const bdays = (a, b) => { let n = 0; for (let d = new Date(a); d <= b; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) { const w = d.getDay(); if (w && w < 6) n++; } return n; };
-  const ESTADO = { culminada: 'Culminada', actual: 'En curso', porllegar: 'Por llegar' };
+  const ESTADO = { culminada: 'Culminada', actual: 'En curso', porllegar: 'Por llegar', espera: 'En espera (bien futuro)' };
   function procesosRows() {
     const T = today(), P = S.params, out = [];
     rows().forEach(({ o, d }) => STAGES.forEach(s => {
@@ -2640,7 +2682,7 @@
       if (k === 'cob') { ini = o.cob_fInicio; fin = o.cob_fCulm; sla = P.plazo; }
       else if (k === 'con') { ini = o.con_fValidacion; fin = o.con_fCulm || (d.done.con ? (o.con_fFirmaCliente > o.con_fFirmaRL ? o.con_fFirmaCliente : o.con_fFirmaRL) : ''); sla = P.plazo; }
       else if (k === 'fin') { if (o.fin_tipo === 'No aplica') aplica = false; else if (o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO') { ini = o.fin_fDesembolso; fin = o.for_fFirmaMinuta; sla = P.slaMin; } else { ini = o.fin_fSolicitud; fin = o.fin_fEmision; sla = P.slaCF; } }
-      else if (k === 'for') { ini = o.for_fInicio || o.for_fIngresoNotaria; fin = o.for_fIndep; sla = P.slaNot; }
+      else if (k === 'for') { ini = o.for_fInicio || o.for_fIngresoNotaria; if (o.for_bfReabierto && (!ini || o.for_bfReabierto > ini)) ini = o.for_bfReabierto; fin = o.for_fIndep; sla = P.slaNot; } // reabierto: el plazo corre desde la reapertura
       const st = d.state[k]; ini = ini || ''; fin = (st === 'culminada' && fin) ? fin : '';
       let dias = null; if (ini && fin) dias = Math.max(0, diff(pd(fin), pd(ini))); else if (ini && st === 'actual') dias = Math.max(0, diff(T, pd(ini)));
       let cumple = ''; if (dias != null && sla != null) cumple = fin ? (dias <= sla ? 'Sí' : 'No') : (dias <= sla ? 'En plazo' : 'Vencido');
@@ -2756,6 +2798,9 @@
     if (a === 'login-reset') { const e = ($('#lg-e') || {}).value; if (!e) return toast('Escribe tu correo arriba y vuelve a tocar'); return CL.reset(e.trim()).then(() => toast('Te enviamos un correo para crear o cambiar tu contraseña')).catch(x => toast(AUTH_ERR[x.code] || x.message)); }
     if (a === 'fab') return fabMenu();
     if (a === 'fab-seg') return clientPicker();
+    if (a === 'bf-pausar') { const o = getOp(el.dataset.op); if (o) bfDialogo(o, false); return; }
+    if (a === 'bf-editar') { const o = getOp(el.dataset.op); if (o) bfDialogo(o, true); return; }
+    if (a === 'bf-reabrir') { const o = getOp(el.dataset.op); if (o) bfReabrir(o); return; }
     if (a === 'acta-elegir') return clientPicker('acta-pick', '¿Acta de entrega de qué cliente?');
     if (a === 'acta-pick') { const o = getOp(el.dataset.op); if (o) { if (!can('a_edit')) return toast(NOPERM); openActa(o); } return; }
     if (a === 'cargo-op') { const o = getOp(el.dataset.op); if (!o) return; cgValCerrar(); ui.cg = cgNuevo(); cgAgregarOp(o); location.hash = '#/cargos'; return; }

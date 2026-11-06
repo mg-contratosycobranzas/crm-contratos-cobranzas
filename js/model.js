@@ -42,6 +42,7 @@
   /* ---------- campos editables por etapa ---------- */
   const YN = ['SI', 'NO'];
   // estados de la inscripción registral, en el orden en que avanza el trámite (como en el seguimiento de Formalización)
+  const BF_MOTIVOS = ['Falta independización del proyecto', 'Falta declaratoria de fábrica / conformidad de obra', 'Otro'];
   const ESTADOS_INS = ['Pendiente', 'Docs enviados a notaría', 'Ingresado a notaría', 'Pendiente conformidad de notaría (adenda)', 'Email enviado', 'Sin respuesta', 'En calificación (SUNARP)', 'Observado', 'Inscrito'];
   const FIELDS = {
     gen: [
@@ -97,7 +98,10 @@
       { k: 'for_estadoIns', l: 'Estado de la inscripción', t: 'select', o: ESTADOS_INS }, { k: 'for_codigo', l: 'Código de inscripción', t: 'text' },
       { k: 'for_titulo', l: 'N° de título (SUNARP)', t: 'text' }, { k: 'for_obsIns', l: 'Observación de la inscripción', t: 'text' },
       { k: 'for_copiaEvolta', l: 'Copia simple SUNARP cargada en Evolta', t: 'select', o: ['CARGADA', 'PENDIENTE'] },
-      { k: 'for_fIndep', l: 'Fecha de independización', t: 'date' }
+      { k: 'for_fIndep', l: 'Fecha de independización', t: 'date' },
+      { k: 'for_bfEstado', l: 'Bien futuro: inscripción en espera', t: 'select', o: ['En espera'] }, { k: 'for_bfMotivo', l: 'Bien futuro: motivo', t: 'select', o: BF_MOTIVOS },
+      { k: 'for_bfReapertura', l: 'Bien futuro: reapertura estimada', t: 'date' }, { k: 'for_bfDesde', l: 'Bien futuro: en espera desde', t: 'date' },
+      { k: 'for_bfReabierto', l: 'Bien futuro: fecha en que se reabrió', t: 'date' }
     ],
     pos: [
       { k: 'pos_derivado', l: 'Derivado a postventa', t: 'select', o: YN }, { k: 'pos_entregada', l: 'Unidad entregada', t: 'select', o: YN }
@@ -228,7 +232,9 @@
     D.done.con = !!(op.con_fFirmaCliente && op.con_fFirmaRL);
     D.semCF = semaforo(op.fin_fSolicitud, P.slaCF, op.fin_fEmision, P, T);
     D.semMin = semaforo(op.fin_fDesembolso, P.slaMin, op.for_fFirmaMinuta, P, T);
-    D.semNot = semaforo(op.for_fIngresoNotaria, P.slaNot, op.for_fInscripcion, P, T);
+    D.espera = op.for_bfEstado === 'En espera' && !op.for_fIndep; // bien futuro: aún no se puede inscribir
+    D.notIni = op.for_bfReabierto && op.for_fIngresoNotaria && op.for_bfReabierto > op.for_fIngresoNotaria ? op.for_bfReabierto : op.for_fIngresoNotaria;
+    D.semNot = D.espera ? '' : semaforo(D.notIni, P.slaNot, op.for_fInscripcion, P, T);
     if (op.fin_tipo === 'No aplica') D.done.fin = true;
     else if (op.fin_tipo === 'Aplica - En curso') D.done.fin = op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? !!op.for_fFirmaMinuta : !!op.fin_fEmision;
     else D.done.fin = false;
@@ -238,6 +244,7 @@
     D.etapa = 'cerrado';
     for (const s of STAGES) if (!D.done[s.key]) { D.etapa = s.key; break; }
     STAGES.forEach(s => { D.state[s.key] = D.done[s.key] ? 'culminada' : (D.etapa === s.key ? 'actual' : 'porllegar'); D.owner[s.key] = ownerOf(op, s.key); });
+    if (D.espera && D.state.for === 'actual') D.state.for = 'espera'; // no cuenta como carga ni como fuera de plazo
     D.responsable = D.etapa === 'cerrado' ? '—' : D.owner[D.etapa];
     D.hechas = STAGES.filter(s => D.done[s.key]).length;
 
@@ -272,8 +279,12 @@
       const c = checklist(op, s.key, D); D.check[s.key] = c;
       D.progress[s.key] = D.done[s.key] ? 100 : (c.length ? Math.round(c.filter(x => x.done).length / c.length * 100) : 0);
     });
-    const first = D.etapa === 'cerrado' ? null : D.check[D.etapa].find(x => !x.done);
-    D.siguiente = D.etapa === 'cerrado' ? 'Operación cerrada' : (first ? first.label : STAGE[D.etapa].accion);
+    if (D.state.for === 'espera') {
+      D.check.for.forEach(c => { if (!c.done && /Inscripción|Independización|Copia simple/.test(c.label)) c.espera = true; });
+      D.progress.for = 100; D.alerta = 'Bajo control'; D.cuello = 'N/A';
+    }
+    const first = D.etapa === 'cerrado' ? null : D.check[D.etapa].find(x => !x.done && !x.espera);
+    D.siguiente = D.etapa === 'cerrado' ? 'Operación cerrada' : D.state[D.etapa] === 'espera' ? `En espera · bien futuro${op.for_bfReapertura ? ' (reapertura ' + op.for_bfReapertura.split('-').reverse().join('/') + ')' : ''}` : (first ? first.label : STAGE[D.etapa].accion);
     D.accion = D.etapa === 'cerrado' ? '—' : STAGE[D.etapa].accion;
     return D;
   }
@@ -326,6 +337,6 @@
     return ops;
   }
 
-  global.CRM = { ESTADOS_INS, STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
+  global.CRM = { BF_MOTIVOS, ESTADOS_INS, STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
     pd, iso, today, addDays, diff, fdate, num };
 })(window);
