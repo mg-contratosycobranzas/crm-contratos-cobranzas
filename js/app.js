@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', usuario_nombre: 'Cambio de nombre de usuario' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', usuario_nombre: 'Cambio de nombre de usuario' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -62,7 +62,7 @@
     { g: 'v', k: 'v_actividad', l: 'Actividad' }, { g: 'v', k: 'v_agenda', l: 'Agenda' }, { g: 'v', k: 'v_config', l: 'Configurar' },
     { g: 'a', k: 'a_edit', l: 'Editar datos' }, { g: 'a', k: 'a_pasos', l: 'Marcar pasos a mano (excepción)' }, { g: 'a', k: 'a_seg', l: 'Registrar gestiones' }, { g: 'a', k: 'a_tomar', l: 'Tomar y repartir expedientes' },
     { g: 'a', k: 'a_newop', l: 'Nuevo cliente' }, { g: 'a', k: 'a_export', l: 'Descargar Excel' }, { g: 'a', k: 'a_users', l: 'Agregar / quitar usuarios' },
-    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos y productividad' }, { g: 'v', k: 'v_carga', l: 'Carga del equipo' },
+    { g: 'a', k: 'a_params', l: 'Cambiar plazos y metas' }, { g: 'a', k: 'a_import', l: 'Importar y respaldos' }, { g: 'a', k: 'a_delop', l: 'Eliminar clientes' }, { g: 'v', k: 'v_ops', l: 'Resumen de operaciones' }, { g: 'v', k: 'v_cartas', l: 'Cartas fianza' }, { g: 'v', k: 'v_ins', l: 'Inscripciones' }, { g: 'v', k: 'v_dev', l: 'Devoluciones' }, { g: 'v', k: 'v_tiempos', l: 'Tiempos y productividad' }, { g: 'v', k: 'v_carga', l: 'Carga del equipo' }, { g: 'v', k: 'v_cargos', l: 'Actas y cargos' },
     // etapas que cada persona puede ver (por defecto todas; la jefatura las restringe)
     ...[['cob', 'Cobranzas'], ['con', 'Contratos'], ['fin', 'Finanzas'], ['for', 'Formalización'], ['pos', 'Postventa']].map(([s, l]) => ({ g: 'e', k: 'e_' + s, l }))];
   // apagados salvo que la jefatura los active; los pasos se marcan solos al completar los datos
@@ -94,7 +94,7 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -144,12 +144,12 @@
     else if (!S.actor) { st = 'denied'; denyMsg = `Tu correo (${authEmail}) no figura en el equipo. Pide a la administradora que te agregue en Equipo.`; }
     else st = 'ready';
     const was = cloudState; cloudState = st;
-    if (st === 'ready' && was !== 'ready') { startBuzon(); startDev(); }
+    if (st === 'ready' && was !== 'ready') { startBuzon(); startDev(); startCg(); }
     if (st === 'ready' && was !== 'ready' && isAdmin()) CL.setAcl(aclOf(S.users)); // mantiene al día quién es jefatura para las reglas de Firebase
     if (st === 'ready' && was !== 'ready') { recompute(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
     render(was === 'ready');
   }
-  function stopCloud() { stopBuzon(); stopDev(); if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
+  function stopCloud() { stopBuzon(); stopDev(); stopCg(); if (unsub) { unsub(); unsub = null; } clearTimeout(rT); S = emptyState(); recompute(); cloudIds.clear(); cloudSeg.clear(); cloudLog.clear(); metaLoaded = opsLoaded = metaMissing = false; lastMeta = ''; for (const k in pendingOps) delete pendingOps[k]; ui.previewReal = null; }
   function startCloud(email) {
     stopCloud(); cloudState = 'loading'; authEmail = email; me = (email || '').toLowerCase();
     const upsert = (arr, ch, set) => { let dirty = false; ch.forEach(c => { if (c.type === 'removed') return; set.add(c.id); const i = arr.findIndex(x => x.id === c.id); if (i >= 0) arr[i] = c.data; else arr.push(c.data); if (!c.pending) dirty = true; }); return dirty; };
@@ -405,15 +405,15 @@
   }
   function fabMenu() {
     const b = (act, ic, l, on) => on ? `<button type="button" class="bigopt" data-act="${act}" data-close><i>${ic}</i><span>${l}</span></button>` : '';
-    modal({ title: '¿Qué quieres hacer?', ok: 'Cerrar', cancel: '', body: `<div class="bigopts">${b('fab-seg', '📞', 'Anotar una gestión', can('a_seg'))}${b('newop', '➕', 'Nuevo cliente', can('a_newop'))}${b('goto" data-href="#/mi', '☀️', 'Mi día', can('v_mi'))}${b('export-xlsx', '⬇️', 'Descargar Excel', can('a_export'))}</div>` });
+    modal({ title: '¿Qué quieres hacer?', ok: 'Cerrar', cancel: '', body: `<div class="bigopts">${b('fab-seg', '📞', 'Anotar una gestión', can('a_seg'))}${b('newop', '➕', 'Nuevo cliente', can('a_newop'))}${b('goto" data-href="#/mi', '☀️', 'Mi día', can('v_mi'))}${b('goto" data-href="#/cargos', '📦', 'Cargo de documentos', can('v_cargos'))}${b('acta-elegir', '🏠', 'Acta de entrega', can('v_cargos') && can('a_edit'))}${b('export-xlsx', '⬇️', 'Descargar Excel', can('a_export'))}</div>` });
     $('#dlg').querySelector('.dlg-f').hidden = true; // se cierra con la ✕ o tocando fuera
   }
   function pickList(q) {
     const box = $('#pk-list'); if (!box) return;
     const list = rows(true).filter(r => match(r, q)).sort((x, y) => (x.d.etapa === 'cerrado') - (y.d.etapa === 'cerrado')).slice(0, 8);
-    box.innerHTML = list.length ? list.map(r => `<button type="button" class="pk" data-act="pick-client" data-op="${r.o.id}" data-close><b>${esc(r.o.cliente)}</b><span class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.etapa === 'cerrado' ? 'Cerrado' : STAGE[r.d.etapa].name}</span></button>`).join('') : '<div class="empty">Sin resultados</div>';
+    box.innerHTML = list.length ? list.map(r => `<button type="button" class="pk" data-act="${ui.pickAct || 'pick-client'}" data-op="${r.o.id}" data-close><b>${esc(r.o.cliente)}</b><span class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.etapa === 'cerrado' ? 'Cerrado' : STAGE[r.d.etapa].name}</span></button>`).join('') : '<div class="empty">Sin resultados</div>';
   }
-  function clientPicker() { modal({ title: '¿De qué cliente?', ok: 'Cerrar', cancel: '', body: '<input type="search" id="pk-q" placeholder="Escribe el nombre, DNI o proyecto…" autocomplete="off"><div id="pk-list" class="pklist"></div>' }); $('#dlg').querySelector('[data-m=ok]').hidden = true; pickList(''); setTimeout(() => { const i = $('#pk-q'); i && i.focus(); }, 60); }
+  function clientPicker(act, title) { ui.pickAct = act || 'pick-client'; modal({ title: title || '¿De qué cliente?', ok: 'Cerrar', cancel: '', body: '<input type="search" id="pk-q" placeholder="Escribe el nombre, DNI o proyecto…" autocomplete="off"><div id="pk-list" class="pklist"></div>' }); $('#dlg').querySelector('[data-m=ok]').hidden = true; pickList(''); setTimeout(() => { const i = $('#pk-q'); i && i.focus(); }, 60); }
 
   /* ================= vistas ================= */
   function pageHead(title, sub, extra, tipText) { return `<div class="page-h"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div>${extra || ''}</div></div>${tipText ? hint(tipText) : ''}`; }
@@ -1912,7 +1912,7 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -2350,16 +2350,142 @@
       ${Object.entries(listas).map(([k, L]) => `<datalist id="dvl-${k}">${L.map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`).join('')}`;
   }
   document.addEventListener('input', (e) => {
-    const t = e.target;
+    const t = e.target, c = ui.cg;
+    if (c && t.dataset) { if (t.dataset.cg) c[t.dataset.cg] = t.value; if (t.dataset.cgi && c.items[t.dataset.cgi]) c.items[t.dataset.cgi][t.dataset.k] = t.value; if (t.dataset.cgd && c.docs[t.dataset.cgd]) c.docs[t.dataset.cgd][t.dataset.k] = t.value; if (t.dataset.cgr) c.rec[t.dataset.cgr] = t.value; }
     if (t.dataset && t.dataset.dv && ui.dv) ui.dv[t.dataset.dv] = t.value;
     if (t.dataset && t.dataset.dvf) { dvFilter()[t.dataset.dvf] = t.value; refresh('rg-dv'); }
   });
   document.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.id === 'cg-buscar') { const o = getOp(String(t.value).split(' · ')[0].trim()); if (o) { if (cgAgregarOp(o)) toast(o.cliente + ' agregado al cargo'); render(true); setTimeout(() => { const i = $('#cg-buscar'); if (i) i.focus(); }, 30); } }
+    if (t.dataset && t.dataset.cgr === 'rel' && ui.cg) ui.cg.rec.rel = t.value;
+    if (t.dataset && t.dataset.cgdni && t.files[0] && ui.cgVal) { const v = ui.cgVal, k = t.dataset.cgdni; if (v[k + 'Url']) URL.revokeObjectURL(v[k + 'Url']); v[k] = t.files[0]; v[k + 'Url'] = URL.createObjectURL(t.files[0]); if (v.frente && v.reverso) cgValidar(); else render(true); }
     if (t.id === 'dv-buscar' && ui.dv) { const o = getOp(String(t.value).split(' · ')[0].trim()); if (o) { dvDeOp(o); toast(`Datos de ${o.cliente} cargados`); render(true); } }
     if (t.id === 'dv-evfile' && t.files[0]) dvPdfEvolta(t.files[0]);
     if (t.dataset && t.dataset.dvimg && t.files[0]) dvImagen(t.files[0], t.dataset.dvimg);
   });
+  /* ---- Actas y cargos: cargo de entrega de documentos (notaría, banco o propietario) y acceso rápido al acta de entrega ---- */
+  let CG = [], cgUnsub = null, cgErr = '', cgListo = false, cgReintento = null;
+  const CG_K = 'crm-mg-cargos';
+  const CG_DOCS = ['Juego de minuta original', 'Cláusula adicional', 'Contrato de compraventa', 'Copia de DNI', 'Carta de aprobación del banco', 'Carta fianza', 'Testimonio'];
+  const CG_REL = ['Propietario', 'Tercero autorizado', 'Personal de notaría', 'Personal del banco'];
+  function cgLocal(guardar) { try { if (guardar) localStorage.setItem(CG_K, JSON.stringify(CG)); else CG = JSON.parse(localStorage.getItem(CG_K) || '[]'); } catch (e) { if (guardar) toast('No hay espacio en este navegador para guardar los cargos'); } }
+  function stopCg() { clearTimeout(cgReintento); if (cgUnsub) { cgUnsub(); cgUnsub = null; } CG = []; cgErr = ''; cgListo = false; }
+  function startCg() {
+    stopCg(); if (!can('v_cargos')) return;
+    cgUnsub = CL.listenCol('cargos', (ch) => { ch.forEach(c => { const i = CG.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) CG.splice(i, 1); } else if (i >= 0) CG[i] = c.data; else CG.push(c.data); }); cgErr = ''; cgListo = true; scheduleRender(); },
+      (e) => { cgUnsub = null; cgReintento = setTimeout(() => { if (cloudState === 'ready') startCg(); }, 20000); cgErr = e && e.code === 'permission-denied' ? 'Los cargos aún no están activados en Firebase (falta actualizar las reglas).' : 'No se pudieron cargar los cargos.'; scheduleRender(); });
+  }
+  async function cgGuardar(c) { if (CL.enabled) { await CL.setDoc('cargos', c.id, c); if (!cgUnsub) startCg(); } const i = CG.findIndex(x => x.id === c.id); if (i >= 0) CG[i] = c; else CG.push(c); if (!CL.enabled) cgLocal(true); }
+  const cgNuevo = () => ({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: 'notaria', dest: '', abogado: '', banco: '', items: [], docs: [{ n: '1', t: 'Juego de minuta original' }], rec: { nombre: '', dni: '', rel: '' }, obs: '', formato: 2 });
+  const cgDraft = () => ui.cg || (ui.cg = cgNuevo());
+  const cgCodigo = () => { const d = iso(today()).replace(/-/g, ''), re = new RegExp('^CG-' + d + '-(\\d+)$'); const n = Math.max(0, ...CG.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `CG-${d}-${String(n + 1).padStart(3, '0')}`; };
+  const cgOpDni = (dni) => S.ops.find(o => String(o.dni || '').replace(/\D/g, '') === dni) || null;
+  function cgDestDe(o, c) { // la notaría, el abogado o el ejecutivo y el banco salen del cliente, si aún están vacíos
+    const put = (k, v) => { if (!c[k] && v) c[k] = v; };
+    if (c.tipo === 'notaria') { put('dest', o.con_notaria); put('abogado', o.con_abogado); }
+    if (c.tipo === 'banco') { put('dest', o.banco); put('abogado', o.ejecBanco); }
+    put('banco', o.banco);
+  }
+  function cgAgregarOp(o) {
+    const c = cgDraft(); if (c.items.some(x => x.opId === o.id)) { toast(`${o.cliente} ya está en el cargo`); return false; }
+    c.items.push({ opId: o.id, proyecto: o.proyecto || '', unidad: o.unidad || '', propietario: o.cliente || '' }); cgDestDe(o, c); return true;
+  }
+  // validación del DNI con sus dos caras (las fotos solo viven en esta pantalla: no se guardan)
+  function cgValAbrir(para) { cgValCerrar(); ui.cgVal = { para }; render(true); }
+  function cgValCerrar() { const v = ui.cgVal; if (v) ['frenteUrl', 'reversoUrl'].forEach(k => v[k] && URL.revokeObjectURL(v[k])); ui.cgVal = null; }
+  async function cgValidar() {
+    const v = ui.cgVal; if (!v || !v.reverso) return toast('Falta la foto del reverso');
+    v.err = ''; v.res = null; v.aviso = ''; v.cargando = 'Leyendo el DNI… (la primera vez tarda unos segundos)'; render(true);
+    try { v.res = await CARGO.validar(v.frente, v.reverso, cgOpDni, (t) => { v.cargando = t; render(true); }); cgAplicar(v); }
+    catch (e) { console.error(e); v.err = e.message; }
+    v.cargando = ''; render(true);
+  }
+  function cgAplicar(v) {
+    const c = cgDraft(), r = v.res, o = r.cliente, obs = r.ok ? 'DNI validado' : 'DNI validado con observaciones (revisa la lista)';
+    if (v.para === 'cli' && o) { cgAgregarOp(o); v.aviso = `✅ <span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)} (${esc([o.proyecto, o.unidad].filter(Boolean).join(' · '))}). Se completaron solos el proyecto, la unidad y el propietario${c.tipo === 'notaria' ? ', y la notaría, el abogado y el banco si estaban vacíos' : c.tipo === 'banco' ? ', y el banco y el ejecutivo si estaban vacíos' : ''}.</span><a class="btn sm" href="#/cliente/${encodeURIComponent(o.id)}">Ver ficha</a>`; return; }
+    c.rec = { nombre: o ? o.cliente : r.nombre, dni: r.dni, rel: o ? 'Propietario' : (c.rec.rel || 'Tercero autorizado') };
+    v.aviso = o ? `✅ <span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)}. Se llenaron nombre y DNI de quien recibe.</span>`
+      : `ℹ️ <span><b>${obs} · no es cliente del CRM:</b> ${esc(r.nombre)} (DNI ${r.dni}) pasó a “Quién recibe” como ${esc(c.rec.rel.toLowerCase())}.</span>`;
+  }
+  function cgPanel(para) {
+    const v = ui.cgVal; if (!v || v.para !== para) return '';
+    const slot = (k, t) => `<label class="cg-slot ${v[k] ? 'ok' : ''}"><b>${t}</b>${v[k + 'Url'] ? `<img src="${v[k + 'Url']}" alt="${t}">` : '<span class="cg-ph">📷</span>'}<span class="small muted">${v[k] ? '✓ Foto cargada · 🔄 Cambiar' : 'Tomar foto o elegir archivo'}</span><input type="file" accept="image/*" data-cgdni="${k}" hidden></label>`;
+    const ic = { ok: '✓', info: 'ℹ', aviso: '⚠' };
+    const res = v.cargando ? `<p class="small muted">⏳ ${esc(v.cargando)}</p>` : v.err ? `<p class="cg-err">⚠ ${esc(v.err)}</p>`
+      : v.res ? `<ul class="cg-chk">${v.res.checks.map(c => `<li class="${c.nivel}"><b>${ic[c.nivel]}</b><span>${c.txt}</span></li>`).join('')}</ul>` : '<p class="small muted">Carga las dos fotos y se valida solo. Que se vean completas, de frente y sin reflejos.</p>';
+    return `<div class="cg-val">${slot('frente', '1. Anverso (frente)')}${slot('reverso', '2. Reverso')}<div class="cg-res"><b>Validación del DNI</b>${res}
+      <div class="cg-vb"><button type="button" class="btn sm pri" data-act="cg-validar" ${v.reverso && !v.cargando ? '' : 'disabled'}>🪪 Validar</button><button type="button" class="btn sm" data-act="cg-val-cerrar">Cerrar</button></div></div></div>
+      ${v.aviso ? `<div class="cg-ban ${v.res && v.res.ok ? 'ok' : 'warn'}">${v.aviso}</div>` : ''}`;
+  }
+  function vCargos() {
+    const c = cgDraft(), U = (k, l, list) => `<label class="dv-f"><span>${l}</span><input data-cg="${k}" value="${esc(c[k])}" ${list ? `list="dl-${list}"` : ''} autocomplete="off"></label>`;
+    const pill = (act, k, l, on) => `<button type="button" class="cg-pill ${on ? 'on' : ''}" data-act="${act}" data-k="${k}">${l}</button>`;
+    const etq = c.tipo === 'banco' ? ['Banco', 'Ejecutivo o asesor de banco', 'banco', 'ejecBanco'] : c.tipo === 'notaria' ? ['Notaría', 'Abogado a cargo', 'notaria', 'abogado'] : ['Notaría y/o banco', 'Abogado o asesor de banco', '', ''];
+    const items = c.items.map((x, i) => `<tr><td>${i + 1}</td><td><input data-cgi="${i}" data-k="proyecto" value="${esc(x.proyecto)}" aria-label="Proyecto"></td><td><input data-cgi="${i}" data-k="unidad" value="${esc(x.unidad)}" aria-label="Dpto / Est / Depo"></td><td><input data-cgi="${i}" data-k="propietario" value="${esc(x.propietario)}" aria-label="Propietario"></td><td><button type="button" class="cg-x" data-act="cg-item-del" data-i="${i}" title="Quitar">✕</button></td></tr>`).join('');
+    const docs = c.docs.map((d, i) => `<div class="cg-doc"><input data-cgd="${i}" data-k="n" value="${esc(d.n)}" aria-label="Cantidad"><input data-cgd="${i}" data-k="t" value="${esc(d.t)}" aria-label="Documento" placeholder="Describe el documento"><button type="button" class="cg-x" data-act="cg-doc-del" data-i="${i}" title="Quitar">✕</button></div>`).join('');
+    const chips = CG_DOCS.filter(t => !c.docs.some(d => d.t === t)).map(t => `<button type="button" class="cg-chip" data-act="cg-doc-add" data-t="${esc(t)}">+ ${esc(t)}</button>`).join('') + '<button type="button" class="cg-chip" data-act="cg-doc-add" data-t="">+ Otro…</button>';
+    const L = [...CG].sort((a, b) => b.ts - a.ts).slice(0, 60), pend = CG.filter(x => !x.firmado).length;
+    const hist = L.length ? `<div class="cg-tw"><table class="cg-t"><thead><tr><th>Emitido</th><th>Código</th><th>Para</th><th>Clientes</th><th>Estado</th></tr></thead><tbody>${L.map(x => `<tr>
+        <td class="nowrap">${fechaHora(x.ts)}<div class="small muted">${esc(x.por || '')}</div></td><td class="nowrap"><b>${esc(x.codigo)}</b></td><td><span class="cg-tag">${esc(CARGO.DEST[x.tipo] || '')}</span> ${esc(x.dest || '')}</td>
+        <td>${x.items.map(i => i.opId && getOp(i.opId) ? `<a href="#/cliente/${encodeURIComponent(i.opId)}">${esc(i.propietario)}</a>` : esc(i.propietario)).join(', ')}</td>
+        <td>${x.firmado ? `<span class="cg-st r">✅ Recibido ${fdate(x.firmado.fecha)}${x.firmado.nombre ? ' · ' + esc(x.firmado.nombre) : ''}</span>` : '<span class="cg-st p">⏳ Falta cargo firmado</span>'}<div class="cg-ac">${x.firmado ? (x.firmado.foto ? `<button class="btn sm" data-act="cg-foto" data-id="${x.id}">📎 Ver foto</button>` : '') : `<button class="btn sm pri" data-act="cg-firmado" data-id="${x.id}">✅ Registrar cargo firmado</button>`}<button class="btn sm" data-act="cg-reimprimir" data-id="${x.id}">🖨️ Reimprimir</button></div></td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="empty">${cgErr ? esc(cgErr) : cgListo || !CL.enabled ? 'Aún no hay cargos emitidos.' : 'Cargando…'}</div>`;
+    return `${pageHead('Actas y cargos', 'Emite en un minuto el cargo de entrega de documentos o el acta de entrega de la unidad, con los datos del CRM ya llenos.', '',
+        'El <b>cargo</b> se imprime en una hoja A4: arriba el <b>original</b> (se queda con quien recibe) y abajo el <b>cargo</b> (regresa firmado y sellado al área). Cuando vuelva, toca <b>“Registrar cargo firmado”</b> y adjunta la foto. Con <b>“Validar DNI”</b> tomas foto a las dos caras del DNI: el CRM compara el frente con el reverso, revisa que esté vigente y, si es cliente, llena sus datos solo. Las fotos del DNI no se guardan. Cada cargo queda en la Actividad de cada cliente.')}
+      <div class="cg-tiles"><button type="button" class="cg-tile on"><i>📦</i><span><b>Cargo de entrega de documentos</b><small>Minutas, cláusulas y otros documentos a notaría, banco o propietario.</small></span></button>
+        <button type="button" class="cg-tile" data-act="acta-elegir"><i>🏠</i><span><b>Acta de entrega de la unidad</b><small>Eliges al cliente y se abre el generador de actas ya lleno.</small></span></button></div>
+      <div class="dv-form">
+      <div class="card"><div class="card-b"><h3 class="dv-h">1. ¿A quién se entrega?</h3>
+        <div class="cg-pills">${pill('cg-tipo', 'notaria', '🏛️ Notaría', c.tipo === 'notaria')}${pill('cg-tipo', 'banco', '🏦 Banco', c.tipo === 'banco')}${pill('cg-tipo', 'propietario', '👤 Propietario o tercero autorizado', c.tipo === 'propietario')}</div>
+        <div class="dv-grid">${U('dest', etq[0], etq[2])}${U('abogado', etq[1], etq[3])}${U('banco', 'Banco', 'banco')}</div>
+        <p class="small muted cg-p">Se llenan solos con los datos del primer cliente que agregues. Puedes cambiarlos.</p></div></div>
+      <div class="card"><div class="card-b"><h3 class="dv-h">2. Clientes del cargo</h3>
+        <div class="cg-tools"><label class="dv-f cg-bus" for="cg-buscar"><span>Buscar cliente (nombre, DNI o unidad) y elegir de la lista</span><input id="cg-buscar" list="cgl-ops" placeholder="Escribe aquí…" autocomplete="off"></label>
+          <button type="button" class="btn pri" data-act="cg-val" data-k="cli">🪪 Validar DNI (anverso y reverso)</button><button type="button" class="btn" data-act="cg-item-add">➕ Agregar fila a mano</button></div>
+        ${cgPanel('cli')}
+        ${c.items.length ? `<div class="cg-tw"><table class="cg-t cg-it"><thead><tr><th>Ítem</th><th>Proyecto</th><th>Dpto / Est / Depo</th><th>Propietario</th><th></th></tr></thead><tbody>${items}</tbody></table></div>` : '<div class="empty" style="padding:14px">Aún no hay clientes en este cargo.</div>'}
+        <p class="small muted cg-p">Puedes poner varios clientes en un mismo cargo (por ejemplo, todas las minutas que van hoy a la misma notaría). Con el DNI: si es cliente del CRM se completa solo; si no lo es, su nombre y DNI pasan a “Quién recibe”.</p></div></div>
+      <div class="card"><div class="card-b"><h3 class="dv-h">3. Se hace constar la entrega de</h3>${docs}<div class="cg-chips"><span class="small muted">Agregar:</span>${chips}</div>
+        <label class="dv-f" style="margin-top:10px"><span>Observación (opcional)</span><input data-cg="obs" value="${esc(c.obs)}" autocomplete="off"></label></div></div>
+      <div class="card"><div class="card-b"><h3 class="dv-h">4. Quién recibe <span class="small muted" style="font-weight:400">(opcional: si lo dejas vacío, sale con líneas para llenar a mano)</span></h3>
+        <div class="cg-tools" style="margin-bottom:10px"><button type="button" class="btn pri" data-act="cg-val" data-k="rec">🪪 Validar DNI de quien recibe (anverso y reverso)</button>${c.items.length ? '<button type="button" class="btn" data-act="cg-mismo">👤 Es el mismo propietario</button>' : ''}</div>
+        ${cgPanel('rec')}
+        <div class="dv-grid" style="margin-top:10px"><label class="dv-f"><span>Nombres y apellidos</span><input data-cgr="nombre" value="${esc(c.rec.nombre)}" autocomplete="off"></label><label class="dv-f"><span>DNI</span><input data-cgr="dni" value="${esc(c.rec.dni)}" inputmode="numeric" autocomplete="off"></label>
+          <label class="dv-f"><span>Relación</span><select data-cgr="rel"><option value=""></option>${CG_REL.map(r => `<option ${c.rec.rel === r ? 'selected' : ''}>${r}</option>`).join('')}</select></label></div></div></div>
+      <div class="card"><div class="card-b"><h3 class="dv-h">5. Impresión</h3><div class="cg-pills">${pill('cg-fmt', '2', '2 por hoja: original + cargo (ahorra papel)', c.formato !== 1)}${pill('cg-fmt', '1', '1 por hoja', c.formato === 1)}</div>
+        <p class="cg-note">El <b>original</b> se queda con quien recibe; el <b>cargo</b> regresa firmado al área como constancia. Si hay más de 6 clientes o documentos, sale uno por hoja para que entre todo. Se guarda con “Guardar como PDF” en la ventana de impresión.</p></div></div>
+      <div class="dv-acc"><span class="small muted">Código: ${cgCodigo()}</span><button class="btn" data-act="cg-limpiar">Limpiar</button><button class="btn pri" data-act="cg-emitir">🖨️ Emitir cargo (PDF)</button></div>
+      <div class="card"><div class="card-h"><h2>Últimos cargos emitidos</h2><span class="small muted">${pend ? `<b>${pend}</b> por recibir firmado${pend > 1 ? 's' : ''}` : 'Al volver el cargo firmado, regístralo con la foto del cargo sellado.'}</span></div>${hist}</div>
+      </div>
+      <datalist id="cgl-ops">${S.ops.map(o => `<option value="${esc(o.id)} · ${esc(o.cliente || '')} · DNI ${esc(o.dni || '—')} · ${esc(o.proyecto || '')} ${esc(o.unidad || '')}"></option>`).join('')}</datalist>`;
+  }
+  async function cgEmitir() {
+    const c = cgDraft(), docs = c.docs.filter(d => String(d.t || '').trim());
+    if (!c.items.length) return toast('Agrega al menos un cliente');
+    if (!docs.length) return toast('Indica qué documentos se entregan');
+    if (c.tipo !== 'propietario' && !String(c.dest || '').trim()) return toast(`Escribe ${c.tipo === 'banco' ? 'el banco' : 'la notaría'}`);
+    const out = { ...JSON.parse(JSON.stringify(c)), docs, codigo: cgCodigo(), ts: Date.now(), por: fullName(S.actor), usuario: S.actor, estado: 'pendiente' };
+    try { await cgGuardar(out); } catch (e) { return toast('No se pudo guardar: ' + (e.code === 'permission-denied' ? 'los cargos aún no están activados en Firebase (falta actualizar las reglas)' : e.message)); }
+    out.items.forEach(x => { if (x.opId) S.log.push({ ts: out.ts, usuario: S.actor, opId: x.opId, etapa: 'gen', campo: 'cargo', antes: '', despues: `${out.codigo} · Para: ${out.dest || CARGO.DEST[out.tipo]} · ${docs.map(d => `${d.n} ${d.t}`.trim()).join(', ')}` }); });
+    save();
+    try { CARGO.imprimir(out, { por: out.por, fecha: fdate(iso(today())) }); } catch (e) { toast('Cargo guardado, pero no se pudo abrir la impresión: usa Reimprimir'); }
+    cgValCerrar(); ui.cg = null; toast(`✓ Cargo ${out.codigo} emitido`); render(true);
+  }
+  function cgFirmado(id) {
+    const x = CG.find(y => y.id === id); if (!x) return;
+    modal({ title: `Cargo firmado · ${x.codigo}`, ok: 'Registrar', body: `<div class="form"><label>Fecha en que se recibió firmado<input type="date" id="cgf-f" value="${iso(today())}"></label><label>Quién lo firmó (nombre)<input id="cgf-n" value="${esc((x.rec && x.rec.nombre) || '')}"></label><label>Foto del cargo firmado y sellado (recomendado)<input type="file" id="cgf-img" accept="image/*"></label></div>`,
+      onOk: () => {
+        const f = $('#cgf-f').value, nombre = $('#cgf-n').value.trim(), file = $('#cgf-img').files[0]; if (!f) { toast('Indica la fecha'); return false; }
+        (async () => {
+          let foto = ''; if (file) { try { foto = await bzImagen(file, 450000); } catch (e) { toast(e.message); } }
+          const out = { ...x, estado: 'recibido', firmado: { fecha: f, nombre, foto, por: fullName(S.actor), ts: Date.now() } };
+          try { await cgGuardar(out); } catch (e) { return toast('No se pudo guardar: ' + e.message); }
+          out.items.forEach(i => { if (i.opId) S.log.push({ ts: Date.now(), usuario: S.actor, opId: i.opId, etapa: 'gen', campo: 'cargo', antes: x.codigo, despues: `Cargo firmado recibido el ${fdate(f)}${nombre ? ' · ' + nombre : ''}` }); });
+          save(); toast('✓ Cargo firmado registrado'); render(true);
+        })();
+      } });
+  }
   document.addEventListener('paste', (e) => { // pegar la captura del correo (o la constancia) en cualquier parte del formulario
     if (route().view !== 'devolucion' || !ui.dv) return; const img = [...((e.clipboardData && e.clipboardData.items) || [])].find(i => i.type.startsWith('image/'));
     if (img) { e.preventDefault(); dvImagen(img.getAsFile(), !ui.dv.solicitud ? 'solicitud' : !ui.dv.voucher ? 'voucher' : 'solicitud'); }
@@ -2447,7 +2573,7 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y productividad', '', r.view === 'tiempos'), can('v_carga') && item('#/carga', '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carga del equipo', '', r.view === 'carga'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
+    const seg = [can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y productividad', '', r.view === 'tiempos'), can('v_carga') && item('#/carga', '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carga del equipo', '', r.view === 'carga'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_cargos') && item('#/cargos', '<svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Actas y cargos', CG.filter(x => !x.firmado).length ? `<span class="cnt">${CG.filter(x => !x.firmado).length}</span>` : '', r.view === 'cargos'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
     return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') : ''}
       ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
       ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
@@ -2479,7 +2605,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'cargos' ? vCargos() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -2630,6 +2756,24 @@
     if (a === 'login-reset') { const e = ($('#lg-e') || {}).value; if (!e) return toast('Escribe tu correo arriba y vuelve a tocar'); return CL.reset(e.trim()).then(() => toast('Te enviamos un correo para crear o cambiar tu contraseña')).catch(x => toast(AUTH_ERR[x.code] || x.message)); }
     if (a === 'fab') return fabMenu();
     if (a === 'fab-seg') return clientPicker();
+    if (a === 'acta-elegir') return clientPicker('acta-pick', '¿Acta de entrega de qué cliente?');
+    if (a === 'acta-pick') { const o = getOp(el.dataset.op); if (o) { if (!can('a_edit')) return toast(NOPERM); openActa(o); } return; }
+    if (a === 'cargo-op') { const o = getOp(el.dataset.op); if (!o) return; cgValCerrar(); ui.cg = cgNuevo(); cgAgregarOp(o); location.hash = '#/cargos'; return; }
+    if (a === 'cg-tipo') { const c = cgDraft(); c.tipo = el.dataset.k; c.dest = ''; c.abogado = ''; const o = c.items[0] && getOp(c.items[0].opId); if (o) cgDestDe(o, c); return render(true); }
+    if (a === 'cg-fmt') { cgDraft().formato = +el.dataset.k; return render(true); }
+    if (a === 'cg-item-add') { cgDraft().items.push({ proyecto: '', unidad: '', propietario: '' }); return render(true); }
+    if (a === 'cg-item-del') { cgDraft().items.splice(+el.dataset.i, 1); return render(true); }
+    if (a === 'cg-doc-add') { cgDraft().docs.push({ n: '1', t: el.dataset.t || '' }); render(true); if (!el.dataset.t) { const L = document.querySelectorAll('[data-cgd][data-k="t"]'); if (L.length) L[L.length - 1].focus(); } return; }
+    if (a === 'cg-doc-del') { cgDraft().docs.splice(+el.dataset.i, 1); return render(true); }
+    if (a === 'cg-mismo') { const c = cgDraft(), x = c.items[0], o = x && getOp(x.opId); if (x) c.rec = { nombre: x.propietario, dni: (o && o.dni) || '', rel: 'Propietario' }; return render(true); }
+    if (a === 'cg-val') return cgValAbrir(el.dataset.k);
+    if (a === 'cg-val-cerrar') { cgValCerrar(); return render(true); }
+    if (a === 'cg-validar') return cgValidar();
+    if (a === 'cg-limpiar') { if (await ask('¿Borrar los datos del cargo que estás armando?', 'Limpiar')) { cgValCerrar(); ui.cg = null; render(true); } return; }
+    if (a === 'cg-emitir') return cgEmitir();
+    if (a === 'cg-firmado') return cgFirmado(el.dataset.id);
+    if (a === 'cg-foto') { const x = CG.find(y => y.id === el.dataset.id); if (x && x.firmado && x.firmado.foto) modal({ title: 'Cargo firmado · ' + x.codigo, ok: 'Cerrar', cancel: '', wide: true, body: '<img src="' + x.firmado.foto + '" alt="Cargo firmado" style="max-width:100%;border-radius:8px">' }); return; }
+    if (a === 'cg-reimprimir') { const x = CG.find(y => y.id === el.dataset.id); if (x) { try { CARGO.imprimir(x, { por: x.por, fecha: fdate(iso(new Date(x.ts))) }); } catch (e) { toast(e.message); } } return; }
     if (a === 'pick-client') return location.hash = '#/cliente/' + el.dataset.op;
     if (a === 'step') return stepTap(el.dataset.op, el.dataset.s, +el.dataset.i);
     if (a === 'quickseg') return quickSeg(el.dataset.op, el.dataset.t);
@@ -2830,7 +2974,7 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarInactividad(); }); // al volver de otra ventana o de la suspensión
   setInterval(revisarInactividad, 1000);
 
-  if (!CL.enabled) { bzLocal(); dvLocal(); }
+  if (!CL.enabled) { bzLocal(); dvLocal(); cgLocal(); }
   if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else { marcaActividad(true); idleMsg = ''; startCloud(u.email); } }); render(); }
   else { render(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
   window.__CRM = { get state() { return S; }, derived: () => D };

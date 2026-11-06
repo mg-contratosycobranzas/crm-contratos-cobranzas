@@ -43,6 +43,8 @@ service cloud.firestore {
     }
     // devoluciones de venta: el equipo las registra y actualiza; solo la administración las elimina
     match /devoluciones/{d} { allow read, create, update: if member(); allow delete: if admin(); }
+    // cargos de entrega de documentos: el equipo los emite y registra el cargo firmado; solo la administración los elimina
+    match /cargos/{d} { allow read, create, update: if member(); allow delete: if admin(); }
     // historial: se agrega, nunca se cambia ni se borra
     match /log/{d} { allow read: if member(); allow create: if member() && request.resource.data.ts is number; allow update, delete: if false; }
   }

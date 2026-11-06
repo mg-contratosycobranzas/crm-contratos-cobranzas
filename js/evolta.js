@@ -156,5 +156,5 @@
     return { values: out, found: Object.keys(found).length };
   }
 
-  window.EVOLTA = { fromPdf, parse, toFields, readText, ocr, readNkb, readTab, fold };
+  window.EVOLTA = { fromPdf, parse, toFields, readText, ocr, readNkb, readTab, fold, tess };
 })();
