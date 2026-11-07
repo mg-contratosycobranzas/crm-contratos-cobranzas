@@ -44,18 +44,18 @@
   const amt = (s) => Number(String(s).replace(/,/g, ''));
   const flat = (s) => s.replace(/\s+/g, ' ').trim();
   function parseMinuta(text) {
-    const ini = text.search(/ANEXO I\s*\n\s*I\.\s*Informaci[oó]n/i);
+    const ini = text.search(/ANEXO I\s*\n\s*(?:I\.\s*)?Informaci[oó]n/i); // en la minuta en Word el "I." es numeración automática
     if (ini < 0) throw new Error('no se encontró el Anexo I de la minuta');
     const fin = text.indexOf('ANEXO II', ini), A = text.slice(ini, fin < 0 ? undefined : fin), F = flat(A);
     const get = (re, s = F) => { const m = re.exec(s); return m ? flat(m[1]) : ''; };
     const between = (a, b) => { const i = F.search(a); if (i < 0) return ''; const r = F.slice(i); const j = r.slice(1).search(b); return j < 0 ? r : r.slice(0, j + 1); };
 
     const rep = /Apoderado\s*:\s*(.+?)\s*DNI\s*:\s*(\d+)/i.exec(F) || [];
-    const vendedora = { razon: get(/Raz[oó]n Social\s*:\s*(.+?)\s*- Domicilio/i), domicilio: get(/Domicilio\s*:\s*(.+?)\s*- RUC/i), ruc: get(/RUC\s*:\s*(\d+)/i),
+    const vendedora = { razon: get(/Raz[oó]n Social\s*:\s*(.+?)\s*-?\s*Domicilio/i), domicilio: get(/Domicilio\s*:\s*(.+?)\s*-?\s*RUC/i), ruc: get(/RUC\s*:\s*(\d+)/i),
       partida: get(/Inscripci[oó]n\s*:\s*PE\s*N[°º]?\s*(\d+)/i), rep: flat(rep[1] || ''), repDni: rep[2] || '', repCargo: 'Gerente' };
 
     const compradores = between(/III\.\s*Informaci[oó]n de EL COMPRADOR/i, /IV\.\s*Bien/i).split(/o Nombre del comprador\s*:/i).slice(1).map(b => ({
-      trat: '', nombre: get(/^(.+?)\s*o DNI/i, b.trim()), dni: get(/DNI\s*:\s*(\d+)/i, b), ec: get(/Estado civil\s*:\s*(.+?)\s*o Direcci/i, b),
+      trat: '', nombre: get(/^(.+?)\s*o (?:DNI|Carn[eé]t?)/i, b.trim()), dni: get(/(?:DNI|Extranjer[ií]a)\s*:\s*(\d+)/i, b), doc: /Carn[eé]t? de Extranjer/i.test(b) ? 'CE' : 'DNI', ec: get(/Estado civil\s*:\s*(.+?)\s*o Direcci/i, b),
       domicilio: get(/Direcci[oó]n\s*:\s*(.+?)\s*o Ocupaci/i, b), nac: 'peruana' }));
 
     const IV = A.slice(Math.max(0, A.search(/IV\.\s*Bien/i)), A.search(/\n\s*V\.\s*Precio/i) > 0 ? A.search(/\n\s*V\.\s*Precio/i) : undefined);
@@ -81,7 +81,9 @@
       vendedora, compradores, inmuebles, proyecto: get(/denominado\s*[“"](.+?)[”"]/i),
       precio: amt(get(/es de S\/\.?\s*([\d,]+\.\d{2})/i) || 0),
       areaOcupada: get(/[ÁA]rea Ocupada aproximada\s*:\s*([\d.,]+)/i), areaTechada: get(/[ÁA]rea Techada aproximada\s*:\s*([\d.,]+)/i), // para el acta de entrega
-      fechaMinuta: isoDeTexto(get(/Fecha de celebraci[oó]n del Contrato\s*(.{0,40})/i)),
+      fechaMinuta: isoDeTexto(get(/Fecha de celebraci[oó]n del Contrato\s*(.{0,40})/i)) || isoDeTexto(get(/\bLima,\s*(\d{1,2}\s+de\s+\S+\s+del?\s+\d{4})/i, flat(text))),
+      dirLote: get(/propietari[oa] del (?:Lote|inmueble)[^,;]*?ubicad[oa] en\s*(.+?)[,;]\s*cuyos antecedentes/i),
+      resolucion: window.CARTA ? window.CARTA.leerSexta(text) : null, // texto exacto de la cláusula sexta, para la carta notarial
       pago: { incluir: true, num: fpNum || 'VI', items },
       entrega: { incluir: true, num: get(/\b([IVX]+)\.\s*Fecha de entrega/i) || 'VII', fecha: isoDeTexto(get(/Fecha de entrega[^.]*?ser[aá] el\s*(.{0,40})/i)) }
     };
@@ -91,7 +93,7 @@
   const DEP = 'que fueron depositados mediante una transferencia bancaria LA VENDEDORA le otorga plenos efectos cancelatorios y declara que no tiene nada que reclamar con respecto a esta cantidad.';
   const fem = (c) => c.trat === 'Sra.';
   const ecTxt = (c) => { const e = (c.ec || '').toLowerCase().replace(/\(a\)|\(o\)/g, ''); const base = e.replace(/[oa]$/, ''); return /casad|solter|viud|divorciad/.test(e) ? base + (fem(c) ? 'a' : 'o') : e; };
-  const idTxt = (c) => `${c.trat === 'Sra.' ? 'la Sra.' : 'el Sr.'} ${c.nombre.toUpperCase()}, identificad${fem(c) ? 'a' : 'o'} con DNI N.º ${c.dni}`;
+  const idTxt = (c) => `${c.trat === 'Sra.' ? 'la Sra.' : 'el Sr.'} ${c.nombre.toUpperCase()}, identificad${fem(c) ? 'a' : 'o'} con ${c.doc === 'CE' ? 'Carné de Extranjería' : 'DNI'} N.º ${c.dni}`;
   function partesCompradores(cs) {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
     const nac = (c) => c.nac || 'peruana';
@@ -181,5 +183,5 @@
     return Z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   }
 
-  window.CLAUSULA = { parseMinuta, docx, letras, montoLetras, montoNum, fechaLarga, isoDeTexto, DEP };
+  window.CLAUSULA = { zipLib, parseMinuta, docx, letras, montoLetras, montoNum, fechaLarga, isoDeTexto, DEP };
 })();

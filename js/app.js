@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -1269,6 +1269,8 @@
   // empresa: la del cliente; si no, la configurada para su proyecto (Configurar → Empresa por proyecto); si no, la de la minuta
   const empEnProy = (p) => ((S.params.empresas || {})[p]) || '';
   const empresaDe = (o) => o.empresa || empEnProy(o.proyecto) || (o.minuta && o.minuta.vendedora && o.minuta.vendedora.razon) || '';
+  const dirEnProy = (p) => ((S.params.dirProyecto || {})[p]) || '';
+  function setDirProyecto(p, v) { if (!p) return; S.params.dirProyecto = { ...(S.params.dirProyecto || {}) }; if (v) S.params.dirProyecto[p] = v; else delete S.params.dirProyecto[p]; save(); }
   function setEmpresaProyecto(p, e) { if (!p) return; S.params.empresas = { ...(S.params.empresas || {}), [p]: e || undefined }; if (!e) delete S.params.empresas[p]; save(); }
   const empresaProy = () => { const m = {}; S.ops.forEach(o => { const e = empresaDe(o); if (e && o.proyecto && !m[o.proyecto]) m[o.proyecto] = e; }); return m; };
   // `s: 1` = columna de la vista simple (la completa y el Excel llevan todas)
@@ -1799,7 +1801,50 @@
 
   /* ---- Cláusula adicional (desde la minuta que exporta Evolta) ---- */
   const BANCO_LARGO = { BCP: 'BANCO DE CRÉDITO DEL PERÚ', INTERBANK: 'BANCO INTERNACIONAL DEL PERÚ - INTERBANK', BBVA: 'BBVA PERÚ', SCOTIABANK: 'SCOTIABANK PERÚ', BANBIF: 'BANCO INTERAMERICANO DE FINANZAS', PICHINCHA: 'BANCO PICHINCHA', GNB: 'BANCO GNB PERÚ' };
-  const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  /* ---- Carta notarial de resolución (cláusula sexta): datos de la minuta + revisión + Word con el formato del área ---- */
+  const CN_K = 'crm-mg-carta-firma';
+  const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">⚖️ Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
+  function openCarta(op) {
+    const m = op.minuta || {}; let fir = {}; try { fir = JSON.parse(localStorage.getItem(CN_K) || '{}'); } catch (e) { }
+    const d = CARTA.borrador(m, { hoy: iso(today()), firma: fir.firma || (m.vendedora && m.vendedora.rep) || '', cargo: fir.cargo || 'Gerente General', dirProyecto: dirEnProy(op.proyecto) || m.dirLote || '' });
+    if (!d.empresa) d.empresa = empresaDe(op) || empEnProy(op.proyecto) || '';
+    const uno = d.compradores.length === 1, dirOficial = !!dirEnProy(op.proyecto);
+    const fila = (c, i) => `<div class="cn-g3"><label>Apellidos, Nombres<input id="cn-n${i}" value="${esc(c.nombre)}" class="${c.aviso ? 'cn-warn' : ''}"></label><label>Documento<select id="cn-d${i}"><option ${c.doc !== 'CE' ? 'selected' : ''}>DNI</option><option ${c.doc === 'CE' ? 'selected' : ''}>CE</option></select></label><label>N°<input id="cn-x${i}" value="${esc(c.num)}" inputmode="numeric"></label></div>${c.aviso ? '<p class="cn-src">⚠️ En la minuta el nombre venía pegado (falta un espacio): corrígelo.</p>' : ''}`;
+    const sec = (t, b) => `<div class="cn-sec"><h4>${t}</h4>${b}</div>`;
+    modal({ title: `⚖️ Carta notarial de resolución · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true,
+      body: `<div class="form cn-form">
+        <div class="${d.deMinuta ? 'cn-ok' : 'cn-note'}">${d.deMinuta ? `✅ Datos tomados de la minuta${d.fechaContrato ? ` del <b>${fdate(d.fechaContrato)}</b>` : ''}${m.cargado ? ` (cargada el ${fdate(iso(new Date(m.cargado)))})` : ''}. Revisa lo resaltado en amarillo.` : '⚠️ Esta minuta se cargó antes de esta mejora: las causales usan el <b>texto estándar</b>. Para usar el texto exacto de su minuta, toca “Cargar otra minuta”.'}
+          <button type="button" class="btn sm" data-act="carta-otra" data-op="${op.id}" style="margin-left:8px">Cargar otra minuta</button></div>
+        ${sec('1. Destinatarios', d.compradores.map(fila).join('') + (uno ? `<label style="max-width:160px;margin-top:8px">Trato<select id="cn-trato"><option>Sr.:</option><option>Sra.:</option></select></label>` : '') + `<label style="margin-top:8px">Dirección de notificación · de la minuta; cámbiala si el cliente se mudó<textarea id="cn-dir" rows="2">${esc(d.direccion)}</textarea></label>`)}
+        ${sec('2. Contrato', `<div class="cn-g2"><label>Fecha de suscripción<input type="date" id="cn-fc" value="${esc(d.fechaContrato)}"></label><label>Inmueble(s)<input id="cn-in" value="${esc(d.inmueble)}"></label>
+          <label>Edificio (nombre)<input id="cn-ed" value="${esc(d.edificio)}"></label><label>Empresa (membrete)<input id="cn-em" value="${esc(d.empresa)}"></label></div>
+          <label style="margin-top:8px">Dirección oficial del proyecto ${dirOficial ? '<span class="cn-src">· <b>de Configurar</b></span>' : '<span class="cn-src">· ⚠️ viene del lote de la minuta: corrígela (se guarda para el proyecto)</span>'}<input id="cn-dp" value="${esc(d.dirProyecto)}" class="${dirOficial ? '' : 'cn-warn'}"></label>`)}
+        ${sec('3. Causales incumplidas <span class="cn-src">(texto de su minuta, cláusula 6.1: marca una o más)</span>', d.literales.map((l, i) => `<label class="cn-cau"><input type="checkbox" data-cnl="${i}"><b>${'ABCD'[i]})</b><span>${esc(l)}</span></label>`).join(''))}
+        ${sec('4. Carta', `<div class="cn-g2"><label>Fecha de la carta<input type="date" id="cn-f" value="${esc(d.fecha)}"></label><label>Ciudad<input id="cn-ci" value="Lima"></label>
+          <label>Firma (nombre)<input id="cn-fi" value="${esc(d.firma)}"></label><label>Cargo<input id="cn-ca" value="${esc(d.cargo)}"></label></div>
+          <label class="cn-chk"><input type="checkbox" id="cn-pe" checked><span>Incluir el párrafo de penalidad (numeral 6.2) y el de costos incurridos</span></label>`)}
+        <p class="small muted" style="margin:0">El texto fijo es el de las cartas del área. Se descarga en Word, con el mismo membrete y formato, para revisarlo antes de llevarlo a la notaría.</p></div>`,
+      onOk: () => {
+        const v = (id) => ($('#' + id) || {}).value || '';
+        d.compradores = d.compradores.map((c, i) => ({ nombre: v('cn-n' + i).trim(), doc: v('cn-d' + i), num: v('cn-x' + i).trim() }));
+        d.trato = uno ? v('cn-trato') : 'Sres.:'; d.direccion = v('cn-dir').trim(); d.fechaContrato = v('cn-fc'); d.inmueble = v('cn-in').trim(); d.edificio = v('cn-ed').trim();
+        d.empresa = v('cn-em').trim(); d.dirProyecto = v('cn-dp').trim(); d.fecha = v('cn-f'); d.ciudad = v('cn-ci').trim() || 'Lima'; d.firma = v('cn-fi').trim(); d.cargo = v('cn-ca').trim(); d.penalidad = $('#cn-pe').checked;
+        d.marcadas = [...document.querySelectorAll('[data-cnl]')].filter(x => x.checked).map(x => +x.dataset.cnl);
+        const falta = [!d.marcadas.length && 'marca al menos una causal', d.compradores.some(c => !c.nombre || !c.num) && 'completa nombres y documentos', !d.direccion && 'la dirección de notificación', !d.dirProyecto && 'la dirección del proyecto', !d.fechaContrato && 'la fecha del contrato', !d.firma && 'quién firma'].filter(Boolean);
+        if (falta.length) { toast('Falta: ' + falta.join(', ')); return false; }
+        try { localStorage.setItem(CN_K, JSON.stringify({ firma: d.firma, cargo: d.cargo })); } catch (e) { }
+        if (!dirOficial && can('a_params')) setDirProyecto(op.proyecto, d.dirProyecto); // se recuerda para las próximas cartas del proyecto
+        toast('Generando la carta…');
+        CARTA.docx(d).then(blob => {
+          download(CARTA.nombreArchivo(d), blob);
+          op.carta = { ts: Date.now(), por: S.actor, causales: d.marcadas.map(i => 'ABCD'[i]).join(', ') }; (pendingOps[op.id] = pendingOps[op.id] || {}).carta = op.carta;
+          S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'carta_notarial', antes: '', despues: `Word generado · causales ${op.carta.causales}` }); commit();
+          toast('✓ Carta notarial descargada: revísala antes de llevarla a la notaría'); rerenderOp(op.id);
+        }).catch(e => { console.error(e); toast('No se pudo generar la carta: ' + e.message); });
+      } });
+    document.querySelectorAll('[data-cnl]').forEach(x => x.addEventListener('change', () => x.closest('.cn-cau').classList.toggle('on', x.checked)));
+  }
   const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save(); };
   function setPath(o, path, v) { const k = path.split('.'); let x = o; k.slice(0, -1).forEach(p => { x = x[p]; }); x[k[k.length - 1]] = v; }
   function clauseCollect(box, D) {
@@ -1865,12 +1910,13 @@
   async function loadMinuta(file, opId) {
     const op = getOp(opId); if (!op) return;
     toast('Leyendo la minuta…'); let m;
-    try { m = CLAUSULA.parseMinuta(await EVOLTA.readText(await file.arrayBuffer())); } catch (e) { console.error(e); return toast('No se pudo leer la minuta: ' + e.message); }
+    try { const buf = await file.arrayBuffer(); m = CLAUSULA.parseMinuta(/\.docx$/i.test(file.name) ? await CARTA.leerDocx(buf) : await EVOLTA.readText(buf)); } catch (e) { console.error(e); ui.minNext = ''; return toast('No se pudo leer la minuta: ' + e.message); }
     const dnis = m.compradores.map(c => c.dni);
     if (op.dni && dnis.length && !dnis.includes(String(op.dni).trim()) && !await ask(`La minuta es de ${m.compradores.map(c => c.nombre).join(' y ')} (DNI ${dnis.join(', ')}), pero este cliente tiene DNI ${op.dni}. ¿Usarla igual?`)) return;
     m.cargado = Date.now(); m.por = S.actor;
     op.minuta = m; (pendingOps[op.id] = pendingOps[op.id] || {}).minuta = m;
     S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'minuta', antes: '', despues: 'Minuta cargada' }); commit();
+    if (ui.minNext === 'carta') { ui.minNext = ''; return openCarta(op); }
     openClausula(op);
   }
 
@@ -1951,7 +1997,7 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -2005,6 +2051,8 @@
       <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}${pf('minInactivo', 'Cerrar sesión tras minutos sin uso', 'Seguridad: avisa 1 minuto antes. 0 = nunca')}</div></div>
       <div class="card"><div class="card-h"><h2>🏢 Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
         <div class="f-grid" style="grid-template-columns:1fr 1.6fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input list="dl-empresa" data-emp="${esc(p)}" value="${esc(empEnProy(p))}" placeholder="Ej.: MG PROYECTO 22 S.A.C." ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
+      <div class="card"><div class="card-h"><h2>📍 Dirección oficial de cada proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Se usa en la carta notarial. Escríbela como debe salir en la carta (la dirección municipal, no la del lote que trae la minuta).</p>
+        <div class="f-grid" style="grid-template-columns:1fr 2.4fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input data-pdir="${esc(p)}" value="${esc(dirEnProy(p))}" placeholder="Ej.: Av. La Paz N° 839, Distrito de San Miguel, Provincia y Departamento de Lima" ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
         <div><button class="btn pri" data-act="export-xlsx">Exportar a Excel (por etapa y por usuario)</button></div>
         <div><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
@@ -2864,6 +2912,8 @@
     if (a === 'cierre-firmar') return cierreFirmar(getOp(el.dataset.op), el.dataset.s);
     if (a === 'cierre-vb') return cierreVB(getOp(el.dataset.op), el.dataset.s);
     if (a === 'cierre-obs') return cierreObs(getOp(el.dataset.op), el.dataset.s);
+    if (a === 'carta-otra') { const op = getOp(el.dataset.op); if (!op) return; $('#dlg').close(); ui.minOp = op.id; ui.minNext = 'carta'; return $('#minfile').click(); }
+    if (a === 'carta') { const op = getOp(el.dataset.op); if (!op) return; if (op.minuta) return openCarta(op); ui.minOp = op.id; ui.minNext = 'carta'; toast('Elige la minuta (PDF o Word)'); return $('#minfile').click(); }
     if (a === 'clausula') { const op = getOp(el.dataset.op); if (op && op.minuta) return openClausula(op); ui.minOp = el.dataset.op; return $('#minfile').click(); }
     if (a === 'chip') { flt(el.dataset.v, {})[el.dataset.k] = el.dataset.val; return refresh(el.dataset.r); }
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
@@ -2951,6 +3001,7 @@
       if (t.value === 'Ingresado a notaría' && !o.for_fIngresoNotaria) setField(o.id, 'for_fIngresoNotaria', iso(today()));
       toast(`${o.cliente}: ${t.value}`); return refresh('rg-ins');
     }
+    if (t.dataset.pdir !== undefined) { if (!can('a_params')) { toast(NOPERM); return render(true); } setDirProyecto(t.dataset.pdir, t.value.trim()); return toast(`Dirección de ${t.dataset.pdir} guardada`); }
     if (t.dataset.emp !== undefined) { if (!can('a_params')) { toast(NOPERM); return render(true); } setEmpresaProyecto(t.dataset.emp, t.value.trim()); return toast(`Empresa de ${t.dataset.emp} guardada`); }
     if (t.id === 'n-proyecto') { const e = $('#n-empresa'); if (e && !e.value) e.value = empEnProy(t.value.trim()); return; }
     if (t.dataset.tpf) { tpF()[t.dataset.tpf] = t.value; return render(true); }

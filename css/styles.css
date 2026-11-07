@@ -595,3 +595,16 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .bf-res{margin:10px 0;padding:10px 12px;border-radius:10px;background:#eef3fc;border:1px solid #c8d8f3;font-size:13px;color:var(--ink)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bf-box,:root:not([data-theme="light"]) .bf-res{background:#18263a;border-color:#2c4466}:root:not([data-theme="light"]) .badge.bf,:root:not([data-theme="light"]) .bf-tag{background:#1d3150;color:#9cc0f5}:root:not([data-theme="light"]) .bf-tx b,:root:not([data-theme="light"]) .txt-bf{color:#9cc0f5}}
 :root[data-theme="dark"] .bf-box,:root[data-theme="dark"] .bf-res{background:#18263a;border-color:#2c4466}:root[data-theme="dark"] .badge.bf,:root[data-theme="dark"] .bf-tag{background:#1d3150;color:#9cc0f5}:root[data-theme="dark"] .bf-tx b,:root[data-theme="dark"] .txt-bf{color:#9cc0f5}
+
+/* Carta notarial */
+.btn.cn-btn{border-color:#b9534f;color:#8a2f2b}
+.cn-form{gap:12px}
+.cn-sec{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;background:var(--surface2)}.cn-sec h4{margin:0 0 10px;font-size:14px;color:var(--ink)}
+.cn-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}.cn-g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px 14px;margin-bottom:6px}
+.cn-warn{outline:2px solid #e0a21b;outline-offset:1px}
+.cn-src{font-size:11.5px;color:var(--muted);margin:0 0 6px}.cn-src b{color:var(--verde)}
+.form label.cn-cau{flex-direction:row;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px;border:1px solid var(--line2);background:var(--surface);margin-bottom:6px;font-size:13px;color:var(--ink);cursor:pointer}
+.form label.cn-cau.on{border-color:#b9534f;background:var(--rojo-bg)}.cn-cau b{min-width:22px}
+.form label.cn-chk{flex-direction:row;gap:8px;align-items:center;margin-top:10px;font-size:13px;color:var(--ink)}
+.cn-ok{font-size:12.5px;color:var(--verde);background:var(--verde-bg);padding:8px 10px;border-radius:8px}.cn-note{font-size:12.5px;color:var(--amar);background:var(--amar-bg);padding:8px 10px;border-radius:8px}
+@media (max-width:820px){.cn-g2,.cn-g3{grid-template-columns:1fr}}
