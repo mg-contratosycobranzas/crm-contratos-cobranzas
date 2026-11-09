@@ -53,8 +53,15 @@
     // datos de la devolución
     y += 12;
     const linea = (k, v, size) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(size || 12); doc.text(k, L, y); const w = doc.getTextWidth(k + ' '); doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(String(v || ''), W - w)[0] || '', L + w, y); y += 8; };
-    linea('EMPRESA:', d.empresa); linea('IMPORTE A DEVOLVER:', soles(d.importe)); linea('FECHA PROGRAMADA DE DEVOLUCIÓN:', dmy(d.fProgramada)); linea('AUTORIZADA POR:', d.autorizadaPor);
+    const varias = (k, v, size) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.text(k, L, y); const w = doc.getTextWidth(k + ' '); doc.setFont('helvetica', 'normal');
+      const ls = doc.splitTextToSize(String(v || ''), W - w).slice(0, 4); ls.forEach((l, i) => doc.text(l, L + w, y + i * 5)); y += Math.max(1, ls.length) * 5 + 3; };
+    const pen = Number(d.penalidad) > 0;
+    linea('EMPRESA:', d.empresa);
+    if (pen) { linea('PENALIDAD APLICADA AL CLIENTE:', soles(d.penalidad)); if (d.motivoPenalidad) varias('Motivo de la penalidad:', d.motivoPenalidad, 10); }
+    linea('IMPORTE A DEVOLVER:', soles(d.importe)); linea('FECHA PROGRAMADA DE DEVOLUCIÓN:', dmy(d.fProgramada)); linea('AUTORIZADA POR:', d.autorizadaPor);
+    if (d.estado === 'Programada' || d.estado === 'Devuelta') linea('DERIVADA A CONTABILIDAD:', dmy(d.fDerivada) || 'Sí', 10.5);
     if (d.motivo) linea('MOTIVO:', d.motivo, 10.5);
+    if (d.obs) varias('OBSERVACIONES:', d.obs, 10);
 
     y += 8;
     linea(`Cuenta ${(d.tipoCuenta || 'de ahorros soles').replace(/^cuenta\s+/i, '')} Banco ${d.banco || ''}:`, d.cuenta);
@@ -95,7 +102,11 @@
     r.cci = dig(m(/CCI\s*[:;]?\s*([\d\s-]{18,30})/i));
     r.cuenta = dig(m(/cuenta[^:\n]{0,40}?:\s*([\d\s-]{8,24})/i));
     r.titularCuenta = m(/titular de la cuenta\s*[:;]?\s*([^\n]+)/i).replace(/[.;,]+$/, '');
-    const imp = m(/S\/\.?\s*([\d.,]+\d)/i); if (imp) r.importe = Number(imp.replace(/,/g, ''));
+    const num = (v) => Number(String(v).replace(/,/g, ''));
+    const pe = /([^\n.]*?(?:penalidad|descuento|retenci[oó]n|se descontar)[^\n]*?S\/\.?\s*([\d.,]+\d)[^\n.]*)/i.exec(s);
+    if (pe) { r.penalidad = num(pe[2]); r.motivoPenalidad = pe[1].replace(/\s+/g, ' ').trim().slice(0, 200); }
+    const dv = m(/devol[^\n]{0,60}?S\/\.?\s*([\d.,]+\d)/i), todos = [...s.matchAll(/S\/\.?\s*([\d.,]+\d)/gi)].map(x => num(x[1]));
+    const imp = dv && !(pe && num(dv) === r.penalidad) ? num(dv) : todos.find(v => !pe || v !== r.penalidad); if (imp) r.importe = imp;
     r.dni = m(/DNI\s*N?[º°o]?\s*[:;]?\s*(\d{8})\b/i);
     const b = m(/banco\s+(BCP|BBVA|Interbank|Scotiabank|BanBif|Pichincha|de la Naci[oó]n|Continental|Falabella|Ripley|GNB)/i); if (b) r.banco = /naci/i.test(b) ? 'Banco de la Nación' : b.toUpperCase() === 'CONTINENTAL' ? 'BBVA' : b.length <= 4 ? b.toUpperCase() : b;
     const tc = /cuenta\s+(?:de\s+)?(ahorros?|corriente)\s*(?:en\s+)?(soles|d[oó]lares)?/i.exec(s);

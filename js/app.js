@@ -2292,12 +2292,18 @@
      captura del correo de solicitud y formato PDF. Cada mes se descarga un respaldo en ZIP para guardarlo fuera de la nube. */
   let DV = [], dvUnsub = null, dvErr = '', dvListo = false, dvReintento = null;
   const DV_K = 'crm-mg-dev', DV_RESP_K = 'crm-mg-dev-respaldo';
-  const DV_EST = { Pendiente: 'amar', Programada: '', Devuelta: 'verde', Anulada: 'gris' }, DV_ORD = { Pendiente: 0, Programada: 1, Devuelta: 2, Anulada: 3 };
+  const DV_EST = { Pendiente: 'amar', Programada: 'verde', Devuelta: 'verde', Anulada: 'gris' }, DV_ORD = { Pendiente: 0, Programada: 1, Devuelta: 2, Anulada: 3 };
+  // Pendiente → espera la autorización de Víctor Guevara o de la Gerencia General; Programada → programada y derivada a Contabilidad: con eso se cierra
+  const DV_LBL = { Pendiente: 'Pendiente de autorización', Programada: 'Programada y derivada a Contabilidad', Devuelta: 'Devuelta (con constancia)', Anulada: 'Anulada' };
+  const DV_AUTORIZAN = ['Víctor Guevara', 'Gerente General'];
+  const dvEstHtml = (x) => { const l = DV_LBL[x.estado] || x.estado || '';
+    const sub = x.estado === 'Pendiente' ? `Autoriza: ${esc(x.autorizadaPor || DV_AUTORIZAN.join(' o '))}` : x.estado === 'Programada' ? `${x.fDerivada ? 'Derivada el ' + fdate(x.fDerivada) + ' · ' : ''}Cerrada` : '';
+    return `<span class="badge ${DV_EST[x.estado] || ''}">${x.estado === 'Programada' ? '✔ ' : x.estado === 'Pendiente' ? '⏳ ' : ''}${esc(l)}</span>${sub ? `<div class="small muted">${sub}</div>` : ''}`; };
   const DV_MOTIVOS = ['Desistimiento de separación', 'Desistimiento de compra', 'Pago en exceso', 'Resolución de contrato', 'Otro'];
   const DV_CUENTAS = ['de ahorros soles', 'de ahorros dólares', 'corriente soles', 'corriente dólares'];
   const DV_G = [
     ['Datos del cliente', [['proyecto', 'Proyecto / Edificio', 'list'], ['distrito', 'Distrito'], ['unidad', 'Departamento Nº'], ['cliente', 'Cliente (titular)', '', 2], ['dni', 'DNI'], ['conyuge', 'Cónyuge'], ['dniConyuge', 'DNI del cónyuge'], ['domicilio', 'Domicilio fiscal', '', 2], ['telefono', 'Teléfono / celular'], ['email', 'Correo electrónico'], ['centroLaboral', 'Centro laboral'], ['precioDpto', 'Precio del departamento (S/)', 'n'], ['precioTotal', 'Precio total (S/)', 'n']]],
-    ['Devolución', [['empresa', 'Empresa', 'list'], ['importe', 'Importe a devolver (S/)', 'n'], ['motivo', 'Motivo', DV_MOTIVOS], ['fSolicitud', 'Fecha de la solicitud', 'd'], ['solicitadoPor', 'Solicitado por'], ['fLiberacion', 'Unidad liberada en el sistema', 'd'], ['fProgramada', 'Fecha programada de devolución', 'd'], ['autorizadaPor', 'Autorizada por', 'list'], ['estado', 'Estado', Object.keys(DV_EST)], ['fDevolucion', 'Fecha en que se devolvió', 'd'], ['obs', 'Observaciones', 'ta', 2]]],
+    ['Devolución', [['empresa', 'Empresa', 'list'], ['importe', 'Importe a devolver (S/)', 'n'], ['penalidad', 'Penalidad aplicada al cliente (S/)', 'n'], ['motivoPenalidad', 'Motivo de la penalidad', '', 2], ['motivo', 'Motivo', DV_MOTIVOS], ['fSolicitud', 'Fecha de la solicitud', 'd'], ['solicitadoPor', 'Solicitado por'], ['fLiberacion', 'Unidad liberada en el sistema', 'd'], ['fProgramada', 'Fecha programada de devolución', 'd'], ['autorizadaPor', 'Autoriza (Víctor Guevara o Gerente General)', 'list'], ['estado', 'Estado', 'estado'], ['fDerivada', 'Derivada a Contabilidad el', 'd'], ['fDevolucion', 'Fecha en que se devolvió', 'd'], ['obs', 'Observaciones', 'ta', 2]]],
     ['Cuenta de destino', [['banco', 'Banco', 'list'], ['tipoCuenta', 'Tipo de cuenta', DV_CUENTAS], ['cuenta', 'N° de cuenta'], ['cci', 'CCI (20 dígitos)'], ['titularCuenta', 'Titular de la cuenta', '', 2]]]
   ];
   const hay = (v) => v !== undefined && v !== null && String(v).trim() !== '';
@@ -2349,19 +2355,21 @@
     if (falta.length) return toast('Falta completar: ' + falta.join(', '));
     if (hay(d.cci) && String(d.cci).replace(/\D/g, '').length !== 20 && !await ask('El CCI no tiene 20 dígitos. ¿Guardar igual?', 'Guardar igual')) return;
     if (!d.solicitud && !await ask('No adjuntaste la captura del correo de solicitud, que es el sustento de la devolución. ¿Guardar sin ella?', 'Guardar sin captura')) return;
-    ['importe', 'precioDpto', 'precioTotal'].forEach(k => { if (hay(d[k])) d[k] = Number(String(d[k]).replace(/[^\d.]/g, '')) || 0; });
+    ['importe', 'precioDpto', 'precioTotal', 'penalidad'].forEach(k => { if (hay(d[k])) d[k] = Number(String(d[k]).replace(/[^\d.]/g, '')) || 0; });
+    if (Number(d.penalidad) > 0 && !hay(d.motivoPenalidad)) return toast('Escribe el motivo de la penalidad aplicada al cliente');
+    if (d.estado === 'Programada') { const f2 = [['autorizadaPor', 'quién autorizó (Víctor Guevara o Gerente General)'], ['fProgramada', 'la fecha programada de devolución']].filter(([k]) => !hay(d[k])).map(x => x[1]); if (f2.length) return toast('Para programarla y derivarla a Contabilidad falta: ' + f2.join(', ')); if (!d.fDerivada) d.fDerivada = iso(today()); }
     if (d.estado === 'Devuelta' && !d.fDevolucion) d.fDevolucion = iso(today());
     if (!d.fSolicitud) d.fSolicitud = iso(today());
     const nuevo = !!d.nuevo, out = JSON.parse(JSON.stringify(d)); delete out.nuevo;
     if (!out.codigo) out.codigo = dvCodigo();
     out.mod = { por: S.actor, ts: Date.now() }; if (nuevo) out.creado = { por: S.actor, ts: Date.now() }; out.ts = out.ts || Date.now();
     try { await dvGuardar(out); } catch (e) { return toast('No se pudo guardar: ' + (e.code === 'permission-denied' ? 'las devoluciones aún no están activadas en Firebase' : e.message)); }
-    S.log.push({ ts: Date.now(), usuario: S.actor, opId: out.opId || '—', etapa: 'gen', campo: 'devolucion', antes: '', despues: `${out.codigo} · ${out.estado} · ${DEVOLUCION.soles(out.importe)}` }); save();
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: out.opId || '—', etapa: 'gen', campo: 'devolucion', antes: '', despues: `${out.codigo} · ${DV_LBL[out.estado] || out.estado} · ${DEVOLUCION.soles(out.importe)}${Number(out.penalidad) > 0 ? ' · penalidad ' + DEVOLUCION.soles(out.penalidad) : ''}` }); save();
     toast(`✓ ${out.codigo} guardada`); ui.dv = null; ui.dvId = null;
     if (location.hash === '#/devolucion/' + out.id) render(true); else location.hash = '#/devolucion/' + out.id;
   }
   function dvExcel(list, bajar) {
-    const C = [['Código', 'codigo'], ['Fecha solicitud', 'fSolicitud', 'd'], ['Estado', 'estado'], ['Cliente', 'cliente'], ['DNI', 'dni'], ['Proyecto', 'proyecto'], ['Departamento', 'unidad'], ['Distrito', 'distrito'], ['Empresa', 'empresa'], ['Importe a devolver', 'importe', 'n'], ['Motivo', 'motivo'], ['Solicitado por', 'solicitadoPor'], ['Unidad liberada', 'fLiberacion', 'd'], ['Fecha programada', 'fProgramada', 'd'], ['Fecha de devolución', 'fDevolucion', 'd'], ['Autorizada por', 'autorizadaPor'],
+    const C = [['Código', 'codigo'], ['Fecha solicitud', 'fSolicitud', 'd'], ['Estado', x => DV_LBL[x.estado] || x.estado || ''], ['Derivada a Contabilidad', 'fDerivada', 'd'], ['Cliente', 'cliente'], ['DNI', 'dni'], ['Proyecto', 'proyecto'], ['Departamento', 'unidad'], ['Distrito', 'distrito'], ['Empresa', 'empresa'], ['Importe a devolver', 'importe', 'n'], ['Penalidad al cliente', 'penalidad', 'n'], ['Motivo de la penalidad', 'motivoPenalidad'], ['Motivo', 'motivo'], ['Solicitado por', 'solicitadoPor'], ['Unidad liberada', 'fLiberacion', 'd'], ['Fecha programada', 'fProgramada', 'd'], ['Fecha de devolución', 'fDevolucion', 'd'], ['Autorizada por', 'autorizadaPor'],
       ['Banco', 'banco'], ['Tipo de cuenta', 'tipoCuenta'], ['N° de cuenta', 'cuenta'], ['CCI', 'cci'], ['Titular de la cuenta', 'titularCuenta'], ['Teléfono', 'telefono'], ['Correo', 'email'], ['Cónyuge', 'conyuge'], ['DNI cónyuge', 'dniConyuge'], ['Domicilio fiscal', 'domicilio'], ['Centro laboral', 'centroLaboral'], ['Precio departamento', 'precioDpto', 'n'], ['Precio total', 'precioTotal', 'n'], ['Observaciones', 'obs'],
       ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || '']];
     const data = list.map(x => { const r = {}; C.forEach(([h, k, t]) => { const v = typeof k === 'function' ? k(x) : x[k]; r[h] = !hay(v) ? '' : t === 'n' ? Number(v) : t === 'd' ? xlDate(v) : String(v); }); return r; });
@@ -2392,14 +2400,15 @@
     const F = dvFilter(), id = 'rg-dv', mesAct = iso(today()).slice(0, 7), t = today(), prev = iso(new Date(t.getFullYear(), t.getMonth() - 1, 1)).slice(0, 7);
     const build = () => {
       const L = dvRows(), sum = (A) => DEVOLUCION.soles(A.reduce((s, x) => s + (Number(x.importe) || 0), 0)) || 'S/ 0.00';
-      const pend = DV.filter(x => x.estado === 'Pendiente'), prog = DV.filter(x => x.estado === 'Programada'), dev = DV.filter(x => x.estado === 'Devuelta' && String(x.fDevolucion || '').slice(0, 7) === mesAct), sin = DV.filter(x => !x.solicitud && x.estado !== 'Anulada');
+      const pend = DV.filter(x => x.estado === 'Pendiente'), prog = DV.filter(x => (x.estado === 'Programada' || x.estado === 'Devuelta') && String(x.fDerivada || x.fProgramada || x.fDevolucion || '').slice(0, 7) === mesAct), pen = DV.filter(x => Number(x.penalidad) > 0 && x.estado !== 'Anulada'), sin = DV.filter(x => !x.solicitud && x.estado !== 'Anulada');
+      const sumPen = DEVOLUCION.soles(pen.reduce((t, x) => t + (Number(x.penalidad) || 0), 0)) || 'S/ 0.00';
       const kpi = (n, l, c) => `<div class="kpi card ${c || ''}"><div><div class="n">${n}</div><div class="l">${l}</div></div></div>`;
       const cols = [{ h: 'Código', s: x => x.codigo, f: x => `<a href="#/devolucion/${x.id}"><b>${esc(x.codigo || '—')}</b></a>` }, { h: 'Solicitud', s: x => x.fSolicitud, f: x => fdate(x.fSolicitud) || '—' },
         { h: 'Cliente', s: x => x.cliente, f: x => `<a href="#/devolucion/${x.id}">${esc(x.cliente || '')}</a><div class="small muted">DNI ${esc(x.dni || '—')}</div>` }, { h: 'Proyecto · Dpto', s: x => x.proyecto, f: x => `${esc(x.proyecto || '')}${x.unidad ? ' · ' + esc(x.unidad) : ''}` },
-        { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => DEVOLUCION.soles(x.importe) || '—' }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
-        { h: 'Estado', s: x => DV_ORD[x.estado], f: x => `<span class="badge ${DV_EST[x.estado] || ''}">${esc(x.estado || '')}</span>` }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">📎 Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
+        { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => (DEVOLUCION.soles(x.importe) || '—') + (Number(x.penalidad) > 0 ? `<div class="small txt-rojo" title="${esc(x.motivoPenalidad || '')}">Penalidad ${DEVOLUCION.soles(x.penalidad)}</div>` : '') }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
+        { h: 'Estado', s: x => DV_ORD[x.estado], f: x => dvEstHtml(x) }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">📎 Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
         { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="dv-pdf" data-id="${x.id}">📄 Formato</button>` }];
-      return `<div class="kpis ops-kpis">${kpi(pend.length, `Pendientes · ${sum(pend)}`, pend.length ? 'warn' : '')}${kpi(prog.length, `Programadas · ${sum(prog)}`)}${kpi(dev.length, `Devueltas este mes · ${sum(dev)}`)}${kpi(sin.length, 'Sin captura del correo', sin.length ? 'bad' : '')}</div>
+      return `<div class="kpis ops-kpis">${kpi(pend.length, `Pendientes de autorización · ${sum(pend)}`, pend.length ? 'warn' : '')}${kpi(prog.length, `Programadas y derivadas a Contabilidad este mes · ${sum(prog)}`)}${kpi(pen.length, `Con penalidad al cliente · ${sumPen}`)}${kpi(sin.length, 'Sin captura del correo', sin.length ? 'bad' : '')}</div>
         <div class="ops-tw full">${tbl(id + '-t', cols, L, DV.length ? 'No hay devoluciones con estos filtros.' : 'Aún no hay devoluciones. Toca “Nueva devolución” para registrar la primera.')}</div>`;
     };
     let hecho = ''; try { hecho = localStorage.getItem(DV_RESP_K) || ''; } catch (e) { }
@@ -2409,16 +2418,17 @@
     return `${pageHead('Devoluciones', 'Devoluciones de venta: datos del cliente, cuenta de destino, sustento y formato.', `<a class="btn pri" href="#/devolucion/nueva">➕ Nueva devolución</a> <button class="btn" data-act="dv-excel">⬇️ Excel</button> <button class="btn" data-act="dv-zip">🗂️ Respaldo del mes</button>`)}
       ${dvErr ? `<div class="ev-falta" style="margin-bottom:12px">${esc(dvErr)}</div>` : ''}${aviso}
       <div class="filters"><input type="search" placeholder="Buscar código, cliente, DNI, dpto…" value="${esc(F.q)}" data-dvf="q" autocomplete="off">
-        ${sel('est', 'Todos los estados', Object.keys(DV_EST).map(e => [e, e]))}${sel('mes', 'Todos los meses', [...new Set(DV.map(dvMes))].sort().reverse().map(m => [m, mesLargo(m)]))}${sel('emp', 'Todas las empresas', [...new Set(DV.map(x => x.empresa).filter(Boolean))].sort().map(e => [e, e]))}</div>
+        ${sel('est', 'Todos los estados', Object.keys(DV_EST).map(e => [e, DV_LBL[e]]))}${sel('mes', 'Todos los meses', [...new Set(DV.map(dvMes))].sort().reverse().map(m => [m, mesLargo(m)]))}${sel('emp', 'Todas las empresas', [...new Set(DV.map(x => x.empresa).filter(Boolean))].sort().map(e => [e, e]))}</div>
       ${region(id, build)}`;
   }
   function vDevolucion(id) {
     if (id !== 'nueva' && !DV.find(x => x.id === id) && !(ui.dvId === id && ui.dv)) return `${pageHead('Devolución', '', '<a class="btn" href="#/devoluciones">‹ Volver</a>')}<div class="empty">${dvErr ? esc(dvErr) : dvListo || !CL.enabled ? 'No se encontró esta devolución.' : 'Cargando…'}</div>`;
     const d = dvDraft(id), uq = (A) => [...new Set(A.filter(Boolean))].sort();
-    const listas = { proyecto: uq(S.ops.map(o => o.proyecto)), empresa: uq([...S.ops.map(empresaDe), ...DV.map(x => x.empresa)]), autorizadaPor: uq(DV.map(x => x.autorizadaPor)),
+    const listas = { proyecto: uq(S.ops.map(o => o.proyecto)), empresa: uq([...S.ops.map(empresaDe), ...DV.map(x => x.empresa)]), autorizadaPor: uq([...DV_AUTORIZAN, ...DV.map(x => x.autorizadaPor)]),
       banco: uq(['BCP', 'BBVA', 'Interbank', 'Scotiabank', 'BanBif', 'Pichincha', 'Banco de la Nación', ...DV.map(x => x.banco)]) };
     const campo = ([k, l, t, w]) => { const v = d[k] ?? '', base = `data-dv="${k}" id="dv-${k}" autocomplete="off"`;
-      const inp = Array.isArray(t) ? `<select ${base}><option value=""></option>${t.map(o => `<option ${v === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+      const inp = t === 'estado' ? `<select ${base}>${Object.keys(DV_EST).map(o => `<option value="${o}" ${v === o ? 'selected' : ''}>${esc(DV_LBL[o])}</option>`).join('')}</select>`
+        : Array.isArray(t) ? `<select ${base}><option value=""></option>${t.map(o => `<option ${v === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
         : t === 'ta' ? `<textarea ${base} rows="2">${esc(v)}</textarea>` : t === 'd' ? `<input type="date" ${base} value="${esc(v)}">`
         : `<input ${base} value="${esc(v)}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'list' ? `list="dvl-${k}"` : ''}>`;
       return `<label class="dv-f${w === 2 ? ' w2' : ''}" for="dv-${k}"><span>${l}</span>${inp}</label>`; };
