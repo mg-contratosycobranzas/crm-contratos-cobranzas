@@ -2299,6 +2299,28 @@
   const dvGestor = (x) => x.gestor || (x.creado || {}).por || '';
   const dvRegTs = (x) => (x.creado || {}).ts || x.ts || null; // cuándo se digitó en el CRM
   const dvRegFecha = (x) => { const t = dvRegTs(x); return t ? iso(new Date(t)) : ''; };
+  const dvFin = (x) => x.estado === 'Programada' || x.estado === 'Devuelta' ? (x.fDerivada || x.fProgramada || x.fDevolucion || '') : '';
+  function dvTiempo(x) {
+    if (x.estado === 'Anulada' || !x.fSolicitud) return null;
+    const a = pd(x.fSolicitud), f = dvFin(x), b = f ? pd(f) : today(), meta = +S.params.metaDev || 5;
+    const dias = diasEntre(a, b < a ? a : b), enCurso = !f, reg = dvRegFecha(x) ? diasEntre(a, pd(dvRegFecha(x)) < a ? a : pd(dvRegFecha(x))) : null;
+    return { dias, enCurso, meta, reg, sem: dias > meta ? 'rojo' : enCurso && dias >= meta * 0.8 ? 'amarillo' : 'verde' };
+  }
+  const dvProd = (L) => prodDe(L.map(dvTiempo).filter(Boolean).map(t => ({ cerrado: !t.enCurso, dias: t.dias, meta: t.meta, vencido: t.sem === 'rojo' })));
+  function dvTiemposHtml() {
+    const L = DV.filter(x => dvTiempo(x)), U = unidadDias(), meta = +S.params.metaDev || 5, mP = metaProd();
+    if (!L.length) return '';
+    const T = L.map(x => ({ x, t: dvTiempo(x) })), cer = T.filter(r => !r.t.enCurso), ab = T.filter(r => r.t.enCurso), venc = ab.filter(r => r.t.sem === 'rojo');
+    const P = dvProd(L), med = mediana(cer.map(r => r.t.dias)), regs = T.map(r => r.t.reg).filter(v => v != null), medReg = mediana(regs);
+    const ges = [...new Set(L.map(dvGestor).filter(Boolean))].map(g => { const G = L.filter(x => dvGestor(x) === g), TT = G.map(dvTiempo); return { g, n: G.length, ab: TT.filter(t => t.enCurso).length, venc: TT.filter(t => t.enCurso && t.sem === 'rojo').length, med: mediana(TT.filter(t => !t.enCurso).map(t => t.dias)), p: dvProd(G) }; }).sort((a, b) => (b.p.productividad ?? -1) - (a.p.productividad ?? -1));
+    const k = (n, l, c) => `<div class="kpi"><div class="n ${c || ''}">${n}</div><div class="small muted">${l}</div></div>`;
+    return `<details class="card tp-card prod-exp" open><summary class="card-h"><h2>⏱️ Tiempo de atención de las solicitudes</h2><span class="small muted">De la solicitud del cliente a la derivación a Contabilidad · meta ${meta} ${U}</span></summary><div class="card-b">
+      <div class="kpis ops-kpis">${k(med == null ? '—' : med + ' <span class="small muted">' + U + '</span>', 'Mediana de atención (cerradas)')}${k(P.productividad == null ? '—' : P.productividad + '%', `Productividad · eficacia ${P.eficacia ?? '—'}% × eficiencia ${P.eficiencia ?? '—'}%`, P.productividad == null ? '' : 'txt-' + prodColor(P.productividad, mP))}${k(venc.length, `Pendientes que ya pasaron ${meta} ${U}`, venc.length ? 'txt-rojo' : '')}${k(medReg == null ? '—' : medReg + ' <span class="small muted">' + U + '</span>', 'Mediana de la solicitud al registro en el CRM')}</div>
+      ${ges.length ? `<div class="ops-tw">${tbl('dv-ges-t', [{ h: 'Gestiona', s: r => r.g, f: r => `<span class="dv-ges"><span class="avatar sm">${initials(r.g)}</span>${esc(r.g)}</span>` }, { h: 'Devoluciones', cls: 'r', s: r => r.n, f: r => r.n },
+        { h: 'Mediana (días)', cls: 'r', s: r => r.med ?? -1, f: r => r.med == null ? '<span class="muted">—</span>' : `<b>${r.med}</b>` }, { h: 'Eficacia', cls: 'r', s: r => r.p.eficacia ?? -1, f: r => prodBadge(r.p.eficacia, +S.params.metaEficacia) }, { h: 'Eficiencia', cls: 'r', s: r => r.p.eficiencia ?? -1, f: r => prodBadge(r.p.eficiencia, +S.params.metaEficiencia) },
+        { h: '<b>Productividad</b>', cls: 'r', s: r => r.p.productividad ?? -1, f: r => prodBadge(r.p.productividad, mP) }, { h: 'Pendientes', cls: 'r', s: r => r.ab, f: r => r.ab ? `${r.ab}${r.venc ? ` <span class="badge rojo">${r.venc} vencida${r.venc > 1 ? 's' : ''}</span>` : ''}` : '<span class="muted">0</span>' }], ges, '')}</div>` : ''}
+      ${can('a_params') ? `<p class="small muted" style="margin:10px 0 0">Meta de atención: <input type="number" min="1" value="${meta}" data-pk="metaDev" style="width:64px"> ${U}, desde la solicitud hasta programarla y derivarla a Contabilidad.</p>` : ''}</div></details>`;
+  }
   const dvEstHtml = (x) => { const l = DV_LBL[x.estado] || x.estado || '';
     const sub = x.estado === 'Pendiente' ? `Autoriza: ${esc(x.autorizadaPor || DV_AUTORIZAN.join(' o '))}` : x.estado === 'Programada' ? `${x.fDerivada ? 'Derivada el ' + fdate(x.fDerivada) + ' · ' : ''}Cerrada` : '';
     return `<span class="badge ${DV_EST[x.estado] || ''}">${x.estado === 'Programada' ? '✔ ' : x.estado === 'Pendiente' ? '⏳ ' : ''}${esc(l)}</span>${sub ? `<div class="small muted">${sub}</div>` : ''}`; };
@@ -2375,7 +2397,7 @@
   function dvExcel(list, bajar) {
     const C = [['Código', 'codigo'], ['Fecha solicitud', 'fSolicitud', 'd'], ['Estado', x => DV_LBL[x.estado] || x.estado || ''], ['Gestiona', x => dvGestor(x)], ['Derivada a Contabilidad', 'fDerivada', 'd'], ['Cliente', 'cliente'], ['DNI', 'dni'], ['Proyecto', 'proyecto'], ['Departamento', 'unidad'], ['Distrito', 'distrito'], ['Empresa', 'empresa'], ['Importe a devolver', 'importe', 'n'], ['Penalidad al cliente', 'penalidad', 'n'], ['Motivo de la penalidad', 'motivoPenalidad'], ['Motivo', 'motivo'], ['Solicitado por', 'solicitadoPor'], ['Unidad liberada', 'fLiberacion', 'd'], ['Fecha programada', 'fProgramada', 'd'], ['Fecha de devolución', 'fDevolucion', 'd'], ['Autorizada por', 'autorizadaPor'],
       ['Banco', 'banco'], ['Tipo de cuenta', 'tipoCuenta'], ['N° de cuenta', 'cuenta'], ['CCI', 'cci'], ['Titular de la cuenta', 'titularCuenta'], ['Teléfono', 'telefono'], ['Correo', 'email'], ['Cónyuge', 'conyuge'], ['DNI cónyuge', 'dniConyuge'], ['Domicilio fiscal', 'domicilio'], ['Centro laboral', 'centroLaboral'], ['Precio departamento', 'precioDpto', 'n'], ['Precio total', 'precioTotal', 'n'], ['Observaciones', 'obs'],
-      ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || ''], ['Registrada en el CRM', x => dvRegFecha(x), 'd']];
+      ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || ''], ['Registrada en el CRM', x => dvRegFecha(x), 'd'], ['Días de atención (hábiles)', x => { const t = dvTiempo(x); return t ? t.dias : ''; }], ['Meta (días)', x => dvTiempo(x) ? +S.params.metaDev || 5 : ''], ['Cumple la meta', x => { const t = dvTiempo(x); return !t ? '' : t.enCurso ? (t.sem === 'rojo' ? 'Vencida (en curso)' : 'En curso') : (t.sem === 'rojo' ? 'No' : 'Sí'); }], ['Días de la solicitud al registro', x => { const t = dvTiempo(x); return t && t.reg != null ? t.reg : ''; }]];
     const data = list.map(x => { const r = {}; C.forEach(([h, k, t]) => { const v = typeof k === 'function' ? k(x) : x[k]; r[h] = !hay(v) ? '' : t === 'n' ? Number(v) : t === 'd' ? xlDate(v) : String(v); }); return r; });
     const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' });
     if (data.length) { ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: /Cliente|Titular|Empresa|Domicilio|Observ/.test(k) ? 32 : Math.max(12, k.length + 2) })); ws['!autofilter'] = { ref: ws['!ref'] }; }
@@ -2412,10 +2434,11 @@
         { h: 'Cliente', s: x => x.cliente, f: x => `<a href="#/devolucion/${x.id}">${esc(x.cliente || '')}</a><div class="small muted">DNI ${esc(x.dni || '—')}</div>` }, { h: 'Proyecto · Dpto', s: x => x.proyecto, f: x => `${esc(x.proyecto || '')}${x.unidad ? ' · ' + esc(x.unidad) : ''}` },
         { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => (DEVOLUCION.soles(x.importe) || '—') + (Number(x.penalidad) > 0 ? `<div class="small txt-rojo" title="${esc(x.motivoPenalidad || '')}">Penalidad ${DEVOLUCION.soles(x.penalidad)}</div>` : '') }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
         { h: 'Gestiona', s: x => dvGestor(x), f: x => dvGestor(x) ? `<span class="dv-ges"><span class="avatar sm">${initials(dvGestor(x))}</span>${esc(dvGestor(x))}</span>` : '<span class="badge amar plain">Sin asignar</span>' },
+        { h: 'Tiempo', cls: 'r', s: x => { const t = dvTiempo(x); return t ? t.dias : -1; }, f: x => { const t = dvTiempo(x); if (!t) return '<span class="muted">—</span>'; return `<span class="nowrap">${semDot(t.sem)} <b>${t.dias}</b> / ${t.meta} d</span><div class="small muted">${t.enCurso ? 'en curso' : 'atendida'}</div>`; } },
         { h: 'Estado', s: x => DV_ORD[x.estado], f: x => dvEstHtml(x) }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">📎 Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
         { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="dv-pdf" data-id="${x.id}">📄 Formato</button>` }];
       return `<div class="kpis ops-kpis">${kpi(pend.length, `Pendientes de autorización · ${sum(pend)}`, pend.length ? 'warn' : '')}${kpi(prog.length, `Programadas y derivadas a Contabilidad este mes · ${sum(prog)}`)}${kpi(pen.length, `Con penalidad al cliente · ${sumPen}`)}${kpi(sin.length, 'Sin captura del correo', sin.length ? 'bad' : '')}</div>
-        <div class="ops-tw full">${tbl(id + '-t', cols, L, DV.length ? 'No hay devoluciones con estos filtros.' : 'Aún no hay devoluciones. Toca “Nueva devolución” para registrar la primera.')}</div>`;
+        ${dvTiemposHtml()}<div class="ops-tw full">${tbl(id + '-t', cols, L, DV.length ? 'No hay devoluciones con estos filtros.' : 'Aún no hay devoluciones. Toca “Nueva devolución” para registrar la primera.')}</div>`;
     };
     let hecho = ''; try { hecho = localStorage.getItem(DV_RESP_K) || ''; } catch (e) { }
     const aviso = isJefe() && t.getDate() <= 15 && hecho < prev && DV.some(x => dvMes(x) === prev)
