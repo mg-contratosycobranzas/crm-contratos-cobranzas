@@ -611,3 +611,7 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 
 /* Devoluciones: quién la gestiona */
 .dv-ges{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.avatar.sm{width:24px;height:24px;font-size:10.5px;background:var(--c-jef);color:#fff}
+
+/* Trabajo sin internet */
+#net-aviso{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:250;max-width:min(760px,94vw);background:var(--amar-bg);color:var(--amar);border:1px solid var(--amar);border-radius:10px;padding:9px 14px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+#net-aviso span{display:block;font-size:12px;opacity:.85;margin-top:2px}#net-aviso.ok{background:var(--verde-bg);color:var(--verde);border-color:var(--verde)}

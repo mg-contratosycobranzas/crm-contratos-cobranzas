@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -174,7 +174,7 @@
   const AUTH_ERR = { 'auth/invalid-credential': 'Correo o contraseña incorrectos', 'auth/wrong-password': 'Correo o contraseña incorrectos', 'auth/user-not-found': 'Ese correo no tiene cuenta', 'auth/invalid-email': 'Correo no válido', 'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.', 'auth/network-request-failed': 'Sin conexión a internet' };
   function gateHtml() {
     const logo = '<h1>CRM</h1>';
-    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p><form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label>${idleMsg ? `<p class="small cl-wait" style="margin:0">⏱️ ${esc(idleMsg)}</p>` : ''}<button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
+    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p>${navigator.onLine ? '' : '<p class="ev-falta">📴 Sin internet no se puede iniciar sesión. Si ya habías entrado en esta computadora, espera a que vuelva la conexión o usa los datos del celular.</p>'}<form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label>${idleMsg ? `<p class="small cl-wait" style="margin:0">⏱️ ${esc(idleMsg)}</p>` : ''}<button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
     if (cloudState === 'seed') return `<div class="gcard">${logo}<p>Todavía no hay datos en la nube.</p><p class="muted small">Si eres la administradora, sube ahora los 139 expedientes iniciales. Quedarás como administradora con el correo <b>${esc(authEmail)}</b>.</p><button class="btn pri" data-act="seed">Subir datos iniciales</button> <button class="btn" data-act="logout">Salir</button></div>`;
     if (cloudState === 'denied') return `<div class="gcard">${logo}<p>🔒 ${esc(denyMsg)}</p><button class="btn" data-act="logout">Cerrar sesión</button></div>`;
     return `<div class="gcard">${logo}<p class="muted">Conectando…</p></div>`;
@@ -1997,7 +1997,7 @@
       const ev = { ...info, cargado: Date.now(), por: S.actor, campos: pick };
       if (!op) {
         const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0));
-        op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()) };
+        op = { id: 'OP-' + String(max + 1).padStart(4, '0') + sufOff(), fechaInicio: iso(today()) };
         pick.forEach(k => op[k] = fields[k]); op.evolta = ev; marcaIngreso(op); S.ops.push(CRM.normalize(op));
         S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente || '' });
       } else {
@@ -2076,7 +2076,7 @@
         <div class="f-grid" style="grid-template-columns:1fr 2.4fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input data-pdir="${esc(p)}" value="${esc(dirEnProy(p))}" placeholder="Ej.: Av. La Paz N° 839, Distrito de San Miguel, Provincia y Departamento de Lima" ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
         <div><button class="btn pri" data-act="export-xlsx">Exportar a Excel (por etapa y por usuario)</button></div>
-        <div><button class="btn pri" data-act="respaldo-completo">🛡️ Respaldo completo (.json + Excel)</button> <span class="small muted">${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} · ${esc(S.params.ultimoRespaldo.por || '')}` : 'Aún no hay respaldo'} · se recomienda cada quincena (días 1 y 16)</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button class="btn pri" data-act="respaldo-completo">🛡️ Descargar respaldo completo</button><button class="btn" data-act="respaldo-drive">☁️ Guardar en Google Drive</button><label class="btn">♻️ Restaurar desde respaldo<input type="file" accept=".json,application/json" id="restaurar-file" hidden></label> <span class="small muted">${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} · ${esc(S.params.ultimoRespaldo.por || '')}` : 'Aún no hay respaldo'} · se recomienda cada quincena (días 1 y 16)</span></div>
         <div style="margin-top:8px"><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
         <div><button class="btn" data-act="import">Importar Excel original o respaldo…</button><input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden></div>
         <div><button class="btn danger" data-act="reset">Volver a los datos del repositorio</button></div>
@@ -2364,7 +2364,9 @@
       (e) => { dvUnsub = null; dvReintento = setTimeout(() => { if (cloudState === 'ready') startDev(); }, 20000); dvErr = e && e.code === 'permission-denied' ? 'Las devoluciones aún no están activadas en Firebase (falta actualizar las reglas).' : 'No se pudieron cargar las devoluciones.'; scheduleRender(); });
   }
   async function dvGuardar(d) { if (CL.enabled) { await CL.setDoc('devoluciones', d.id, d); const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); if (!dvUnsub) startDev(); } else { const i = DV.findIndex(x => x.id === d.id); if (i >= 0) DV[i] = d; else DV.push(d); dvLocal(true); } }
-  const dvCodigo = () => { const y = new Date().getFullYear(), re = new RegExp('^DEV-' + y + '-(\\d+)$'); const n = Math.max(0, ...DV.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `DEV-${y}-${String(n + 1).padStart(4, '0')}`; };
+  // sin internet, dos personas podrían sacar el mismo número: se agrega una marca de 2 letras al final
+  const sufOff = () => navigator.onLine ? '' : '-' + Array.from({ length: 2 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
+  const dvCodigo = () => { const y = new Date().getFullYear(), re = new RegExp('^DEV-' + y + '-(\\d+)(?:-[A-Z]{2})?$'); const n = Math.max(0, ...DV.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `DEV-${y}-${String(n + 1).padStart(4, '0')}${sufOff()}`; };
   function dvDraft(id) {
     if (ui.dvId === id && ui.dv) return ui.dv;
     const ex = DV.find(x => x.id === id);
@@ -2533,7 +2535,7 @@
   async function cgGuardar(c) { if (CL.enabled) { await CL.setDoc('cargos', c.id, c); if (!cgUnsub) startCg(); } const i = CG.findIndex(x => x.id === c.id); if (i >= 0) CG[i] = c; else CG.push(c); if (!CL.enabled) cgLocal(true); }
   const cgNuevo = () => ({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), tipo: 'notaria', dest: '', abogado: '', banco: '', items: [], docs: [{ n: '1', t: 'Juego de minuta original' }], rec: { nombre: '', dni: '', rel: '' }, obs: '', formato: 2 });
   const cgDraft = () => ui.cg || (ui.cg = cgNuevo());
-  const cgCodigo = () => { const d = iso(today()).replace(/-/g, ''), re = new RegExp('^CG-' + d + '-(\\d+)$'); const n = Math.max(0, ...CG.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `CG-${d}-${String(n + 1).padStart(3, '0')}`; };
+  const cgCodigo = () => { const d = iso(today()).replace(/-/g, ''), re = new RegExp('^CG-' + d + '-(\\d+)(?:-[A-Z]{2})?$'); const n = Math.max(0, ...CG.map(x => Number((re.exec(x.codigo || '') || [])[1] || 0))); return `CG-${d}-${String(n + 1).padStart(3, '0')}${sufOff()}`; };
   const cgOpDni = (dni) => S.ops.find(o => String(o.dni || '').replace(/\D/g, '') === dni) || null;
   function cgDestDe(o, c) { // la notaría, el abogado o el ejecutivo y el banco salen del cliente, si aún están vacíos
     const put = (k, v) => { if (!c[k] && v) c[k] = v; };
@@ -2884,24 +2886,90 @@
   // respaldo completo: un archivo para restaurar el CRM (.json) y un Excel que se abre en cualquier computadora
   const inicioQuincena = () => { const t = today(); return iso(new Date(t.getFullYear(), t.getMonth(), t.getDate() >= 16 ? 16 : 1)); };
   const respaldoPendiente = () => { const u = S.params.ultimoRespaldo || {}; return !u.fecha || u.fecha < inicioQuincena(); };
-  function respaldoCompleto() {
-    if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel.');
+  function respaldoArmar() {
     const f = iso(today()), info = { generado: new Date().toISOString(), por: S.actor || '', nota: 'Respaldo completo del CRM de Contratos y Cobranzas' };
-    download(`Respaldo_CRM_${f}.json`, JSON.stringify({ ...snapshot(), devoluciones: DV, cargos: CG, respaldo: info }), 'application/json');
+    const json = JSON.stringify({ ...snapshot(), devoluciones: DV, cargos: CG, respaldo: info });
     const wb = XLSX.utils.book_new(), add = (n, d) => { const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); if (d.length) ws['!autofilter'] = { ref: ws['!ref'] }; XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31)); };
     const campos = Object.values(FIELDS).flat(), val = (v) => v == null ? '' : typeof v === 'object' ? JSON.stringify(v).slice(0, 30000) : v;
     add('Léame', [{ Dato: 'Generado', Valor: new Date().toLocaleString('es-PE') }, { Dato: 'Por', Valor: S.actor || '' }, { Dato: 'Clientes', Valor: S.ops.length }, { Dato: 'Devoluciones', Valor: DV.length }, { Dato: 'Actas y cargos', Valor: CG.length },
-      { Dato: 'Para restaurar', Valor: 'El archivo .json del mismo día se carga en Configurar → Importar respaldo. Este Excel se puede abrir en cualquier computadora aunque el CRM no esté disponible.' }]);
+      { Dato: 'Para restaurar', Valor: 'El archivo .json del mismo día se carga en Configurar → Restaurar desde respaldo. Este Excel se abre en cualquier computadora aunque el CRM no esté disponible.' }]);
     add('Clientes', S.ops.map(o => { const x = { ID: o.id }; campos.forEach(c => { x[c.l] = val(o[c.k]); }); return x; }));
     add('Seguimientos', S.seguimientos.map(x => ({ Fecha: x.ts ? new Date(x.ts).toLocaleString('es-PE') : '', Cliente: (getOp(x.opId) || {}).cliente || x.opId, Tipo: x.tipo || '', Detalle: x.nota || '', 'Próxima acción': x.proxima || '', Compromiso: x.fCompromiso || '', Usuario: x.usuario || '' })));
     try { const dw = dvExcel(DV, false); XLSX.utils.book_append_sheet(wb, dw.Sheets[dw.SheetNames[0]], 'Devoluciones'); } catch (e) { }
     add('Actas y cargos', CG.map(c => { const x = {}; Object.entries(c).forEach(([k, v]) => { if (typeof v !== 'object' && !String(v).startsWith('data:')) x[k] = v; }); return x; }));
     add('Equipo', S.users.map(u => ({ Nombre: u.name, Rol: u.rol || '', Etapa: STAGE[u.stage] ? STAGE[u.stage].name : 'Jefatura', Correo: u.email || '', Administrador: u.admin ? 'Sí' : '' })));
-    XLSX.writeFile(wb, `Respaldo_CRM_${f}.xlsx`, { cellDates: true });
-    S.params.ultimoRespaldo = { fecha: f, por: S.actor || '' }; commit(); render(true);
-    toast('✓ Respaldo descargado: guarda los 2 archivos en tu computadora y en Google Drive');
+    return { f, json, wb, xlsx: () => XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) };
   }
-  const respaldoAviso = () => !isJefe() || !respaldoPendiente() ? '' : `<div class="dv-aviso">🛡️ <span><b>Respaldo de la quincena pendiente.</b> Descarga el respaldo completo del CRM (clientes, seguimientos, devoluciones y actas) y guárdalo en tu computadora y en Google Drive. ${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} por ${esc(S.params.ultimoRespaldo.por || '')}.` : 'Aún no se ha hecho ninguno.'}</span><button class="btn sm pri" data-act="respaldo-completo">Descargar respaldo</button></div>`;
+  function respaldoCompleto() {
+    if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel.');
+    const R = respaldoArmar();
+    download(`Respaldo_CRM_${R.f}.json`, R.json, 'application/json');
+    XLSX.writeFile(R.wb, `Respaldo_CRM_${R.f}.xlsx`, { cellDates: true });
+    S.params.ultimoRespaldo = { fecha: R.f, por: S.actor || '' }; commit(); render(true);
+    toast('✓ Respaldo descargado: guarda los 2 archivos en tu computadora');
+  }
+  /* ---- Guardar el respaldo en Google Drive (cuenta del área) con el permiso de Google, sin servidores ---- */
+  const DRIVE_CARPETA = 'Respaldo CRM Contratos y Cobranzas';
+  function driveConfigurar() {
+    modal({ title: 'Configurar "Guardar en Google Drive"', ok: 'Entendido', cancel: '', wide: true, body: `<p style="margin-top:0">Se hace <b>una sola vez</b>, gratis, con la cuenta <b>contratosycobranzas.mg@gmail.com</b>:</p>
+      <ol class="small" style="line-height:1.6;padding-left:18px">
+        <li>Entra a <b>console.cloud.google.com</b> y elige el proyecto <b>crm-mg-4faf9</b> (es el mismo de Firebase).</li>
+        <li><b>APIs y servicios → Biblioteca</b>: busca <b>Google Drive API</b> y pulsa <b>Habilitar</b>.</li>
+        <li><b>APIs y servicios → Pantalla de consentimiento de OAuth</b>: tipo <b>Externo</b>, nombre "CRM Contratos y Cobranzas", tu correo de soporte, y en <b>Usuarios de prueba</b> agrega los correos que usarán el botón.</li>
+        <li><b>APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth</b>: tipo <b>Aplicación web</b>. En <b>Orígenes autorizados de JavaScript</b> agrega <code>https://mg-contratosycobranzas.github.io</code>.</li>
+        <li>Copia el <b>ID de cliente</b> (termina en <code>.apps.googleusercontent.com</code>) y envíaselo a Claude para activarlo en el CRM. No es una clave secreta.</li></ol>
+      <p class="small muted">Mientras tanto, usa <b>Descargar respaldo</b> y súbelo a Drive a mano. Además está el respaldo automático diario (Google Apps Script), que no necesita este paso.</p>` });
+  }
+  const cargarScript = (src) => new Promise((ok, ko) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const x = document.createElement('script'); x.src = src; x.onload = ok; x.onerror = () => ko(new Error('no hay conexión con Google')); document.head.appendChild(x); });
+  async function respaldoDrive() {
+    if (!window.DRIVE_CLIENT_ID) return driveConfigurar();
+    if (!navigator.onLine) return toast('Sin internet: guardar en Drive necesita conexión. Usa "Descargar respaldo".');
+    if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel.');
+    try {
+      await cargarScript('https://accounts.google.com/gsi/client');
+      const token = await new Promise((ok, ko) => window.google.accounts.oauth2.initTokenClient({ client_id: window.DRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: (r) => r && r.access_token ? ok(r.access_token) : ko(new Error(r && r.error || 'permiso no concedido')), error_callback: (e) => ko(new Error(e && e.type === 'popup_closed' ? 'se cerró la ventana de Google' : 'Google no dio el permiso')) }).requestAccessToken());
+      toast('Subiendo el respaldo a Google Drive…');
+      const H = { Authorization: 'Bearer ' + token }, q = encodeURIComponent(`name='${DRIVE_CARPETA}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+      const lista = await (await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`, { headers: H })).json();
+      let carpeta = lista.files && lista.files[0] && lista.files[0].id;
+      if (!carpeta) carpeta = (await (await fetch('https://www.googleapis.com/drive/v3/files?fields=id', { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: DRIVE_CARPETA, mimeType: 'application/vnd.google-apps.folder' }) })).json()).id;
+      if (!carpeta) throw new Error('no se pudo crear la carpeta en Drive');
+      const R = respaldoArmar(), sube = async (name, mime, data) => { const b = 'crm' + Date.now();
+        const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: [carpeta] })}\r\n--${b}\r\nContent-Type: ${mime}\r\n\r\n`, data, `\r\n--${b}--`]);
+        const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { ...H, 'Content-Type': 'multipart/related; boundary=' + b }, body });
+        if (!r.ok) throw new Error('Drive respondió ' + r.status); };
+      await sube(`Respaldo_CRM_${R.f}.json`, 'application/json', R.json);
+      await sube(`Respaldo_CRM_${R.f}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', new Uint8Array(R.xlsx()));
+      S.params.ultimoRespaldo = { fecha: R.f, por: S.actor || '', drive: true }; commit(); render(true);
+      toast(`✓ Respaldo guardado en Google Drive, carpeta "${DRIVE_CARPETA}"`);
+    } catch (e) { toast('No se pudo guardar en Drive: ' + e.message + '. Usa "Descargar respaldo".'); }
+  }
+  /* ---- Restaurar desde un respaldo (.json descargado o el del respaldo automático de Drive) ---- */
+  async function restaurarRespaldo(file) {
+    let j; try { j = JSON.parse(await file.text()); } catch (e) { return toast('El archivo no es un respaldo válido (.json)'); }
+    const L = (k) => (Array.isArray(j[k]) ? j[k] : []).map(x => ({ ...x, id: x.id || x._id })).filter(x => x.id).map(x => { delete x._id; return x; });
+    const C = { ops: L('ops'), seguimientos: L('seguimientos'), log: L('log'), devoluciones: L('devoluciones'), cargos: L('cargos') };
+    if (!C.ops.length) return toast('El archivo no tiene clientes: no parece un respaldo del CRM');
+    const fecha = (j.respaldo && j.respaldo.generado) || j.generado || j.version || '';
+    modal({ title: '🛡️ Restaurar desde respaldo', ok: 'Restaurar', wide: true, body: `<p style="margin-top:0">Respaldo del <b>${fecha ? new Date(fecha).toLocaleString('es-PE') : 'fecha desconocida'}</b>:</p>
+      <ul class="small">${[['ops', 'clientes'], ['seguimientos', 'seguimientos'], ['log', 'cambios del historial'], ['devoluciones', 'devoluciones'], ['cargos', 'actas y cargos']].map(([k, l]) => `<li><label><input type="checkbox" data-rk="${k}" ${C[k].length && !(k === 'log' && CL.enabled) ? 'checked' : 'disabled'}> ${C[k].length} ${l}${k === 'log' && CL.enabled ? ' <span class="muted">(el historial está protegido: no se reescribe, queda guardado en el archivo)</span>' : ''}</label></li>`).join('')}</ul>
+      <div class="ev-falta">Se vuelven a escribir los registros del respaldo: lo que falte o se haya dañado regresa como estaba ese día. <b>No se borra</b> lo registrado después del respaldo, pero si un registro cambió después, vuelve a su versión del respaldo.</div>`,
+      onOk: (dlg) => { const sel = [...dlg.querySelectorAll('[data-rk]:checked')].map(x => x.dataset.rk); setTimeout(async () => {
+        try { toast('Restaurando…');
+          for (const k of sel) {
+            if (CL.enabled) await CL.batchSet(k, C[k]);
+            else if (k === 'ops') { const m = new Map(S.ops.map(o => [o.id, o])); C.ops.forEach(o => m.set(o.id, CRM.normalize(o))); S.ops = [...m.values()]; }
+            else if (k === 'seguimientos' || k === 'log') { const m = new Map(S[k].map(x => [x.id, x])); C[k].forEach(x => m.set(x.id, x)); S[k] = [...m.values()]; }
+            else if (k === 'devoluciones') { const m = new Map(DV.map(x => [x.id, x])); C[k].forEach(x => m.set(x.id, x)); DV = [...m.values()]; dvLocal(true); }
+            else if (k === 'cargos') { const m = new Map(CG.map(x => [x.id, x])); C[k].forEach(x => m.set(x.id, x)); CG = [...m.values()]; cgLocal(true); }
+          }
+          S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'restauracion', antes: '', despues: 'Restaurado desde respaldo ' + (fecha || '') + ': ' + sel.join(', ') });
+          commit(); render(); toast('✓ Respaldo restaurado');
+        } catch (e) { toast('No se pudo restaurar: ' + (e.code || e.message)); }
+      }, 50); } });
+  }
+  const respaldoAviso = () => !isJefe() || !respaldoPendiente() ? '' : `<div class="dv-aviso">🛡️ <span><b>Respaldo de la quincena pendiente.</b> Descarga el respaldo completo del CRM (clientes, seguimientos, devoluciones y actas) y guárdalo en tu computadora o en Google Drive. ${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} por ${esc(S.params.ultimoRespaldo.por || '')}.` : 'Aún no se ha hecho ninguno.'}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="respaldo-completo">Descargar respaldo</button><button class="btn sm" data-act="respaldo-drive">Guardar en Drive</button></span></div>`;
   const snapshot = () => ({ version: new Date().toISOString(), ops: S.ops, seguimientos: S.seguimientos, log: S.log, params: S.params, users: S.users, perms: S.perms, adminPin: S.adminPin });
   async function doImport(file) {
     try {
@@ -3031,6 +3099,7 @@
     if (a === 'seg-done') { const s = S.seguimientos.find(x => x.id === el.dataset.id); if (s) { s.resuelto = true; if (CL.enabled) CL.updateDoc('seguimientos', s.id, { resuelto: true }); save(); toast('Seguimiento cumplido'); render(true); } return; }
     if (a === 'export-xlsx') return exportModal();
     if (a === 'respaldo-completo') return respaldoCompleto();
+    if (a === 'respaldo-drive') return respaldoDrive();
     if (a === 'export-json') return download(`respaldo_crm_${iso(today())}.json`, JSON.stringify(snapshot(), null, 1), 'application/json');
     if (a === 'export-js') { download('operaciones.js', 'window.CRM_DATA = ' + JSON.stringify(snapshot()) + ';\n', 'text/javascript'); return toast('Sube este archivo a la carpeta data/ del repositorio'); }
     if (a === 'import') return $('#file').click();
@@ -3057,7 +3126,7 @@
           box.innerHTML = `<b>⚠️ Este cliente podría estar repetido:</b><ul style="margin:6px 0 6px 18px;padding:0">${dups.slice(0, 5).map(d => `<li><b>${esc(d.o.cliente)}</b> (${esc(d.o.id)})${d.o.dni ? ' · DNI ' + esc(d.o.dni) : ''}${d.o.proyecto ? ' · ' + esc(d.o.proyecto) : ''}${d.o.unidad ? ' – ' + esc(d.o.unidad) : ''} · <i>${d.r.join(', ')}</i> <button type="button" class="btn sm" data-act="goto" data-href="#/cliente/${esc(d.o.id)}" data-close>Ver</button></li>`).join('')}</ul>Si de verdad es otro cliente u otra compra, toca <b>Crear de todas formas</b>.`;
           dlg.querySelector('[data-m=ok]').textContent = 'Crear de todas formas'; box.scrollIntoView({ block: 'nearest' }); return false;
         }
-        const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0'), fechaInicio: iso(today()), cliente: v('cliente') };
+        const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), cliente: v('cliente') };
         ['dni', 'proyecto', 'unidad', 'vendedor', 'banco'].forEach(k => v(k) && (op[k] = v(k)));
         if (v('empresa') && v('empresa') !== empEnProy(op.proyecto)) { if (op.proyecto && !empEnProy(op.proyecto)) setEmpresaProyecto(op.proyecto, v('empresa')); else op.empresa = v('empresa'); } // la primera vez queda como la empresa del proyecto
         if (v('precio')) op.precio = +v('precio'); if (v('monto')) op.montoBanco = +v('monto');
@@ -3100,6 +3169,7 @@
       return go();
     }
     if (t.id === 'file' && t.files[0]) { doImport(t.files[0]); t.value = ''; }
+    if (t.id === 'restaurar-file' && t.files[0]) { if (!isAdmin()) toast(NOPERM); else restaurarRespaldo(t.files[0]); t.value = ''; }
     if (t.id === 'evfile' && t.files[0]) { loadEvolta(t.files[0], ui.evOp); t.value = ''; }
     if (t.id === 'minfile' && t.files[0]) { loadMinuta(t.files[0], ui.minOp); t.value = ''; }
   });
@@ -3144,6 +3214,7 @@
   function revisarInactividad() {
     const min = +S.params.minInactivo || 0;
     if (!CL.enabled || cloudState !== 'ready' || !min) return;
+    if (!navigator.onLine) { const av = $('#idle-aviso'); if (av) av.remove(); return; } // se retoma al volver internet
     const resta = min * 60000 - (Date.now() - ultimaActividad());
     if (resta <= 0) { const av = $('#idle-aviso'); if (av) av.remove(); idleMsg = `Tu sesión se cerró tras ${min} minuto${min > 1 ? 's' : ''} sin uso. Vuelve a entrar.`; if ($('#dlg').open) $('#dlg').close(); return CL.signOut(); }
     if (resta <= Math.min(AVISO_MS, min * 30000)) { // aviso el último minuto (o la mitad del tiempo, si es muy corto)
@@ -3156,6 +3227,17 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarInactividad(); }); // al volver de otra ventana o de la suspensión
   setInterval(revisarInactividad, 1000);
 
+  // aviso de conexión: sin internet se sigue trabajando y los cambios se suben solos al volver
+  function avisoRed() {
+    let b = $('#net-aviso');
+    if (navigator.onLine) { if (b) { b.classList.add('ok'); b.innerHTML = '✓ <b>Conexión recuperada.</b> Subiendo los cambios guardados…'; setTimeout(() => { if (navigator.onLine && b) b.remove(); }, 4000); } return; }
+    if (!b) { b = document.createElement('div'); b.id = 'net-aviso'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+    b.classList.remove('ok'); b.innerHTML = '📴 <b>Sin conexión a internet.</b> Puedes seguir trabajando: los cambios se guardan en esta computadora y se suben solos cuando vuelva la conexión. <span>Leer PDF de Evolta, capturas y enviar a Drive necesitan internet.</span>';
+  }
+  window.addEventListener('online', () => { avisoRed(); revisarInactividad(); });
+  window.addEventListener('offline', avisoRed);
+  if (!navigator.onLine) avisoRed();
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => null);
   if (!CL.enabled) { bzLocal(); dvLocal(); cgLocal(); }
   if (CL.enabled) { CL.onAuth((u) => { if (!u) { stopCloud(); cloudState = 'login'; render(); } else { marcaActividad(true); idleMsg = ''; startCloud(u.email); } }); render(); }
   else { render(); try { if (!localStorage.getItem('crm-mg-welcome')) setTimeout(showWelcome, 350); } catch (e) { } }
