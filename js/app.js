@@ -2297,6 +2297,8 @@
   const DV_LBL = { Pendiente: 'Pendiente de autorización', Programada: 'Programada y derivada a Contabilidad', Devuelta: 'Devuelta (con constancia)', Anulada: 'Anulada' };
   const DV_AUTORIZAN = ['Víctor Guevara', 'Gerente General'];
   const dvGestor = (x) => x.gestor || (x.creado || {}).por || '';
+  const dvRegTs = (x) => (x.creado || {}).ts || x.ts || null; // cuándo se digitó en el CRM
+  const dvRegFecha = (x) => { const t = dvRegTs(x); return t ? iso(new Date(t)) : ''; };
   const dvEstHtml = (x) => { const l = DV_LBL[x.estado] || x.estado || '';
     const sub = x.estado === 'Pendiente' ? `Autoriza: ${esc(x.autorizadaPor || DV_AUTORIZAN.join(' o '))}` : x.estado === 'Programada' ? `${x.fDerivada ? 'Derivada el ' + fdate(x.fDerivada) + ' · ' : ''}Cerrada` : '';
     return `<span class="badge ${DV_EST[x.estado] || ''}">${x.estado === 'Programada' ? '✔ ' : x.estado === 'Pendiente' ? '⏳ ' : ''}${esc(l)}</span>${sub ? `<div class="small muted">${sub}</div>` : ''}`; };
@@ -2373,7 +2375,7 @@
   function dvExcel(list, bajar) {
     const C = [['Código', 'codigo'], ['Fecha solicitud', 'fSolicitud', 'd'], ['Estado', x => DV_LBL[x.estado] || x.estado || ''], ['Gestiona', x => dvGestor(x)], ['Derivada a Contabilidad', 'fDerivada', 'd'], ['Cliente', 'cliente'], ['DNI', 'dni'], ['Proyecto', 'proyecto'], ['Departamento', 'unidad'], ['Distrito', 'distrito'], ['Empresa', 'empresa'], ['Importe a devolver', 'importe', 'n'], ['Penalidad al cliente', 'penalidad', 'n'], ['Motivo de la penalidad', 'motivoPenalidad'], ['Motivo', 'motivo'], ['Solicitado por', 'solicitadoPor'], ['Unidad liberada', 'fLiberacion', 'd'], ['Fecha programada', 'fProgramada', 'd'], ['Fecha de devolución', 'fDevolucion', 'd'], ['Autorizada por', 'autorizadaPor'],
       ['Banco', 'banco'], ['Tipo de cuenta', 'tipoCuenta'], ['N° de cuenta', 'cuenta'], ['CCI', 'cci'], ['Titular de la cuenta', 'titularCuenta'], ['Teléfono', 'telefono'], ['Correo', 'email'], ['Cónyuge', 'conyuge'], ['DNI cónyuge', 'dniConyuge'], ['Domicilio fiscal', 'domicilio'], ['Centro laboral', 'centroLaboral'], ['Precio departamento', 'precioDpto', 'n'], ['Precio total', 'precioTotal', 'n'], ['Observaciones', 'obs'],
-      ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || '']];
+      ['Captura de solicitud', x => x.solicitud ? 'Sí' : 'No'], ['Registrado por', x => (x.creado || {}).por || ''], ['Registrada en el CRM', x => dvRegFecha(x), 'd']];
     const data = list.map(x => { const r = {}; C.forEach(([h, k, t]) => { const v = typeof k === 'function' ? k(x) : x[k]; r[h] = !hay(v) ? '' : t === 'n' ? Number(v) : t === 'd' ? xlDate(v) : String(v); }); return r; });
     const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' });
     if (data.length) { ws['!cols'] = Object.keys(data[0]).map(k => ({ wch: /Cliente|Titular|Empresa|Domicilio|Observ/.test(k) ? 32 : Math.max(12, k.length + 2) })); ws['!autofilter'] = { ref: ws['!ref'] }; }
@@ -2406,6 +2408,7 @@
       const sumPen = DEVOLUCION.soles(pen.reduce((t, x) => t + (Number(x.penalidad) || 0), 0)) || 'S/ 0.00';
       const kpi = (n, l, c) => `<div class="kpi card ${c || ''}"><div><div class="n">${n}</div><div class="l">${l}</div></div></div>`;
       const cols = [{ h: 'Código', s: x => x.codigo, f: x => `<a href="#/devolucion/${x.id}"><b>${esc(x.codigo || '—')}</b></a>` }, { h: 'Solicitud', s: x => x.fSolicitud, f: x => fdate(x.fSolicitud) || '—' },
+        { h: 'Registrada en el CRM', s: x => dvRegTs(x) || 0, f: x => dvRegTs(x) ? `${fdate(dvRegFecha(x))}<div class="small muted">${new Date(dvRegTs(x)).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}${(x.creado || {}).por ? ' · ' + esc(x.creado.por) : ''}</div>` : '—' },
         { h: 'Cliente', s: x => x.cliente, f: x => `<a href="#/devolucion/${x.id}">${esc(x.cliente || '')}</a><div class="small muted">DNI ${esc(x.dni || '—')}</div>` }, { h: 'Proyecto · Dpto', s: x => x.proyecto, f: x => `${esc(x.proyecto || '')}${x.unidad ? ' · ' + esc(x.unidad) : ''}` },
         { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => (DEVOLUCION.soles(x.importe) || '—') + (Number(x.penalidad) > 0 ? `<div class="small txt-rojo" title="${esc(x.motivoPenalidad || '')}">Penalidad ${DEVOLUCION.soles(x.penalidad)}</div>` : '') }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
         { h: 'Gestiona', s: x => dvGestor(x), f: x => dvGestor(x) ? `<span class="dv-ges"><span class="avatar sm">${initials(dvGestor(x))}</span>${esc(dvGestor(x))}</span>` : '<span class="badge amar plain">Sin asignar</span>' },
