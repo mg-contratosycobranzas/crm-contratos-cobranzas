@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -489,7 +489,7 @@
     const gauge = (pct, meta, big, label, sub) => { const v = Math.max(0, Math.min(100, Number(pct) || 0)), R = 38, C = 2 * Math.PI * R; return `<div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" stroke-linecap="round" stroke-dasharray="${v / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${gcol(v, meta)}"/><text x="50" y="56" text-anchor="middle" class="g-big">${big}</text></svg><div><b>${label}</b><span class="small muted">${sub}</span><span class="small" style="color:${gcol(v, meta)}">${v >= meta ? '✔ Meta cumplida' : 'Meta: ' + meta + '%'}</span></div></div>`; };
     const ins = insights(all, abiertos, venc, Pm);
     const apps = homeApps(crit.length, venc.length);
-    return `<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} 👋</h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p><p class="motiva">${esc(motivaHoy())}</p></div>
+    return `${respaldoAviso()}<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} 👋</h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p><p class="motiva">${esc(motivaHoy())}</p></div>
       <div class="apps">${apps}</div></div>
     <h2 class="sec">Resultados del área ${tip('Eficacia: de lo que ya debía estar terminado, cuánto se terminó. Eficiencia: plazo previsto ÷ días reales de cada caso cerrado. Productividad = eficacia × eficiencia. Basado en ISO 9000 y en la fórmula de Gutiérrez Pulido. Las metas se cambian en Configurar.')}</h2>
     <div class="grid three gauges">${gauge(Pm.eficacia, S.params.metaEficacia, (Pm.eficacia === '' ? '—' : Math.round(Pm.eficacia) + '%'), 'Eficacia', '¿Se terminó lo que tocaba?')}${gauge(Pm.eficiencia, S.params.metaEficiencia, (Pm.eficiencia === '' ? '—' : Math.round(Pm.eficiencia) + '%'), 'Eficiencia', '¿Con cuánto tiempo?')}${gauge(Pm.productividad, metaProd(), (Pm.productividad === '' ? '—' : Math.round(Pm.productividad) + '%'), 'Productividad', `eficacia × eficiencia · meta ${metaProd()} %`)}</div>
@@ -811,6 +811,7 @@
   /* ---- Tiempos y efectividad: cuánto tarda cada tramo (banco, notaría, abogado, equipo interno),
      contra una meta, en días hábiles y descontando lo que se esperó al cliente. Con Excel e informe PDF. ---- */
   const TRAMOS = {
+    cob: { ini: 'cob_fInicio', fin: 'cob_fCulm', meta: 'metaCob', l: 'Cobranza de la inicial', c: 'Asistente de cobranza', quien: o => [o.cob_asistente] },
     val: { ini: 'con_fAsignacion', fin: 'con_fValidacion', meta: 'metaVal', l: 'Validación legal (interno)', c: 'Asistente legal', quien: o => [o.con_asistente] },
     ban: { ini: 'fRecibeBanco', fin: 'con_fLlegaNotaria', meta: 'metaBan', l: 'Banco → notaría', c: 'Ejecutivo de banco', pausa: 'con_banPausa', obs: 'con_banObs', quien: o => [o.banco, o.ejecBanco] },
     not: { ini: 'con_fLlegaNotaria', fin: 'con_fFirmaCliente', meta: 'metaNot', l: 'Notaría → firma del cliente', c: 'Notaría', pausa: 'con_notPausa', obs: 'con_notObs', quien: o => [o.con_notaria] },
@@ -884,6 +885,18 @@
     });
     return out;
   }
+  // cartas de aprobación del banco que vencen en 15 días o menos (o ya vencieron) y el cliente aún no tiene desembolso
+  function cartasPorVencer(base) {
+    const hoy = today(), lim = iso(CRM.addDays(hoy, 15));
+    return (base || rows().map(r => r.o)).filter(o => o.cob_vencCarta && !o.fin_fDesembolso && o.cob_vencCarta <= lim).map(o => ({ o, dias: diff(pd(o.cob_vencCarta), hoy) })).sort((a, b) => a.dias - b.dias);
+  }
+  const compKey = (p) => { const n = String(p.operacion || '').replace(/\D/g, ''); return n.length >= 4 ? n + '|' + Math.round((Number(p.monto) || 0) * 100) : ''; };
+  // el mismo N° de operación y monto en dos clientes (o dos veces en el mismo): posible comprobante duplicado
+  function comprobantesRepetidos() {
+    const m = new Map();
+    S.ops.forEach(o => ((o.evolta || {}).pagos || []).forEach(p => { const k = compKey(p); if (!k) return; if (!m.has(k)) m.set(k, []); m.get(k).push({ o, p }); }));
+    return [...m.values()].filter(L => L.length > 1);
+  }
   function tpFaltan(base) {
     const B = base || tpBase();
     return [[B.filter(o => o.ejecBanco && !o.fRecibeBanco).length, 'tiene', 'tienen', 'ejecutivo de banco pero no la fecha en que recibió el caso'],
@@ -941,14 +954,16 @@
         ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(b => [b, b]))}${sel('fin', 'Todo financiamiento', [['bono', 'Con bono MiVivienda'], ['sinbono', 'Sin bono']])}
         ${sel('foco', 'Informe: todos', [...uniq(o => o.banco).map(b => ['b:' + b, 'Informe del banco ' + b]), ...uniq(o => o.con_notaria).map(n => ['n:' + n, 'Informe de ' + n])])}
         ${F.desde || F.hasta || F.banco || F.fin || F.foco ? '<button class="btn sm" data-act="tp-limpiar">Quitar filtros</button>' : ''}</div>
-      <div class="kpis ops-kpis">${['ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
+      <div class="kpis ops-kpis">${['cob', 'ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
       ${prodExplicaHtml(false)}
       ${cicloCard(base)}
-      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
-        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
+      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
+        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
           <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
           <label class="f" style="grid-column:1/-1">Feriados o días no laborables adicionales <input type="text" data-pt="feriadosExtra" value="${esc(P.feriadosExtra || '')}" placeholder="Ej.: 02/01/2026, 26/12/2026"><span class="small">Los feriados nacionales del Perú (incluidos Jueves y Viernes Santo) ya se descuentan solos.</span></label></div></details>
+      ${(() => { const C = cartasPorVencer(base); return C.length ? `<div class="ev-falta tp-avisos" style="background:var(--rojo-bg);color:var(--rojo)"><b>📄 Cartas de aprobación por vencer (${C.length}):</b> ${C.slice(0, 8).map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> ${x.dias < 0 ? `venció hace ${-x.dias} d` : x.dias === 0 ? 'vence hoy' : `vence en ${x.dias} d`}`).join(' · ')}${C.length > 8 ? ` · y ${C.length - 8} más` : ''}</div>` : ''; })()}
       ${falt.length || probl.length ? `<div class="ev-falta tp-avisos">${falt.length ? `<b>Faltan datos para medir:</b> ${falt.join(' · ')}.` : ''}${probl.length ? `${falt.length ? '<br>' : ''}<b>Fechas a revisar (${probl.length}):</b> ${probl.slice(0, 8).map(p => `<a href="#/cliente/${p.o.id}">${esc(p.o.cliente || p.o.id)}</a> — ${esc(p.txt)}`).join(' · ')}${probl.length > 8 ? ` · y ${probl.length - 8} más (ver Excel)` : ''}` : ''}</div>` : ''}
+      ${card('💵 Cobranza de la inicial', 'Desde el inicio de la cobranza hasta que se recibe toda la inicial', tabla('tp-cob', 'cob', ['Asistente de cobranza'], false, 'Aún no hay clientes con fecha de inicio de cobranza.'))}
       ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
       ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
       ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
@@ -965,7 +980,7 @@
     const fila = (s) => ({ Casos: s.n, Terminados: s.hechos, [`Mediana (${U})`]: s.mediana ?? '', Promedio: s.promedio ?? '', 'Más rápido': s.min ?? '', 'Más lento': s.max ?? '', [`Meta (${U})`]: s.meta ?? '', 'EFICACIA %': s.eficacia ?? '', 'EFICIENCIA %': s.eficiencia ?? '', 'PRODUCTIVIDAD %': s.productividad ?? '', '% en meta': s.enMeta ?? '', 'En curso': s.curso, 'Vencidos en curso': s.vencidos, 'Por vencer': s.porVencer, 'Obs. promedio por caso': s.obsProm ?? '', '% sin observaciones': s.sinObs ?? '', [`Pocos casos (<${MIN_CASOS})`]: s.pocos ? 'Sí' : '' });
     add('Resumen', Object.keys(TRAMOS).map(k => ({ Tramo: TRAMOS[k].l, ...fila(tpStats(tpCasos(k, base))) })));
     const grp = (name, k, heads) => add(name, tpGrupos(k, base).map(g => ({ ...Object.fromEntries(heads.map((h, i) => [h, g.ks[i] || '(sin registrar)'])), ...fila(g.s) })));
-    grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
+    grp('Cobranza', 'cob', ['Asistente de cobranza']); grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
     grp('Validación legal', 'val', ['Asistente legal']); grp('Firma RL', 'rl', ['Empresa']); grp('Desembolso', 'des', ['Banco']);
     add('Motivos de demora', tpMotivos(base).map(m => ({ Motivo: m.motivo, Casos: m.n, '%': m.pct, '% acumulado': m.acum, 'Fuera de meta': m.fuera })));
     const T = tpTendencia(base); add('Tendencia', T.filas.map(f => ({ Tramo: f.l, ...Object.fromEntries(T.meses.flatMap((m, i) => [[`${mesTxt(m)} mediana`, f.cel[i].med ?? ''], [`${mesTxt(m)} % meta`, f.cel[i].ok ?? ''], [`${mesTxt(m)} casos`, f.cel[i].n]])) })));
@@ -994,10 +1009,10 @@
     const periodo = F.desde || F.hasta ? `${F.desde ? mesTxt(F.desde) : 'Inicio'} – ${F.hasta ? mesTxt(F.hasta) : 'hoy'}` : 'Todo el historial';
     const filtros = [F.banco && 'Banco ' + F.banco, F.fin && (F.fin === 'bono' ? 'Con bono MiVivienda' : 'Sin bono'), ui.proy && 'Proyecto ' + ui.proy].filter(Boolean).join(' · ');
     // indicador global: todos los tramos menos "abogado" (es parte del tramo de notaría y lo contaría dos veces)
-    const glob = prodDe(['val', 'ban', 'not', 'rl', 'des'].flatMap(k => tpCasos(k, base).map(x => ({ cerrado: !x.t.enCurso, dias: x.t.dias, meta: x.t.meta, vencido: x.t.sem === 'rojo' }))));
+    const glob = prodDe(['cob', 'val', 'ban', 'not', 'rl', 'des'].flatMap(k => tpCasos(k, base).map(x => ({ cerrado: !x.t.enCurso, dias: x.t.dias, meta: x.t.meta, vencido: x.t.sem === 'rojo' }))));
     const dona = (v, m, l, q) => { const R = 44, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, v || 0));
       return `<div class="g"><svg viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="${R}" fill="none" stroke="#e7ecea" stroke-width="12"/><circle cx="55" cy="55" r="${R}" fill="none" stroke="${col(v, m)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${p / 100 * C} ${C}" transform="rotate(-90 55 55)"/><text x="55" y="61" text-anchor="middle" font-size="22" font-weight="700" fill="#17302d">${v == null ? '—' : v + '%'}</text></svg><b>${l}</b><span>${q}</span><em style="color:${col(v, m)}">${v == null ? 'Sin datos' : v >= m ? '✔ Cumple la meta' : 'Meta ' + m + '%'}</em></div>`; };
-    const tr = ['ban', 'not', 'abo', 'val', 'rl', 'des'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
+    const tr = ['cob', 'ban', 'not', 'abo', 'val', 'rl', 'des'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
     const barras = tr.map(({ k, s }) => `<div class="tr"><span class="tl">${esc(TRAMOS[k].l.replace(' (interno)', ''))}${/interno/.test(TRAMOS[k].l) ? ' <i>interno</i>' : ''}</span><div class="tb"><i style="width:${s.productividad ?? 0}%;background:${col(s.productividad, mP)}"></i><u style="left:${mP}%"></u></div><b style="color:${col(s.productividad, mP)}">${s.productividad == null ? '—' : s.productividad + '%'}</b><small>${s.mediana == null ? '' : s.mediana + ' d'}</small></div>`).join('');
     // destacados y a mejorar (solo grupos con casos suficientes)
     const lideres = [['ban', 'Ejecutivo de banco'], ['not', 'Notaría'], ['abo', 'Abogado']].map(([k, l]) => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.productividad != null).sort((a, b) => b.s.productividad - a.s.productividad); return { l, mej: G[0], peor: G.length > 1 ? G[G.length - 1] : null }; }).filter(x => x.mej);
@@ -1007,6 +1022,7 @@
     const venc = tr.filter(x => x.k !== 'abo').reduce((t, x) => t + x.s.vencidos, 0), mot = tpMotivos(base), CG = cargaDatos(), sobre = CG.filas.filter(f => f.estado === 'alta');
     const largo = C.suma ? [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0] : null;
     const alertas = [
+      (() => { const C = cartasPorVencer(base); return C.length ? ['📄', `<b>${C.length} carta${C.length > 1 ? 's' : ''} de aprobación</b> vence${C.length > 1 ? 'n' : ''} en 15 días o menos sin desembolso.`] : null; })(),
       venc ? ['🔴', `<b>${venc} casos abiertos</b> superaron su meta de tiempo.`] : ['🟢', 'No hay casos abiertos fuera de meta.'],
       mot.length ? ['🔎', `Principal causa de demora: <b>${esc(mot[0].motivo)}</b> (${mot[0].pct}%).`] : null,
       largo && largo.med ? ['⏱️', `Tramo más largo del ciclo: <b>${esc(largo.de)} → ${esc(largo.a)}</b> (${Math.round(largo.med * 100 / C.suma)}%).`] : null,
@@ -1063,7 +1079,7 @@
     const pctTxt = (p, meta) => p == null ? '—' : `<span class="b ${{ verde: 'v', amar: 'a', rojo: 'r' }[prodColor(p, meta ?? 80)]}">${p}%</span>`;
     const mE = +P.metaEficacia, mI = +P.metaEficiencia, mP = metaProd();
     const res = Object.keys(TRAMOS).map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
-    const top = res.filter(x => ['ban', 'not', 'abo', 'rl'].includes(x.k));
+    const top = res.filter(x => ['cob', 'ban', 'not', 'rl'].includes(x.k));
     const barras = (k, heads) => { const G = tpGrupos(k, base).filter(g => g.s.mediana != null), mx = Math.max(1, ...G.map(g => Math.max(g.s.mediana, g.s.meta || 0)));
       if (!G.length) return '<p class="m">Sin casos terminados en este tramo.</p>';
       return `<table><thead><tr>${heads.map(h => `<th>${h}</th>`).join('')}<th>Mediana vs. meta (${U})</th><th class="r">Casos</th><th class="r">Eficacia</th><th class="r">Eficiencia</th><th class="r">Productividad</th><th class="r">En curso</th></tr></thead><tbody>${G.map(g => `<tr>${heads.map((h, i) => `<td>${esc(g.ks[i] || '(sin registrar)')}</td>`).join('')}<td style="width:26%"><div class="bar"><i class="${g.s.meta && g.s.mediana > g.s.meta ? 'r' : 'v'}" style="width:${g.s.mediana * 100 / mx}%"></i>${g.s.meta ? `<u style="left:${g.s.meta * 100 / mx}%"></u>` : ''}</div><small>${g.s.mediana}${g.s.pocos ? ' · pocos casos' : ''}</small></td><td class="r">${g.s.hechos}</td><td class="r">${pctTxt(g.s.eficacia, mE)}</td><td class="r">${pctTxt(g.s.eficiencia, mI)}</td><td class="r"><b>${pctTxt(g.s.productividad, mP)}</b></td><td class="r">${g.s.curso}${g.s.vencidos ? ` (${g.s.vencidos} venc.)` : ''}</td></tr>`).join('')}</tbody></table>`; };
@@ -1096,6 +1112,7 @@
       ${sec('Indicadores principales', `<div class="kp">${top.map(({ k, s }) => `<div><small>${esc(TRAMOS[k].l)}</small><b>${s.productividad == null ? '—' : pctTxt(s.productividad, mP)}</b><small>productividad · eficacia ${s.eficacia ?? '—'}% × eficiencia ${s.eficiencia ?? '—'}% · mediana ${s.mediana ?? '—'} ${U}</small></div>`).join('')}</div>`)}
       ${(() => { const C = cicloResumen(base); if (!C.segs.some(x => x.n)) return ''; return sec('Ciclo completo de la venta', `<p>Mediana de la venta al desembolso: <b>${C.desemb.med ?? '—'} ${U}</b> (${C.desemb.n} casos) · a la inscripción: <b>${C.insc.med ?? '—'} ${U}</b> (${C.insc.n} casos).</p><div style="display:flex;height:22px;border-radius:5px;overflow:hidden;margin:6px 0">${C.segs.filter(x => x.med).map(x => `<div style="flex:${x.med};background:${CICLO_COL[x.i]};color:#fff;font-size:10px;display:grid;place-items:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${x.med}</div>`).join('')}</div><table><tbody>${C.segs.map(x => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${CICLO_COL[x.i]};-webkit-print-color-adjust:exact;print-color-adjust:exact"></span> ${esc(x.de)} → ${esc(x.a)}</td><td class="r"><b>${x.med ?? '—'}</b> ${U}</td><td class="r">${x.med && C.suma ? Math.round(x.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${x.n} casos</td></tr>`).join('')}</tbody></table>`); })()}
       ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
+      ${sec('Cobranza de la inicial · por asistente', barras('cob', ['Asistente de cobranza']))}
       ${sec('Ejecutivos de banco · banco → notaría', barras('ban', ['Banco', 'Ejecutivo']))}
       ${sec('Notarías · llegada → firma del cliente', barras('not', ['Notaría']))}
       ${sec('Abogados de notaría · asignación → firma del cliente', barras('abo', ['Notaría', 'Abogado']))}
@@ -1149,8 +1166,10 @@
   function faltaHtml() {
     const Q = calidadDatos(), yo = Q.filas.find(f => f.name === S.actor);
     if (isJefe()) {
+      const CR = comprobantesRepetidos();
+      const crHtml = CR.length ? `<h2 class="sec">⚠️ Comprobantes de pago repetidos <span class="badge rojo plain">${CR.length}</span></h2><div class="card"><div class="card-b">${CR.slice(0, 8).map(L => `<div class="agrow"><div><b>Operación N° ${esc(L[0].p.operacion)}</b> · ${money(L[0].p.monto)} <span class="small muted">${esc(L[0].p.entidad || '')}</span><div class="small">${L.map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> (${esc(x.p.fecha || '')})`).join(' · ')}</div></div></div>`).join('')}</div></div>` : '';
       const pend = Q.filas.filter(f => f.items.length);
-      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>`;
+      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>` + crHtml;
     }
     if (!yo || !yo.req) return '';
     const porCli = new Map(); yo.items.forEach(x => { if (!porCli.has(x.o.id)) porCli.set(x.o.id, { o: x.o, L: [] }); porCli.get(x.o.id).L.push(x); });
@@ -1970,6 +1989,8 @@
     const body = `<p>${op ? `Se actualizará <b>${esc(op.cliente)}</b> (${op.id}).` : `No hay un cliente con DNI ${esc(fields.dni || '—')}: se creará <b>${esc(fields.cliente)}</b>.`} Estado de cuenta consultado el ${fdate(info.consulta) || '—'}.</p>
       ${rows.length ? `<p class="small muted">Desmarca lo que no quieras cambiar:</p><div class="ev-tw"><table class="ev-t"><thead><tr><th></th><th>Campo</th>${op ? '<th>Ahora</th>' : ''}<th>Del PDF</th></tr></thead><tbody>${rows.map(x => `<tr><td><input type="checkbox" data-evk="${x.k}" checked></td><td>${esc(lbl(x.k))}</td>${op ? `<td class="muted">${esc(fmtVal(x.k, x.cur))}</td>` : ''}<td><b>${esc(fmtVal(x.k, x.nuevo))}</b></td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">Los datos del PDF ya coinciden con el CRM.</p>'}
       <p class="small">Además se guardan el cronograma (${info.cronograma.length} cuotas), los pagos registrados (${info.pagos.length}) y lo pagado / por pagar.</p>
+      ${(() => { const rep = info.pagos.map(p => ({ p, otros: S.ops.filter(x => (!op || x.id !== op.id) && ((x.evolta || {}).pagos || []).some(q => compKey(q) && compKey(q) === compKey(p))) })).filter(x => x.otros.length);
+        return rep.length ? `<div class="ev-falta" style="background:var(--rojo-bg);color:var(--rojo)"><b>⚠️ Comprobante de pago repetido:</b> ${rep.map(x => `operación N° ${esc(x.p.operacion)} por ${money(x.p.monto)} (${esc(x.p.fecha || '')}) ya figura en ${x.otros.map(o => `<b>${esc(o.cliente)}</b> (${o.id})`).join(', ')}`).join(' · ')}. Revísalo antes de continuar.</div>` : ''; })()}
       ${faltan.length ? `<div class="ev-falta"><b>Quedarán por completar a mano:</b> ${faltan.map(esc).join(' · ')}</div>` : ''}`;
     modal({ title: 'Cargar estado de cuenta Evolta', ok: op ? 'Actualizar' : 'Crear cliente', body, onOk: (dlg) => {
       const pick = keys.filter(k => { const c = dlg.querySelector(`[data-evk="${k}"]`); return !c || c.checked; });
@@ -2055,7 +2076,8 @@
         <div class="f-grid" style="grid-template-columns:1fr 2.4fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input data-pdir="${esc(p)}" value="${esc(dirEnProy(p))}" placeholder="Ej.: Av. La Paz N° 839, Distrito de San Miguel, Provincia y Departamento de Lima" ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
         <div><button class="btn pri" data-act="export-xlsx">Exportar a Excel (por etapa y por usuario)</button></div>
-        <div><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
+        <div><button class="btn pri" data-act="respaldo-completo">🛡️ Respaldo completo (.json + Excel)</button> <span class="small muted">${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} · ${esc(S.params.ultimoRespaldo.por || '')}` : 'Aún no hay respaldo'} · se recomienda cada quincena (días 1 y 16)</span></div>
+        <div style="margin-top:8px"><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
         <div><button class="btn" data-act="import">Importar Excel original o respaldo…</button><input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden></div>
         <div><button class="btn danger" data-act="reset">Volver a los datos del repositorio</button></div>
         <p class="small muted" style="margin:0">Los cambios se guardan en este navegador. Para compartirlos con el equipo, descarga <b>operaciones.js</b> y súbelo a la carpeta <code>data/</code> del repositorio (ver README).</p></div></div>
@@ -2379,6 +2401,8 @@
     if (!hay(d.cuenta) && !hay(d.cci)) falta.push('la cuenta o el CCI');
     if (falta.length) return toast('Falta completar: ' + falta.join(', '));
     if (hay(d.cci) && String(d.cci).replace(/\D/g, '').length !== 20 && !await ask('El CCI no tiene 20 dígitos. ¿Guardar igual?', 'Guardar igual')) return;
+    const dup = DV.find(x => x.id !== d.id && x.estado !== 'Anulada' && ((hay(d.dni) && String(x.dni || '').trim() === String(d.dni).trim() && String(x.unidad || '').trim().toUpperCase() === String(d.unidad || '').trim().toUpperCase()) || (hay(d.cci) && String(x.cci || '').replace(/\D/g, '') === String(d.cci).replace(/\D/g, '') && Number(x.importe) === Number(String(d.importe).replace(/[^\d.]/g, '')))));
+    if (dup && d.nuevo && !await ask(`⚠️ Ya existe la devolución ${dup.codigo || ''} de ${dup.cliente || ''} (${dup.proyecto || ''} ${dup.unidad || ''}, ${DEVOLUCION.soles(dup.importe)}, ${DV_LBL[dup.estado] || dup.estado}). ¿Registrar otra de todas formas?`, 'Registrar otra')) return;
     if (!d.solicitud && !await ask('No adjuntaste la captura del correo de solicitud, que es el sustento de la devolución. ¿Guardar sin ella?', 'Guardar sin captura')) return;
     ['importe', 'precioDpto', 'precioTotal', 'penalidad'].forEach(k => { if (hay(d[k])) d[k] = Number(String(d[k]).replace(/[^\d.]/g, '')) || 0; });
     if (!hay(d.gestor)) d.gestor = dvGestor(d) || S.actor || '';
@@ -2857,6 +2881,27 @@
       { Indicador: 'Alcance', Definición: 'Los indicadores solo usan expedientes con fechas registradas. Las acciones registradas empiezan a contarse desde que el equipo trabaja en el CRM.', 'Cómo leerlo': 'La hoja "Procesos" permite armar tablas dinámicas propias.' }]);
     XLSX.writeFile(wb, `CRM_Procesos_Indicadores_${iso(today())}.xlsx`, { cellDates: true }); toast('Excel generado');
   }
+  // respaldo completo: un archivo para restaurar el CRM (.json) y un Excel que se abre en cualquier computadora
+  const inicioQuincena = () => { const t = today(); return iso(new Date(t.getFullYear(), t.getMonth(), t.getDate() >= 16 ? 16 : 1)); };
+  const respaldoPendiente = () => { const u = S.params.ultimoRespaldo || {}; return !u.fecha || u.fecha < inicioQuincena(); };
+  function respaldoCompleto() {
+    if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel.');
+    const f = iso(today()), info = { generado: new Date().toISOString(), por: S.actor || '', nota: 'Respaldo completo del CRM de Contratos y Cobranzas' };
+    download(`Respaldo_CRM_${f}.json`, JSON.stringify({ ...snapshot(), devoluciones: DV, cargos: CG, respaldo: info }), 'application/json');
+    const wb = XLSX.utils.book_new(), add = (n, d) => { const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); if (d.length) ws['!autofilter'] = { ref: ws['!ref'] }; XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31)); };
+    const campos = Object.values(FIELDS).flat(), val = (v) => v == null ? '' : typeof v === 'object' ? JSON.stringify(v).slice(0, 30000) : v;
+    add('Léame', [{ Dato: 'Generado', Valor: new Date().toLocaleString('es-PE') }, { Dato: 'Por', Valor: S.actor || '' }, { Dato: 'Clientes', Valor: S.ops.length }, { Dato: 'Devoluciones', Valor: DV.length }, { Dato: 'Actas y cargos', Valor: CG.length },
+      { Dato: 'Para restaurar', Valor: 'El archivo .json del mismo día se carga en Configurar → Importar respaldo. Este Excel se puede abrir en cualquier computadora aunque el CRM no esté disponible.' }]);
+    add('Clientes', S.ops.map(o => { const x = { ID: o.id }; campos.forEach(c => { x[c.l] = val(o[c.k]); }); return x; }));
+    add('Seguimientos', S.seguimientos.map(x => ({ Fecha: x.ts ? new Date(x.ts).toLocaleString('es-PE') : '', Cliente: (getOp(x.opId) || {}).cliente || x.opId, Tipo: x.tipo || '', Detalle: x.nota || '', 'Próxima acción': x.proxima || '', Compromiso: x.fCompromiso || '', Usuario: x.usuario || '' })));
+    try { const dw = dvExcel(DV, false); XLSX.utils.book_append_sheet(wb, dw.Sheets[dw.SheetNames[0]], 'Devoluciones'); } catch (e) { }
+    add('Actas y cargos', CG.map(c => { const x = {}; Object.entries(c).forEach(([k, v]) => { if (typeof v !== 'object' && !String(v).startsWith('data:')) x[k] = v; }); return x; }));
+    add('Equipo', S.users.map(u => ({ Nombre: u.name, Rol: u.rol || '', Etapa: STAGE[u.stage] ? STAGE[u.stage].name : 'Jefatura', Correo: u.email || '', Administrador: u.admin ? 'Sí' : '' })));
+    XLSX.writeFile(wb, `Respaldo_CRM_${f}.xlsx`, { cellDates: true });
+    S.params.ultimoRespaldo = { fecha: f, por: S.actor || '' }; commit(); render(true);
+    toast('✓ Respaldo descargado: guarda los 2 archivos en tu computadora y en Google Drive');
+  }
+  const respaldoAviso = () => !isJefe() || !respaldoPendiente() ? '' : `<div class="dv-aviso">🛡️ <span><b>Respaldo de la quincena pendiente.</b> Descarga el respaldo completo del CRM (clientes, seguimientos, devoluciones y actas) y guárdalo en tu computadora y en Google Drive. ${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} por ${esc(S.params.ultimoRespaldo.por || '')}.` : 'Aún no se ha hecho ninguno.'}</span><button class="btn sm pri" data-act="respaldo-completo">Descargar respaldo</button></div>`;
   const snapshot = () => ({ version: new Date().toISOString(), ops: S.ops, seguimientos: S.seguimientos, log: S.log, params: S.params, users: S.users, perms: S.perms, adminPin: S.adminPin });
   async function doImport(file) {
     try {
@@ -2985,6 +3030,7 @@
     if (a === 'tomar') { const st = STAGE[user(el.dataset.u).stage]; setField(el.dataset.op, st.ownerKey, el.dataset.u); toast('Expediente asignado a ' + el.dataset.u, () => { setField(el.dataset.op, st.ownerKey, ''); render(true); }); return render(true); }
     if (a === 'seg-done') { const s = S.seguimientos.find(x => x.id === el.dataset.id); if (s) { s.resuelto = true; if (CL.enabled) CL.updateDoc('seguimientos', s.id, { resuelto: true }); save(); toast('Seguimiento cumplido'); render(true); } return; }
     if (a === 'export-xlsx') return exportModal();
+    if (a === 'respaldo-completo') return respaldoCompleto();
     if (a === 'export-json') return download(`respaldo_crm_${iso(today())}.json`, JSON.stringify(snapshot(), null, 1), 'application/json');
     if (a === 'export-js') { download('operaciones.js', 'window.CRM_DATA = ' + JSON.stringify(snapshot()) + ';\n', 'text/javascript'); return toast('Sube este archivo a la carpeta data/ del repositorio'); }
     if (a === 'import') return $('#file').click();
