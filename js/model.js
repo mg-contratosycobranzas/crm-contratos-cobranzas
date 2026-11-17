@@ -66,6 +66,10 @@
       { k: 'con_fValidacion', l: 'Fecha de validación', t: 'date' },
       { k: 'con_actDocs', l: 'Actualización de documentos', t: 'select', o: ['SI APLICA', 'NO APLICA'] },
       { k: 'con_clausula', l: 'Cláusula enviada (digital)', t: 'select', o: ['SI', 'NO', 'EN PROCESO'] },
+      { k: 'con_clEnvComercial', l: 'Cláusula enviada al equipo comercial', t: 'date' }, { k: 'con_clDevComercial', l: 'Cláusula firmada por el cliente y devuelta por comercial', t: 'date' },
+      { k: 'con_clEnvBanco', l: 'Cláusula enviada al banco', t: 'date' }, { k: 'con_clObsBanco', l: 'Observaciones del banco a la cláusula', t: 'text' },
+      { k: 'con_clObsLevantada', l: 'Observación del banco levantada', t: 'date' }, { k: 'con_fIngresoNotariaDesemb', l: 'File de desembolso ingresado a notaría', t: 'date' },
+      { k: 'con_clFechasOk', l: 'Fechas de la cláusula confirmadas', t: 'select', o: ['Sí', 'No, por confirmar'] }, { k: 'con_clObs', l: 'Observaciones de la cláusula (fechas a confirmar, cambios)', t: 'textarea', w: 2 },
       { k: 'con_docsNotaria', l: 'Documentos a notaría', t: 'select', o: ['ENVIADOS', 'PENDIENTES', 'INCOMPLETOS'] },
       { k: 'con_fInicioFirmas', l: 'Fecha envío de minuta (inicio firmas)', t: 'date' },
       { k: 'con_cheque', l: 'Cheque en CRM Evolta', t: 'select', o: YN },
@@ -142,7 +146,7 @@
   const NUM_KEYS = new Set();
   Object.values(FIELDS).forEach(a => a.forEach(f => { if (f.t === 'number') NUM_KEYS.add(f.k); }));
 
-  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, metaVal: 3, metaBan: 15, metaNot: 10, metaAbo: 10, metaRl: 3, metaDes: 15, metaDev: 5, metaCob: 5, ultimoRespaldo: '', diasHabiles: 1, feriadosExtra: '', topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
+  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, metaVal: 3, metaBan: 15, metaNot: 10, metaAbo: 10, metaRl: 3, metaDes: 15, metaDev: 5, metaCob: 5, metaClCom: 5, metaClBan: 10, metaDnot: 3, ultimoRespaldo: '', diasHabiles: 1, feriadosExtra: '', topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
   const DEFAULT_USERS = [
     { name: 'Milagros Valles', stage: JEFATURA, rol: 'Jefa de Administración de Contratos y Cobranzas', admin: true },
     { name: 'Jonathan', stage: 'cob', rol: 'Asistente de Cobranza' },

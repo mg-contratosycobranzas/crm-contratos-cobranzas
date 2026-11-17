@@ -821,6 +821,9 @@
   /* ---- Tiempos y efectividad: cuánto tarda cada tramo (banco, notaría, abogado, equipo interno),
      contra una meta, en días hábiles y descontando lo que se esperó al cliente. Con Excel e informe PDF. ---- */
   const TRAMOS = {
+    clc: { ini: 'con_clEnvComercial', fin: 'con_clDevComercial', meta: 'metaClCom', l: 'Comercial: firma de la cláusula por el cliente', c: 'Ejecutivo de ventas', quien: o => [o.vendedor] },
+    clb: { ini: 'con_clEnvBanco', fin: 'fin_fDesembolso', meta: 'metaClBan', l: 'Banco: cláusula → desembolso', c: 'Banco', quien: o => [o.banco] },
+    dnot: { ini: 'fin_fDesembolso', fin: 'con_fIngresoNotariaDesemb', meta: 'metaDnot', l: 'Desembolso → file en notaría', c: 'Notaría', quien: o => [o.con_notaria] },
     cob: { ini: 'cob_fInicio', fin: 'cob_fCulm', meta: 'metaCob', l: 'Cobranza de la inicial', c: 'Asistente de cobranza', quien: o => [o.cob_asistente] },
     val: { ini: 'con_fAsignacion', fin: 'con_fValidacion', meta: 'metaVal', l: 'Validación legal (interno)', c: 'Asistente legal', quien: o => [o.con_asistente] },
     ban: { ini: 'fRecibeBanco', fin: 'con_fLlegaNotaria', meta: 'metaBan', l: 'Banco → notaría', c: 'Ejecutivo de banco', pausa: 'con_banPausa', obs: 'con_banObs', quien: o => [o.banco, o.ejecBanco] },
@@ -967,8 +970,8 @@
       <div class="kpis ops-kpis">${['cob', 'ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
       ${prodExplicaHtml(false)}
       ${cicloCard(base)}
-      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
-        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
+      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Cláusula comercial ${P.metaClCom} · Cláusula banco ${P.metaClBan} · Desembolso → notaría ${P.metaDnot} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
+        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaClCom', 'Comercial: firma de la cláusula')}${mf('metaClBan', 'Banco: cláusula → desembolso')}${mf('metaDnot', 'Desembolso → file en notaría')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
           <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
           <label class="f" style="grid-column:1/-1">Feriados o días no laborables adicionales <input type="text" data-pt="feriadosExtra" value="${esc(P.feriadosExtra || '')}" placeholder="Ej.: 02/01/2026, 26/12/2026"><span class="small">Los feriados nacionales del Perú (incluidos Jueves y Viernes Santo) ya se descuentan solos.</span></label></div></details>
       ${(() => { const C = cartasPorVencer(base); return C.length ? `<div class="ev-falta tp-avisos" style="background:var(--rojo-bg);color:var(--rojo)"><b>📄 Cartas de aprobación por vencer (${C.length}):</b> ${C.slice(0, 8).map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> ${x.dias < 0 ? `venció hace ${-x.dias} d` : x.dias === 0 ? 'vence hoy' : `vence en ${x.dias} d`}`).join(' · ')}${C.length > 8 ? ` · y ${C.length - 8} más` : ''}</div>` : ''; })()}
@@ -977,6 +980,9 @@
       ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
       ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
       ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
+      ${card('📝 Cláusula: firma de los clientes (comercial)', 'Desde que se envía la cláusula a comercial hasta que la devuelve firmada por el cliente', tabla('tp-clc', 'clc', ['Ejecutivo de ventas'], false, 'Aún no hay cláusulas con fecha de envío a comercial.'))}
+      ${card('🏦 Cláusula en el banco → desembolso', 'Desde que se envía la cláusula al banco hasta el desembolso', tabla('tp-clb', 'clb', ['Banco'], false, 'Aún no hay cláusulas con fecha de envío al banco.'))}
+      ${card('📂 Desembolso → file en notaría', 'Desde el desembolso hasta que el file de desembolso ingresa a notaría', tabla('tp-dnot', 'dnot', ['Notaría'], false, 'Aún no hay desembolsos con fecha.'))}
       ${card('👥 Equipo interno', 'Validación legal y firma del representante legal: lo que depende de nosotros', `<div class="ops-tw">${tbl('tp-val', colsDe(['Asistente legal']), tpGrupos('val', base), 'Sin casos con fecha de asignación y validación.')}</div><div class="ops-tw">${tbl('tp-rl', colsDe(['Empresa (firma RL)']), tpGrupos('rl', base), 'Sin casos con firma del cliente.')}</div>`)}
       ${card('💰 Desembolso', 'Desde la firma del representante legal hasta el desembolso del banco', tabla('tp-des', 'des', ['Banco'], false, 'Sin casos con firma del representante legal.'))}
       ${card('🔎 Motivos de demora', 'Dónde se pierde el tiempo: las primeras filas explican la mayoría de los retrasos', mot.length ? `<div class="ops-tw"><table><thead><tr><th>Motivo</th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th><th class="r">Fuera de meta</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}<div class="tp-bar"><i style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td><td class="r">${m.fuera}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Aún no hay motivos de demora registrados. Se elige en la ficha del cliente → Contratos → "Motivo principal de demora".</div>')}
@@ -990,7 +996,7 @@
     const fila = (s) => ({ Casos: s.n, Terminados: s.hechos, [`Mediana (${U})`]: s.mediana ?? '', Promedio: s.promedio ?? '', 'Más rápido': s.min ?? '', 'Más lento': s.max ?? '', [`Meta (${U})`]: s.meta ?? '', 'EFICACIA %': s.eficacia ?? '', 'EFICIENCIA %': s.eficiencia ?? '', 'PRODUCTIVIDAD %': s.productividad ?? '', '% en meta': s.enMeta ?? '', 'En curso': s.curso, 'Vencidos en curso': s.vencidos, 'Por vencer': s.porVencer, 'Obs. promedio por caso': s.obsProm ?? '', '% sin observaciones': s.sinObs ?? '', [`Pocos casos (<${MIN_CASOS})`]: s.pocos ? 'Sí' : '' });
     add('Resumen', Object.keys(TRAMOS).map(k => ({ Tramo: TRAMOS[k].l, ...fila(tpStats(tpCasos(k, base))) })));
     const grp = (name, k, heads) => add(name, tpGrupos(k, base).map(g => ({ ...Object.fromEntries(heads.map((h, i) => [h, g.ks[i] || '(sin registrar)'])), ...fila(g.s) })));
-    grp('Cobranza', 'cob', ['Asistente de cobranza']); grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
+    grp('Cobranza', 'cob', ['Asistente de cobranza']); grp('Cláusula comercial', 'clc', ['Ejecutivo de ventas']); grp('Cláusula banco', 'clb', ['Banco']); grp('Desembolso a notaría', 'dnot', ['Notaría']); grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
     grp('Validación legal', 'val', ['Asistente legal']); grp('Firma RL', 'rl', ['Empresa']); grp('Desembolso', 'des', ['Banco']);
     add('Motivos de demora', tpMotivos(base).map(m => ({ Motivo: m.motivo, Casos: m.n, '%': m.pct, '% acumulado': m.acum, 'Fuera de meta': m.fuera })));
     const T = tpTendencia(base); add('Tendencia', T.filas.map(f => ({ Tramo: f.l, ...Object.fromEntries(T.meses.flatMap((m, i) => [[`${mesTxt(m)} mediana`, f.cel[i].med ?? ''], [`${mesTxt(m)} % meta`, f.cel[i].ok ?? ''], [`${mesTxt(m)} casos`, f.cel[i].n]])) })));
@@ -1022,7 +1028,7 @@
     const glob = prodDe(['cob', 'val', 'ban', 'not', 'rl', 'des'].flatMap(k => tpCasos(k, base).map(x => ({ cerrado: !x.t.enCurso, dias: x.t.dias, meta: x.t.meta, vencido: x.t.sem === 'rojo' }))));
     const dona = (v, m, l, q) => { const R = 44, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, v || 0));
       return `<div class="g"><svg viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="${R}" fill="none" stroke="#e7ecea" stroke-width="12"/><circle cx="55" cy="55" r="${R}" fill="none" stroke="${col(v, m)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${p / 100 * C} ${C}" transform="rotate(-90 55 55)"/><text x="55" y="61" text-anchor="middle" font-size="22" font-weight="700" fill="#17302d">${v == null ? '—' : v + '%'}</text></svg><b>${l}</b><span>${q}</span><em style="color:${col(v, m)}">${v == null ? 'Sin datos' : v >= m ? '✔ Cumple la meta' : 'Meta ' + m + '%'}</em></div>`; };
-    const tr = ['cob', 'ban', 'not', 'abo', 'val', 'rl', 'des'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
+    const tr = ['cob', 'clc', 'clb', 'ban', 'not', 'abo', 'val', 'rl', 'des', 'dnot'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
     const barras = tr.map(({ k, s }) => `<div class="tr"><span class="tl">${esc(TRAMOS[k].l.replace(' (interno)', ''))}${/interno/.test(TRAMOS[k].l) ? ' <i>interno</i>' : ''}</span><div class="tb"><i style="width:${s.productividad ?? 0}%;background:${col(s.productividad, mP)}"></i><u style="left:${mP}%"></u></div><b style="color:${col(s.productividad, mP)}">${s.productividad == null ? '—' : s.productividad + '%'}</b><small>${s.mediana == null ? '' : s.mediana + ' d'}</small></div>`).join('');
     // destacados y a mejorar (solo grupos con casos suficientes)
     const lideres = [['ban', 'Ejecutivo de banco'], ['not', 'Notaría'], ['abo', 'Abogado']].map(([k, l]) => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.productividad != null).sort((a, b) => b.s.productividad - a.s.productividad); return { l, mej: G[0], peor: G.length > 1 ? G[G.length - 1] : null }; }).filter(x => x.mej);
@@ -1123,6 +1129,8 @@
       ${(() => { const C = cicloResumen(base); if (!C.segs.some(x => x.n)) return ''; return sec('Ciclo completo de la venta', `<p>Mediana de la venta al desembolso: <b>${C.desemb.med ?? '—'} ${U}</b> (${C.desemb.n} casos) · a la inscripción: <b>${C.insc.med ?? '—'} ${U}</b> (${C.insc.n} casos).</p><div style="display:flex;height:22px;border-radius:5px;overflow:hidden;margin:6px 0">${C.segs.filter(x => x.med).map(x => `<div style="flex:${x.med};background:${CICLO_COL[x.i]};color:#fff;font-size:10px;display:grid;place-items:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${x.med}</div>`).join('')}</div><table><tbody>${C.segs.map(x => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${CICLO_COL[x.i]};-webkit-print-color-adjust:exact;print-color-adjust:exact"></span> ${esc(x.de)} → ${esc(x.a)}</td><td class="r"><b>${x.med ?? '—'}</b> ${U}</td><td class="r">${x.med && C.suma ? Math.round(x.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${x.n} casos</td></tr>`).join('')}</tbody></table>`); })()}
       ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
       ${sec('Cobranza de la inicial · por asistente', barras('cob', ['Asistente de cobranza']))}
+      ${sec('Cláusula · firma de los clientes por ejecutivo de ventas', barras('clc', ['Ejecutivo de ventas']))}
+      ${sec('Cláusula en el banco → desembolso', barras('clb', ['Banco']))}
       ${sec('Ejecutivos de banco · banco → notaría', barras('ban', ['Banco', 'Ejecutivo']))}
       ${sec('Notarías · llegada → firma del cliente', barras('not', ['Notaría']))}
       ${sec('Abogados de notaría · asignación → firma del cliente', barras('abo', ['Notaría', 'Abogado']))}
@@ -1156,6 +1164,8 @@
       REQ_GEN.forEach(k => add(k, 'Dato básico del cliente'));
       const conHecho = !!(d.done && d.done.con);
       REQ_CON.forEach((grp, i) => { const despues = REQ_CON.slice(i + 1).flat().some(k => filled(o[k])); if (conHecho || despues) grp.forEach(k => add(k, conHecho ? 'Contratos ya culminó' : 'Ya se registró un paso posterior')); });
+      const CLR = ['con_clEnvComercial', 'con_clDevComercial', 'con_clEnvBanco', 'fin_fDesembolso', 'con_fIngresoNotariaDesemb'];
+      CLR.forEach((k, i) => { if (CLR.slice(i + 1).some(x => filled(o[x])) && !(k === 'fin_fDesembolso')) add(k, 'Ya se registró un paso posterior de la cláusula'); });
       if (['ban', 'not', 'abo'].some(k => tramo(o, k).sem === 'rojo')) add('con_motivoDemora', 'El caso pasó su meta de tiempo');
     }
     const r = { req, out: req.filter(x => !x.ok) }; FALT.set(o.id, r); return r;
@@ -1830,7 +1840,17 @@
 
   /* ---- Cláusula adicional (desde la minuta que exporta Evolta) ---- */
   const BANCO_LARGO = { BCP: 'BANCO DE CRÉDITO DEL PERÚ', INTERBANK: 'BANCO INTERNACIONAL DEL PERÚ - INTERBANK', BBVA: 'BBVA PERÚ', SCOTIABANK: 'SCOTIABANK PERÚ', BANBIF: 'BANCO INTERAMERICANO DE FINANZAS', PICHINCHA: 'BANCO PICHINCHA', GNB: 'BANCO GNB PERÚ' };
-  const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const CL_PASOS = [['con_clEnvComercial', '1. Enviada al equipo comercial'], ['con_clDevComercial', '2. Firmada por el cliente y devuelta por comercial'], ['con_clEnvBanco', '3. Enviada al banco'],
+    ['con_clObsLevantada', '4. Observación del banco levantada (si hubo)'], ['fin_fDesembolso', '5. Desembolso del banco'], ['con_fIngresoNotariaDesemb', '6. File de desembolso ingresado a notaría']];
+  const campoDe = (k) => Object.values(FIELDS).flat().find(f => f.k === k);
+  function clRecorridoHtml(o) {
+    const t = (k) => { const x = tramo(o, k); return x.dias == null ? '<span class="muted">—</span>' : `${semDot(x.sem)} <b>${x.dias}</b> / ${x.meta} d${x.enCurso ? ' <span class="muted">en curso</span>' : ''}`; };
+    const porConf = o.con_clFechasOk && o.con_clFechasOk !== 'Sí';
+    return `<details class="cl-rec" ${o.con_clEnvComercial || o.clausula ? 'open' : ''}><summary><b>📝 Recorrido de la cláusula</b>${porConf ? ' <span class="badge amar">Fechas por confirmar</span>' : ''}</summary>
+      <div class="cl-rec-t small"><span>Comercial (firma del cliente): ${t('clc')}</span><span>Banco → desembolso: ${t('clb')}</span><span>Desembolso → notaría: ${t('dnot')}</span></div>
+      <div class="f-grid">${CL_PASOS.map(([k, l]) => fieldInput(o, { ...campoDe(k), l })).join('')}${fieldInput(o, campoDe('con_clObsBanco'))}${fieldInput(o, campoDe('con_clFechasOk'))}${fieldInput(o, campoDe('con_clObs'))}</div></details>`;
+  }
+  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
   /* ---- Carta notarial de resolución (cláusula sexta): datos de la minuta + revisión + Word con el formato del área ---- */
   const CN_K = 'crm-mg-carta-firma';
   const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">⚖️ Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
@@ -1874,11 +1894,14 @@
       } });
     document.querySelectorAll('[data-cnl]').forEach(x => x.addEventListener('change', () => x.closest('.cn-cau').classList.toggle('on', x.checked)));
   }
-  const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save(); };
+  const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save();
+    if ((D.obsInterna || '') !== (op.con_clObs || '')) setField(op.id, 'con_clObs', D.obsInterna || '');
+    const fc = D.fechasConfirmadas ? 'Sí' : (D.obsInterna ? 'No, por confirmar' : (op.con_clFechasOk || '')); if (fc !== (op.con_clFechasOk || '')) setField(op.id, 'con_clFechasOk', fc); };
   function setPath(o, path, v) { const k = path.split('.'); let x = o; k.slice(0, -1).forEach(p => { x = x[p]; }); x[k[k.length - 1]] = v; }
   function clauseCollect(box, D) {
     box.querySelectorAll('[name]').forEach(el => setPath(D, el.name, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) || 0 : el.value));
-    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (el.value && el.value !== el.dataset.orig) it.texto = it.texto.replace(/a más tardar el .+? del? \d{4}/i, 'a más tardar el ' + CLAUSULA.fechaLarga(el.value)); });
+    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (!it || !el.value || el.value === el.dataset.orig) return; const f = 'a más tardar el ' + CLAUSULA.fechaLarga(el.value);
+      it.texto = /a más tardar el .+? del? \d{4}/i.test(it.texto) ? it.texto.replace(/a más tardar el .+? del? \d{4}/i, f) : String(it.texto || '').replace(/[\s.,;]*$/, '') + ', ' + f + '.'; });
     D.pago.items.forEach(it => { if (it.sub && it.sub.length) it.monto = it.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
   }
   function clauseForm(D, op) {
@@ -1888,7 +1911,7 @@
     const items = D.pago.items.map((it, i) => {
       const fd = CLAUSULA.isoDeTexto((/a más tardar el (.+? del? \d{4})/i.exec(it.texto) || [])[1]);
       return `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}<span class="small muted cl-let">${L.montoLetras(it.monto || 0)}</span></div>${ta(`pago.items.${i}.texto`, it.texto)}
-        ${fd ? `<label class="f cl-row" style="max-width:260px">Desembolso a más tardar el<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>` : ''}
+        <label class="f cl-row" style="max-width:300px">${fd ? 'Fecha (a más tardar el)' : 'Fecha de este pago (opcional)'}<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>
         ${(it.sub || []).map((s, j) => `<div class="cl-sub"><div class="cl-row">– ${inp(`pago.items.${i}.sub.${j}.monto`, s.monto, 'Monto (S/)', { type: 'number' })}<span class="small muted cl-let">${L.montoLetras(s.monto || 0)}</span><button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div>${ta(`pago.items.${i}.sub.${j}.texto`, s.texto)}</div>`).join('')}
         <div class="cl-row">${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : `<button type="button" class="btn sm" data-cl="to-sub" data-i="${i}">+ Dividir en varios pagos</button>`} <button type="button" class="btn sm" data-cl="del-item" data-i="${i}">✕ Quitar este punto</button></div></div>`;
     }).join('');
@@ -1907,11 +1930,12 @@
       ${D.entrega.incluir ? `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>` : ''}
       <h3 class="cl-h"><label><input type="checkbox" name="poder.incluir" ${D.poder.incluir ? 'checked' : ''}> Incluir poder irrevocable</label></h3>
       ${D.poder.incluir ? `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>` : ''}
+      <h3>Observaciones y fechas</h3><div class="f-grid"><label class="f w2">Observaciones (no salen en el Word): fechas a confirmar, cambios pedidos<textarea name="obsInterna" rows="2">${esc(D.obsInterna || '')}</textarea></label></div><label class="cl-ok"><input type="checkbox" name="fechasConfirmadas" ${D.fechasConfirmadas ? 'checked' : ''}> <b>Fechas confirmadas</b> <span class="small muted">(si no, la ficha muestra "Fechas por confirmar")</span></label>
       <h3>Lugar y fecha de firma</h3><div class="f-grid">${inp('ciudad', D.ciudad, 'Ciudad')}${inp('fecha', D.fecha, 'Fecha', { type: 'date' })}</div></div>`;
   }
   function openClausula(op) {
     const m = op.minuta, base = JSON.parse(JSON.stringify(m));
-    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
+    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, obsInterna: op.con_clObs || '', fechasConfirmadas: op.con_clFechasOk === 'Sí', minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
     modal({ title: `Cláusula adicional · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true, body: clauseForm(D, op),
       onCancel: () => { if (box.isConnected) clauseCollect(box, D); keepClause(op, D); },
       onOk: (dlg) => {
@@ -2079,6 +2103,7 @@
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
+    const clr = $('#clrec-' + id); if (clr && !clr.contains(document.activeElement)) { const ab = clr.querySelector('details') && clr.querySelector('details').open; clr.innerHTML = clRecorridoHtml(o); if (ab) clr.querySelector('details').open = true; }
     STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();

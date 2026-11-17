@@ -619,3 +619,8 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .guia-bar{height:6px;background:var(--line2);border-radius:3px;margin:6px 0 8px;overflow:hidden}.guia-bar i{display:block;height:100%;background:var(--sc,var(--accent))}
 .guia ol{margin:0;padding-left:20px;display:grid;gap:6px}.guia li span{margin-right:8px}.guia li{font-size:13.5px}
 .save-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+
+/* Recorrido de la cláusula */
+.cl-rec{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;background:var(--surface)}.cl-rec>summary{cursor:pointer}
+.cl-rec-t{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}
+.cl-ok{display:flex;gap:8px;align-items:center;margin:8px 0}.cl-ok input{width:18px;height:18px}
