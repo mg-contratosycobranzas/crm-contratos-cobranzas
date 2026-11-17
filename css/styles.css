@@ -646,3 +646,5 @@ em.est{font-style:normal;font-weight:650;color:var(--accent,#2c6db4)}
 .am-pasos{margin:6px 0;padding-left:20px;display:grid;gap:6px}.am-donde{background:var(--surface2);border-radius:8px;padding:8px 10px;margin:0 0 10px}
 .nf-op{display:flex;gap:8px;align-items:center;margin:10px 0 4px;cursor:pointer}.nf-box{margin-left:26px}
 .f em.est,.f em.nu,.f em.req{white-space:nowrap}
+.guia em.req{font-style:normal;font-size:10.5px;font-weight:650;color:var(--amar);background:var(--amar-bg);border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
+.guia-h>span{display:flex;gap:8px;align-items:center;flex:none}

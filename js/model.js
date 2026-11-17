@@ -200,13 +200,14 @@
         it('Cobranza iniciada', has('cob_fInicio'), { cob_fInicio: T }), it('Inicial cobrada (saldo por recibir = 0)', d.done.cob, { cob_porRecibir: 0 }), it('Fecha de culminación registrada', has('cob_fCulm'), { cob_fCulm: T })];
       case 'con': return [
         it('Asistente legal asignado', has('con_asistente'), { con_asistente: ME, con_fAsignacion: T }), it('Expediente validado', has('con_fValidacion'), { con_fValidacion: T }),
-        it('Actualización de documentos definida', has('con_actDocs'), { con_actDocs: 'SI APLICA' }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
+        it('Actualización de documentos definida', has('con_actDocs'), { con_actDocs: 'SI APLICA' }),
+        it('¿Requiere carta fianza o minuta de levantamiento? (Finanzas)', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '✅', 'No requiere: pasa directo a Formalización'], ['Aplica - En curso', '📄', 'Sí requiere: lo trabaja Finanzas']] }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
         it('Documentos enviados a notaría', op.con_docsNotaria === 'ENVIADOS', { con_docsNotaria: 'ENVIADOS' }), it('Minuta enviada a firmas', has('con_fInicioFirmas'), { con_fInicioFirmas: T }),
         it('Cheque en CRM Evolta', op.con_cheque === 'SI', { con_cheque: 'SI' }), it('Kardex completo', op.con_estadoKardex === 'Completo' || op.con_estadoKardex === 'No corresponde', { con_estadoKardex: 'Completo' }),
         it('Notaría y abogado definidos', has('con_notaria') && has('con_abogado')), it('Notaría y Kardex/Banco completo y cotejado con Evolta', nkbOk(op)),it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
         it('Firma del representante legal', has('con_fFirmaRL'), { con_fFirmaRL: T }), it('Datos ingresados al CRM Evolta', op.con_datosCRM === 'INGRESADO', { con_datosCRM: 'INGRESADO' })];
       case 'fin':
-        if (op.fin_tipo === 'No aplica') return [it('No aplica carta fianza ni minuta de levantamiento', true)];
+        if (op.fin_tipo === 'No aplica') return [it('No requiere carta fianza ni minuta de levantamiento (lo definió Contratos)', true)];
         return [
           it('Definir si aplica carta fianza / minuta', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '✅', 'No aplica'], ['Aplica - En curso', '📄', 'Sí aplica']] }),
           it('Responsable de valorados asignado', has('fin_responsable'), { fin_responsable: ME }),

@@ -755,11 +755,11 @@
   // quién puede marcar pasos a mano ve "Marcar ✓ / Deshacer"; el resto ve el dato que debe completar
   const stepLabel = (c) => can('a_pasos') ? (c.done ? 'Deshacer' : (c.set || c.choose) ? 'Marcar ✓' : 'Completar') : (c.done ? '' : c.choose ? 'Elegir' : 'Completar dato');
   const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span>${c.espera ? '<span class="bf-tag">En espera · bien futuro</span>' : ''}<em>${stepLabel(c)}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
-  const stageHead = (key, d) => `${stateChip(d.state[key])}<span class="small muted">Responsable: <b style="color:var(--ink)">${respCell(d.owner[key])}</b></span>${bar(d.progress[key])}`;
+  const stageHead = (key, d, o) => `${key === 'fin' && o && o.fin_tipo === 'No aplica' ? '<span class="badge plain gris">No aplica · no requiere carta fianza ni minuta</span>' : stateChip(d.state[key])}<span class="small muted">Responsable: <b style="color:var(--ink)">${respCell(d.owner[key])}</b></span>${bar(d.progress[key])}`;
   const headHtml = (o, d) => `<div class="t"><h1>${esc(o.cliente)}</h1>${d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(d.etapa)}${alertBadge(d.alerta)}</div>
     <div class="meta"><span><b>ID</b>${o.id}</span><span><b>DNI</b>${esc(o.dni || '—')}</span><span><b>Proyecto</b>${esc(o.proyecto || '—')} ${esc(o.unidad || '')}</span><span><b>Vendedor</b>${esc(o.vendedor || '—')}</span><span><b>Banco</b>${esc(o.banco || '—')}</span><span><b>Precio</b>${money(o.precio)}</span><span><b>Financia banco</b>${money(o.montoBanco)}</span><span><b>Días en proceso</b>${d.diasTotal ?? '—'}</span></div>
     <div class="next" ${d.etapa !== 'cerrado' ? `style="--sc:${colVar(d.etapa)}"` : ''}><div><span class="nx-l">Qué sigue</span><b>${esc(d.siguiente)}</b></div><div><span class="nx-l">Responsable</span><b>${respCell(d.responsable)}</b></div>${d.cuello !== 'N/A' ? `<div><span class="nx-l">Se traba en</span><b>${esc(CUELLO_LABEL[d.cuello] || d.cuello)}</b></div>` : ''}${d.etapa !== 'cerrado' ? `<a class="btn pri sm" data-act="gostage" data-s="${d.etapa}" href="#/cliente/${o.id}">Ir a la etapa ›</a>` : ''}</div>`;
-  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : st === 'espera' ? '⏸' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : st === 'espera' ? 'En espera · bien futuro' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
+  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : st === 'espera' ? '⏸' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${s.key === 'fin' && o.fin_tipo === 'No aplica' ? 'No aplica' : st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : st === 'espera' ? 'En espera · bien futuro' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
 
   function timelineItems(o) {
     const items = [];
@@ -1700,6 +1700,7 @@
   const pendientesVB = () => S.ops.flatMap(o => Object.entries(o.cierres || {}).filter(([, c]) => c.estado === 'pendiente').map(([k, c]) => ({ o, k, c }))).sort((a, b) => a.c.firma.ts - b.c.firma.ts);
   function stickerBar(o, d, k) {
     if (d.state[k] !== 'culminada') return '';
+    if (k === 'fin' && o.fin_tipo === 'No aplica') return '<span class="small muted">Este cliente no requiere Finanzas: Contratos indicó que no aplica carta fianza ni minuta de levantamiento.</span>';
     const c = cierre(o, k), firma = c && c.firma ? `✍️ Firmado por <b>${esc(c.firma.nombre || fullName(c.firma.por))}</b> · ${fechaHora(c.firma.ts)}` : '';
     let html;
     if (!c || c.estado === 'observado') html = `${c && c.obs ? `<div class="ev-falta">↩️ <b>Observado por ${esc(c.obs.por)}</b> (${fechaHora(c.obs.ts)}): ${esc(c.obs.motivo)}</div>` : ''}
@@ -2135,7 +2136,7 @@
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
-      ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
+      ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d, o)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
         <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">💾 Guardar</button><span class="small muted">Tranquila/o: cada dato también se guarda solo al salir del campo. Este botón te confirma y te dice cuánto te falta.</span></div></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
@@ -2153,12 +2154,13 @@
   // qué le falta a la etapa para llegar al 100%, con el botón que lleva a cada cosa
   function guiaHtml(o, d, k) {
     if (!d || !d.state || d.state[k] === 'porllegar') return '';
+    if (k === 'fin' && o.fin_tipo === 'No aplica') return '<div class="guia ok">✅ <b>No requiere Finanzas</b> · Contratos indicó que no aplica carta fianza ni minuta. Si cambia, edita "Carta fianza / minuta de levantamiento".</div>';
     const items = d.check[k] || [], pend = items.map((c, i) => ({ c, i })).filter(x => !x.c.done);
     const setKeys = new Set(pend.flatMap(x => Object.keys(x.c.set || {})));
     const obl = faltantes(o, d).out.filter(x => (k === 'con' ? x.k.startsWith('con_') : k === 'cob' ? !x.k.startsWith('con_') : false) && !setKeys.has(x.k));
     const c = typeof cierre === 'function' ? cierre(o, k) : null, culm = d.state[k] === 'culminada';
     const firma = culm && !pend.length && (!c || c.estado === 'observado') ? (canFirmar(o, d, k) ? 'firmar' : 'esperaFirma') : culm && c && c.estado === 'pendiente' ? 'vb' : '';
-    const pct = d.progress[k] ?? 0, nombre = STAGE[k].name;
+    const totalPasos = items.length + obl.length, pct = totalPasos ? Math.round((totalPasos - pend.length - obl.length) * 100 / totalPasos) : (d.progress[k] ?? 0), nombre = STAGE[k].name;
     if (!pend.length && !obl.length && !firma) return `<div class="guia ok">✅ <b>${nombre} al 100%</b>${c && c.estado === 'aprobado' ? ' · con V°B° de jefatura' : ''}</div>`;
     const li = [...pend.map(x => `<li><span>${esc(x.c.label)}</span><button class="btn sm" data-act="step" data-op="${o.id}" data-s="${k}" data-i="${x.i}">${stepLabel(x.c) || 'Ver'} ›</button></li>`),
       ...obl.map(x => `<li><span>${esc(x.l)} <em class="req" title="${esc(x.por)}">obligatorio</em></span><button class="btn sm" data-act="completar" data-op="${o.id}" data-k="${x.k}">Completar ›</button></li>`),
@@ -2180,7 +2182,7 @@
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
     const clr = $('#clrec-' + id); if (clr && !clr.contains(document.activeElement)) { const ab = clr.querySelector('details') && clr.querySelector('details').open; clr.innerHTML = clRecorridoHtml(o); if (ab) clr.querySelector('details').open = true; }
-    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
+    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d, o); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     refrescarRotulos(id);
     applyPerms();
@@ -3377,6 +3379,7 @@
   document.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.perm) { setPerm(t.dataset.u, t.dataset.perm, t.checked); return toast('Permiso guardado'); }
+    if (t.dataset.fk && t.type === 'date' && t.value && +t.value.slice(0, 4) < 1990) return; // año a medio escribir: se espera a que esté completo
     if (t.dataset.fk) { if (!can('a_edit')) { toast(NOPERM); return render(true); } if (setField(t.dataset.op, t.dataset.fk, t.value)) { const mk = t.closest('.f.mk'); if (mk) mk.classList.toggle('falta', !t.value); refreshFicha(t.dataset.op); $('#nav').innerHTML = navHtml(route()); toast('Guardado'); } return; }
     if (t.dataset.ins) { // estado de inscripción cambiado desde la lista de Inscripciones
       if (!can('a_edit')) { toast(NOPERM); return render(true); }
