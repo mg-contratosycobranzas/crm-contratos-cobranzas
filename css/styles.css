@@ -627,3 +627,5 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .cl-rec{border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:8px 0;background:var(--surface)}.cl-rec>summary{cursor:pointer}
 .cl-rec-t{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}
 .cl-ok{display:flex;gap:8px;align-items:center;margin:8px 0}.cl-ok input{width:18px;height:18px}
+.nov .how{margin-bottom:10px}
+.nov .hn{background:var(--surface2);border:1px solid var(--line);font-size:15px}
