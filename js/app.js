@@ -2848,12 +2848,81 @@
     if (!keepScroll && key !== lastKey) window.scrollTo(0, 0);
     lastKey = key;
     renderDatalists(); renderTop(); applyPerms();
+    if (!ui.avisosVistos && (!CL.enabled || cloudState === 'ready')) { ui.avisosVistos = true; setTimeout(avisosDelDia, 1200); }
     $('.side').classList.remove('open');
   }
+  /* ---- 🔔 Avisos: los pendientes de cada persona (y de todo el equipo para la jefatura), en un solo lugar ---- */
+  function avisosDe(n) {
+    const out = [], add = (nivel, ic, txt, go, cnt) => { if (cnt === 0) return; out.push({ nivel, ic, txt, go, cnt: cnt || 1 }); };
+    const u = user(n); if (!u) return out;
+    const k = u.stage, jefe = isJefe(n), abiertos = rows().filter(r => r.d.etapa !== 'cerrado');
+    const mios = jefe ? abiertos : abiertos.filter(r => r.d.owner[k] === n && r.d.state[k] === 'actual');
+    const pl = (c, a, b) => `${c} ${c === 1 ? a : b}`;
+    // expedientes urgentes y en riesgo
+    const urg = mios.filter(r => r.d.alerta === 'Inmediato').length, rie = mios.filter(r => r.d.alerta === 'Por acumulación').length;
+    add('rojo', '🔴', `${pl(urg, 'expediente urgente', 'expedientes urgentes')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', urg);
+    add('amar', '🟡', `${pl(rie, 'expediente en riesgo', 'expedientes en riesgo')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', rie);
+    // compromisos de seguimiento
+    const ag = agenda(jefe ? null : n), venc = ag.filter(x => x.cat === 'vencido').length, hoy = ag.filter(x => x.cat === 'hoy').length;
+    add('rojo', '📅', `${pl(venc, 'compromiso vencido', 'compromisos vencidos')}`, '#/agenda', venc);
+    add('amar', '📅', `${pl(hoy, 'compromiso para hoy', 'compromisos para hoy')}`, '#/agenda', hoy);
+    // datos obligatorios vacíos
+    const Q = calidadDatos(), yo = Q.filas.find(f => f.name === n), falt = jefe ? Q.req - Q.ok : (yo ? yo.items.length : 0);
+    add('amar', '📝', `${pl(falt, 'dato obligatorio vacío', 'datos obligatorios vacíos')}${jefe ? ' en el equipo' : ''}`, jefe ? '#/usuarios' : '#/mi', falt);
+    // tiempos fuera de meta en lo que lleva la persona
+    const quienTramo = { cob: 'cob_asistente', val: 'con_asistente', clc: 'con_asistente', rl: 'con_asistente' };
+    const venTr = Object.keys(TRAMOS).flatMap(t => rows(true).map(r => r.o).filter(o => jefe || (quienTramo[t] && o[quienTramo[t]] === n)).map(o => ({ t, x: tramo(o, t) }))).filter(z => z.x.enCurso && z.x.sem === 'rojo').length;
+    add('rojo', '⏱️', `${pl(venTr, 'tramo abierto pasó', 'tramos abiertos pasaron')} su meta de tiempo`, '#/tiempos', venTr);
+    // cláusulas con fechas por confirmar
+    const fc = S.ops.filter(o => o.con_clFechasOk && o.con_clFechasOk !== 'Sí' && (jefe || o.con_asistente === n)).length;
+    add('amar', '📝', `${pl(fc, 'cláusula con fechas', 'cláusulas con fechas')} por confirmar`, jefe ? '#/etapa/con' : '#/mi', fc);
+    // cartas de aprobación por vencer
+    const cv = cartasPorVencer().filter(x => jefe || x.o.cob_asistente === n || x.o.con_asistente === n).length;
+    add('rojo', '📄', `${pl(cv, 'carta de aprobación vence', 'cartas de aprobación vencen')} en 15 días o menos`, '#/tiempos', cv);
+    // devoluciones
+    const dv = (typeof DV !== 'undefined' ? DV : []).filter(x => (jefe || dvGestor(x) === n)).map(dvTiempo).filter(t => t && t.enCurso && t.sem === 'rojo').length;
+    add('rojo', '↩️', `${pl(dv, 'devolución pasó', 'devoluciones pasaron')} su meta de atención`, '#/devoluciones', dv);
+    // cierres
+    const obs = S.ops.filter(o => Object.values(o.cierres || {}).some(c => c.estado === 'observado' && c.firma && c.firma.por === n)).length;
+    add('rojo', '↩️', `${pl(obs, 'cierre observado', 'cierres observados')} por jefatura`, '#/mi', obs);
+    if (jefe) {
+      add('amar', '✅', `${pl(pendientesVB().length, 'cierre espera', 'cierres esperan')} tu V°B°`, '#/mi', pendientesVB().length);
+      const ing = S.ops.filter(o => pendienteIngreso(o) && o.aprob.estado === 'pendiente').length;
+      add('amar', '🆕', `${pl(ing, 'cliente nuevo espera', 'clientes nuevos esperan')} tu aprobación`, '#/mi', ing);
+      const cr = comprobantesRepetidos().length; add('rojo', '⚠️', `${pl(cr, 'comprobante de pago repetido', 'comprobantes de pago repetidos')}`, '#/mi', cr);
+      const sob = cargaDatos().filas.filter(f => f.estado === 'alta').length; add('amar', '⚖️', `${pl(sob, 'persona sobrecargada', 'personas sobrecargadas')}`, '#/carga', sob);
+      const bz = typeof bzNuevos === 'function' ? bzNuevos() : 0; add('info', '💬', `${pl(bz, 'mensaje nuevo', 'mensajes nuevos')} en el Buzón`, '#/buzon', bz);
+      if (respaldoPendiente()) add('rojo', '🛡️', 'Respaldo de la quincena pendiente', '#/resumen', 1);
+    }
+    const ord = { rojo: 0, amar: 1, info: 2 };
+    return out.sort((a, b) => ord[a.nivel] - ord[b.nivel]);
+  }
+  // resumen del equipo para la jefatura: cuántos pendientes urgentes tiene cada persona
+  function avisosEquipo() {
+    return S.users.filter(u => STAGE[u.stage] && u.stage !== JEFATURA).map(u => { const A = avisosDe(u.name); return { u, A, rojos: A.filter(a => a.nivel === 'rojo').reduce((t, a) => t + a.cnt, 0), total: A.reduce((t, a) => t + a.cnt, 0) }; }).sort((a, b) => b.rojos - a.rojos || b.total - a.total);
+  }
+  function avisosPanel() {
+    const A = avisosDe(S.actor), fila = (a) => `<a class="av-row ${a.nivel}" href="${a.go}" data-close><span class="av-ic">${a.ic}</span><span>${esc(a.txt)}</span><span class="av-go">Ver ›</span></a>`;
+    const eq = isJefe() ? avisosEquipo() : [];
+    modal({ title: '🔔 Tus avisos', ok: 'Entendido', cancel: '', body: `${A.length ? `<div class="av-list">${A.map(fila).join('')}</div>` : '<div class="empty">🎉 No tienes pendientes. ¡Todo al día!</div>'}
+      ${eq.length ? `<h3 style="margin:16px 0 6px">👥 Pendientes de tu equipo</h3><div class="av-list">${eq.map(x => `<div class="av-row ${x.rojos ? 'rojo' : x.total ? 'amar' : 'ok'}"><span class="av-ic">${x.rojos ? '🔴' : x.total ? '🟡' : '🟢'}</span><span><b>${esc(x.u.name)}</b> <span class="small muted">${x.total ? x.A.slice(0, 3).map(a => esc(a.txt)).join(' · ') : 'todo al día'}</span></span><span class="av-go">${x.total}</span></div>`).join('')}</div>` : ''}
+      <p class="small muted" style="margin:12px 0 0">Los avisos se actualizan solos. Toca <b>Ver ›</b> para ir a resolverlos.</p>` });
+    try { localStorage.setItem('crm-mg-avisos-' + S.actor, iso(today())); } catch (e) { }
+  }
+  let AVC = { D: null, actor: '', v: null }; // se recalcula solo cuando cambian los datos
+  const avisosCuenta = () => { if (!S.actor) return { n: 0, rojo: false }; if (AVC.D === D && AVC.actor === S.actor && AVC.v) return AVC.v; const A = avisosDe(S.actor); AVC = { D, actor: S.actor, v: { n: A.reduce((t, a) => t + a.cnt, 0), rojo: A.some(a => a.nivel === 'rojo') } }; return AVC.v; };
+  // la primera vez del día que la persona entra, se le muestran sus avisos
+  function avisosDelDia() {
+    if (!S.actor || !S.ops.length) return; let ya = ''; try { ya = localStorage.getItem('crm-mg-avisos-' + S.actor) || ''; } catch (e) { }
+    if (ya === iso(today()) || $('#dlg').open) return;
+    if (avisosDe(S.actor).length) avisosPanel(); else { try { localStorage.setItem('crm-mg-avisos-' + S.actor, iso(today())); } catch (e) { } }
+  }
+
   function renderTop() {
     $('#gproy').innerHTML = `<option value="">Todos los proyectos</option>` + uniq(o => o.proyecto).map(p => `<option ${ui.proy === p ? 'selected' : ''}>${esc(p)}</option>`).join('');
     $('#actor').innerHTML = (CL.enabled ? S.users.filter(u => u.name === S.actor) : S.users).map(u => `<option ${u.name === S.actor ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
     $('#actor').disabled = CL.enabled; $('#logoutBtn').hidden = !CL.enabled;
+    const bell = $('#bellBtn'); if (bell) { let c = { n: 0 }; try { c = avisosCuenta(); } catch (e) { } bell.hidden = !S.actor; bell.querySelector('.cnt').textContent = c.n > 99 ? '99+' : c.n || ''; bell.querySelector('.cnt').hidden = !c.n; bell.classList.toggle('hot', !!c.rojo); bell.title = c.n ? `Tienes ${c.n} pendientes` : 'Sin pendientes'; }
     const nuevo = !CL.enabled && window.CRM_DATA && window.CRM_DATA.version && S.seedVersion !== window.CRM_DATA.version;
     if (ui.previewReal) { $('#banner').innerHTML = `<div class="banner">👁️ Estás probando el CRM como <b>${esc(S.actor)}</b>. <button class="btn sm" data-act="perm-back">Volver a mi usuario</button></div>`; return; }
     $('#banner').innerHTML = nuevo ? `<div class="banner">El repositorio tiene datos más recientes que los de este navegador. <button class="btn sm" data-act="reset">Cargar datos del repositorio</button> <button class="btn sm" data-act="dismiss-banner">Mantener los míos</button></div>` : '';
@@ -3125,6 +3194,7 @@
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
+    if (a === 'avisos') return avisosPanel();
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'carga-excel') return cargaExcel();

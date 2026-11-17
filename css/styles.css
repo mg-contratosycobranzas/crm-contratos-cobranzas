@@ -629,3 +629,10 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .cl-ok{display:flex;gap:8px;align-items:center;margin:8px 0}.cl-ok input{width:18px;height:18px}
 .nov .how{margin-bottom:10px}
 .nov .hn{background:var(--surface2);border:1px solid var(--line);font-size:15px}
+
+/* 🔔 Avisos */
+.bell{position:relative;font-size:15px}.bell .cnt{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--amar);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;line-height:1}
+.bell.hot .cnt{background:var(--rojo)}
+.av-list{display:grid;gap:6px}.av-row{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 12px;border-radius:9px;border:1px solid var(--line);text-decoration:none;color:var(--ink);background:var(--surface)}
+.av-row.rojo{border-left:4px solid var(--rojo)}.av-row.amar{border-left:4px solid var(--amar)}.av-row.info{border-left:4px solid var(--accent,#2c6db4)}.av-row.ok{border-left:4px solid var(--verde)}
+a.av-row:hover{background:var(--surface2)}.av-ic{font-size:17px;text-align:center}.av-go{font-weight:650;font-size:12.5px;color:var(--muted);white-space:nowrap}
