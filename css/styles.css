@@ -611,3 +611,11 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 
 /* Devoluciones: quién la gestiona */
 .dv-ges{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.avatar.sm{width:24px;height:24px;font-size:10.5px;background:var(--c-jef);color:#fff}
+
+/* Guía para llegar al 100% y botón Guardar en la ficha */
+.guia{border:1px solid var(--line);border-left:4px solid var(--sc,var(--accent));border-radius:10px;padding:10px 12px;margin-bottom:12px;background:var(--surface2)}
+.guia.ok{border-left-color:var(--verde);color:var(--verde);font-size:13.5px}
+.guia-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.guia-pct{font-weight:700;font-variant-numeric:tabular-nums}
+.guia-bar{height:6px;background:var(--line2);border-radius:3px;margin:6px 0 8px;overflow:hidden}.guia-bar i{display:block;height:100%;background:var(--sc,var(--accent))}
+.guia ol{margin:0;padding-left:20px;display:grid;gap:6px}.guia li span{margin-right:8px}.guia li{font-size:13.5px}
+.save-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}

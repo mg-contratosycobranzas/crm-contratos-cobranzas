@@ -76,6 +76,18 @@
       prev = { obj, end: re.lastIndex };
     }
     if (prev) prev.obj.texto = flat(FP.slice(prev.end));
+    if (!items.length) { // respaldo: montos al inicio de cada línea de la sección (numeración automática de Word)
+      const iFP = A.search(/Forma de Pago/i), fFP = A.search(/\b[IVX]+\.\s*Fecha de entrega|\n\s*Fecha de entrega/i);
+      const RAW = iFP < 0 ? '' : A.slice(iFP, fFP > iFP ? fFP : undefined).replace(/^.*?Forma de Pago[^\n]*\n?/i, '').split(/Conforme a lo estipulado/i)[0];
+      const re2 = /^[ \t]*(?:(\d+)[.)][ \t]*|([-–•·▪o])[ \t]+)?S\/\.?[ \t]*([\d,]+(?:\.\d{1,2})?)[ \t]*\([^)]*\)[ \t]*/gm; let k, pv = null;
+      while ((k = re2.exec(RAW))) {
+        if (pv) pv.obj.texto = flat(RAW.slice(pv.end, k.index));
+        const obj = { monto: amt(k[3]), texto: '' };
+        if (k[2] && items.length) items[items.length - 1].sub.push(obj); else { obj.sub = []; items.push(obj); }
+        pv = { obj, end: re2.lastIndex };
+      }
+      if (pv) pv.obj.texto = flat(RAW.slice(pv.end));
+    }
 
     return {
       vendedora, compradores, inmuebles, proyecto: get(/denominado\s*[“"](.+?)[”"]/i),
@@ -124,6 +136,7 @@
       P('A quienes en adelante también se les podrá denominar **LAS PARTES**.'), BL,
       P('PRIMERA. - “Antecedentes”', { b: true, u: true }), BL,
       P(`Las partes contratantes con fecha ${fm}, firmaron contrato de **COMPRA VENTA DE BIEN FUTURO**, por la adquisición del ${d.inmuebles} del Proyecto “${d.proyecto.toUpperCase()}”.`), BL];
+    (d.antecedentes || []).filter(a => a.fecha || a.texto).forEach(a => out.push(P(`Asimismo, con fecha ${fechaLarga(a.fecha)}, **LAS PARTES** suscribieron una cláusula adicional a la referida minuta${a.texto ? `, mediante la cual ${String(a.texto).trim().replace(/[.;]+$/, '')}` : ''}.`), BL));
     if (d.pago.incluir || d.entrega.incluir) {
       out.push(P('SEGUNDA. - “Aclaración”', { b: true, u: true }), BL,
         P(`Mediante la presente cláusula adicional, que forma parte integrante de la minuta de compraventa de fecha ${fm}, **LAS PARTES** precisan que son materia de aclaración lo siguiente:`), BL);

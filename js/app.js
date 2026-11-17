@@ -288,10 +288,20 @@
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
     commit();
     if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('⚠️ Revisa la fecha: ' + p.txt); }, 50);
+    autoTomar(op, k);
     return true;
   }
 
   /* ================= acciones de un toque ================= */
+  // si una asistente completa un dato de su etapa y el cliente no tiene responsable, queda como responsable
+  function autoTomar(op, k) {
+    const u = user(S.actor); if (!u || !STAGE[u.stage] || !op) return;
+    const st = STAGES.find(x => (FIELDS[x.key] || []).some(f => f.k === k)); if (!st || st.key !== u.stage) return;
+    const ok = STAGE[st.key].ownerKey; if (!ok || k === ok || (op[ok] && op[ok] !== 'Sin asignar')) return;
+    setField(op.id, ok, S.actor);
+    if (st.key === 'con' && !op.con_fAsignacion) setField(op.id, 'con_fAsignacion', iso(today()));
+    setTimeout(() => toast(`👤 Quedaste como responsable de ${STAGE[st.key].name} de ${op.cliente}`), 700);
+  }
   const applyMany = (id, obj) => { const op = getOp(id); const prev = {}; let ch = false; for (const k in obj) { prev[k] = op[k] === undefined ? '' : op[k]; if (setField(id, k, obj[k])) ch = true; } return ch ? prev : null; };
   const rerenderOp = (id) => { if ($('#f-head')) { refreshFicha(id); $('#nav').innerHTML = navHtml(route()); } else render(true); };
   function pickStageUser(sk, cb) {
@@ -1880,15 +1890,18 @@
       return `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}<span class="small muted cl-let">${L.montoLetras(it.monto || 0)}</span></div>${ta(`pago.items.${i}.texto`, it.texto)}
         ${fd ? `<label class="f cl-row" style="max-width:260px">Desembolso a más tardar el<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>` : ''}
         ${(it.sub || []).map((s, j) => `<div class="cl-sub"><div class="cl-row">– ${inp(`pago.items.${i}.sub.${j}.monto`, s.monto, 'Monto (S/)', { type: 'number' })}<span class="small muted cl-let">${L.montoLetras(s.monto || 0)}</span><button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div>${ta(`pago.items.${i}.sub.${j}.texto`, s.texto)}</div>`).join('')}
-        ${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : ''}</div>`;
+        <div class="cl-row">${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : `<button type="button" class="btn sm" data-cl="to-sub" data-i="${i}">+ Dividir en varios pagos</button>`} <button type="button" class="btn sm" data-cl="del-item" data-i="${i}">✕ Quitar este punto</button></div></div>`;
     }).join('');
     const pagosEv = op.evolta && (op.evolta.pagos || []).length;
     return `<div class="cl"><p class="small muted" style="margin-top:0">Datos tomados de la minuta (Anexo I). Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 Cargar otra minuta</button></p>
       <h3>Minuta y bien</h3><div class="f-grid">${inp('fechaMinuta', D.fechaMinuta, 'Fecha de la minuta', { type: 'date' })}${inp('proyecto', D.proyecto, 'Proyecto')}${inp('inmuebles', D.inmuebles, 'Inmueble(s)', { w2: true })}</div>
       <h3>Compradores</h3>${D.compradores.map((c, i) => `<div class="f-grid cl-block"><label class="f">Trato<select name="compradores.${i}.trat"><option value="">Elegir…</option><option ${c.trat === 'Sr.' ? 'selected' : ''}>Sr.</option><option ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label>${inp(`compradores.${i}.nombre`, c.nombre, 'Nombre completo', { w2: true })}${inp(`compradores.${i}.dni`, c.dni, 'DNI')}${inp(`compradores.${i}.ec`, c.ec, 'Estado civil')}${inp(`compradores.${i}.nac`, c.nac, 'Nacionalidad')}${inp(`compradores.${i}.domicilio`, c.domicilio, 'Domicilio', { w2: true })}</div>`).join('')}
       <h3>Vendedora</h3><div class="f-grid">${inp('vendedora.razon', D.vendedora.razon, 'Razón social')}${inp('vendedora.ruc', D.vendedora.ruc, 'RUC')}${inp('vendedora.domicilio', D.vendedora.domicilio, 'Domicilio', { w2: true })}${inp('vendedora.rep', D.vendedora.rep, 'Representante')}${inp('vendedora.repDni', D.vendedora.repDni, 'DNI representante')}${inp('vendedora.repCargo', D.vendedora.repCargo, 'Cargo')}${inp('vendedora.partida', D.vendedora.partida, 'Partida electrónica')}</div>
+      <h3>Cláusulas adicionales anteriores (antecedentes)</h3><p class="small muted" style="margin:0 0 6px">Si el cliente ya firmó otra cláusula adicional, agrégala: se menciona en la PRIMERA cláusula (Antecedentes).</p>
+      ${(D.antecedentes || []).map((a, i) => `<div class="cl-item"><div class="f-grid">${inp(`antecedentes.${i}.fecha`, a.fecha, 'Fecha de esa cláusula', { type: 'date' })}<label class="f w2">Qué se acordó<input name="antecedentes.${i}.texto" value="${esc(a.texto || '')}" placeholder="Ej.: se modificó la forma de pago"></label></div><button type="button" class="btn sm" data-cl="del-ant" data-i="${i}">✕ Quitar</button></div>`).join('')}
+      <p><button type="button" class="btn sm" data-cl="add-ant">+ Agregar cláusula antecedente</button></p>
       <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Aclarar la forma de pago</label> <span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span></h3>
-      ${D.pago.incluir ? `${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}
+      ${D.pago.incluir ? `${!D.pago.items.length ? '<div class="ev-falta">⚠️ No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}<p><button type="button" class="btn sm" data-cl="add-item">+ Agregar punto de pago</button></p>
         <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' ⚠️ no coincide' : ' ✓'}` : ''}</div>` : ''}
       <h3 class="cl-h"><label><input type="checkbox" name="entrega.incluir" ${D.entrega.incluir ? 'checked' : ''}> Aclarar la fecha de entrega</label> <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num"></h3>
       ${D.entrega.incluir ? `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>` : ''}
@@ -1918,9 +1931,14 @@
     box.onclick = (e) => {
       const b = e.target.closest('[data-cl]'); if (!b) return;
       clauseCollect(box, D); const it = D.pago.items[+b.dataset.i];
+      if (b.dataset.cl === 'add-item') D.pago.items.push({ monto: 0, texto: '' });
+      if (b.dataset.cl === 'del-item') D.pago.items.splice(+b.dataset.i, 1);
+      if (b.dataset.cl === 'to-sub' && it) it.sub = [{ monto: it.monto || 0, texto: CLAUSULA.DEP }];
+      if (b.dataset.cl === 'add-ant') (D.antecedentes = D.antecedentes || []).push({ fecha: '', texto: '' });
+      if (b.dataset.cl === 'del-ant') D.antecedentes.splice(+b.dataset.i, 1);
       if (b.dataset.cl === 'add-sub') it.sub.push({ monto: 0, texto: (it.sub[it.sub.length - 1] || {}).texto || CLAUSULA.DEP });
       if (b.dataset.cl === 'del-sub') it.sub.splice(+b.dataset.j, 1);
-      if (b.dataset.cl === 'evolta') { const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
+      if (b.dataset.cl === 'evolta') { if (!D.pago.items.length) D.pago.items.push({ monto: 0, texto: 'por concepto de cuota inicial, ', sub: [] }); const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; if (!ini.sub) ini.sub = []; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
       if (b.dataset.cl === 'otra') { keepClause(op, D); ui.minOp = op.id; dlg.close(); return $('#minfile').click(); }
       D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
       redraw();
@@ -2018,7 +2036,7 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">💾 Guardar</button><span class="small muted">Cada dato también se guarda solo al salir del campo.</span></div></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -2032,13 +2050,36 @@
         <button class="btn pri" type="submit">Registrar seguimiento</button>
       </form></details><hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div id="tl">${timelineHtml(o)}</div></div></div></div>`;
   }
+  // qué le falta a la etapa para llegar al 100%, con el botón que lleva a cada cosa
+  function guiaHtml(o, d, k) {
+    if (!d || !d.state || d.state[k] === 'porllegar') return '';
+    const items = d.check[k] || [], pend = items.map((c, i) => ({ c, i })).filter(x => !x.c.done);
+    const setKeys = new Set(pend.flatMap(x => Object.keys(x.c.set || {})));
+    const obl = faltantes(o, d).out.filter(x => (k === 'con' ? x.k.startsWith('con_') : k === 'cob' ? !x.k.startsWith('con_') : false) && !setKeys.has(x.k));
+    const c = typeof cierre === 'function' ? cierre(o, k) : null, culm = d.state[k] === 'culminada';
+    const firma = culm && !pend.length && (!c || c.estado === 'observado') ? (canFirmar(o, d, k) ? 'firmar' : 'esperaFirma') : culm && c && c.estado === 'pendiente' ? 'vb' : '';
+    const pct = d.progress[k] ?? 0, nombre = STAGE[k].name;
+    if (!pend.length && !obl.length && !firma) return `<div class="guia ok">✅ <b>${nombre} al 100%</b>${c && c.estado === 'aprobado' ? ' · con V°B° de jefatura' : ''}</div>`;
+    const li = [...pend.map(x => `<li><span>${esc(x.c.label)}</span><button class="btn sm" data-act="step" data-op="${o.id}" data-s="${k}" data-i="${x.i}">${stepLabel(x.c) || 'Ver'} ›</button></li>`),
+      ...obl.map(x => `<li><span>${esc(x.l)} <em class="req" title="${esc(x.por)}">obligatorio</em></span><button class="btn sm" data-act="completar" data-op="${o.id}" data-k="${x.k}">Completar ›</button></li>`),
+      firma === 'firmar' ? `<li><span><b>Firmar la culminación de la etapa</b> (la jefatura dará su V°B°)</span><button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">✍️ Firmar</button></li>` : '',
+      firma === 'esperaFirma' ? '<li><span>Falta que el responsable firme la culminación de la etapa</span></li>' : '',
+      firma === 'vb' ? '<li><span>⏳ Firmado: falta el V°B° de la jefatura</span></li>' : ''].filter(Boolean);
+    return `<div class="guia"><div class="guia-h"><b>🎯 Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span class="guia-pct">${pct}%</span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
+  }
+  function guardarFicha(id) {
+    const a = document.activeElement; if (a && a.dataset && a.dataset.fk) a.dispatchEvent(new Event('change', { bubbles: true }));
+    setTimeout(() => { save(); const o = getOp(id), d = D.get(id); if (!o || !d) return toast('✓ Guardado');
+      const k = d.etapa === 'cerrado' ? null : d.etapa, falta = k ? (guiaHtml(o, d, k).match(/<li>/g) || []).length : 0;
+      toast(k ? `✓ Guardado · ${STAGE[k].name} al ${d.progress[k] ?? 0}%${falta ? ` · te falta${falta > 1 ? 'n' : ''} ${falta} paso${falta > 1 ? 's' : ''} (mira la lista 🎯)` : ' · ¡completo!'}` : '✓ Guardado'); }, 120);
+  }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
-    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
+    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
   }
@@ -2980,6 +3021,7 @@
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
+    if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'carga-excel') return cargaExcel();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-resumen') return tpResumen();
