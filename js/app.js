@@ -288,6 +288,7 @@
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
     commit();
     if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('⚠️ Revisa la fecha: ' + p.txt); }, 50);
+    if (!ui.nfSet && op.fechaInfo && op.fechaInfo[k] && v !== undefined) setTimeout(() => setInfo(id, k, null), 0);
     autoTomar(op, k);
     return true;
   }
@@ -717,6 +718,20 @@
   }
 
   /* ---- Ficha de cliente ---- */
+  // rótulo de un campo: obligatorio, estimado / no ubicado y el botón 📌
+  function rotuloExtras(op, f) {
+    const v = op[f.k] ?? '', oblig = faltantes(op).out.find(x => x.k === f.k), nfI = infoDe(op, f.k);
+    const btn = f.t !== 'owner' && f.t !== 'textarea' && (nfI || ((f.t === 'date' || oblig) && v === '')) ? ` <button type="button" class="nf-btn" data-act="dato-nf" data-op="${op.id}" data-k="${f.k}" title="¿No encuentras este dato?">📌</button>` : '';
+    const tag = nfI ? (nfI.tipo === 'estimada' ? ` <em class="est" title="Dato estimado · fuente: ${esc(nfI.fuente || '')} · ${esc(nfI.por || '')}">~ estimado</em>` : ` <em class="nu" title="${esc(nfI.nota || '')} · ${esc(nfI.por || '')}">no ubicado</em>`) : '';
+    return `${oblig ? ` <em class="req" title="${esc(oblig.por)}">obligatorio</em>` : ''}${tag}${btn}`;
+  }
+  // actualiza los rótulos de la ficha sin redibujarla (así no se cierran las secciones abiertas)
+  function refrescarRotulos(id) {
+    const o = getOp(id); if (!o) return;
+    $$(`#view [data-fk][data-op="${id}"]`).forEach(inp => { const lb = inp.closest('label.f'), sp = lb && lb.querySelector(':scope > span[data-lbl]'); if (!sp) return;
+      const pdf = sp.querySelector('em.pdf'); sp.innerHTML = esc(sp.dataset.lbl) + rotuloExtras(o, { k: sp.dataset.lk, t: sp.dataset.lt }) + (pdf ? ' ' + pdf.outerHTML : '');
+      if (!lb.classList.contains('mk')) lb.classList.toggle('falta', !!faltantes(o).out.find(x => x.k === sp.dataset.lk)); });
+  }
   function fieldInput(op, f, mark) {
     const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}" autocomplete="off"`; // sin autocompletar: evita que el navegador ofrezca guardar "pasaporte" o direcciones
     mark = mark === 'siempre' || (mark && op.evolta && f.k !== 'observaciones'); // con estado de cuenta cargado: resalta lo que falta y lo que vino del PDF
@@ -727,7 +742,7 @@
     else inp = `<input type="${f.t === 'number' ? 'number' : f.t === 'date' ? 'date' : 'text'}" ${f.t === 'number' ? 'step="any"' : ''} ${f.list ? `list="dl-${listaDe(op, f)}"` : ''} value="${esc(v)}" ${f.k === 'empresa' && !v && empresaDe(op) ? `placeholder="${esc(empresaDe(op))} (del proyecto)"` : ''} ${base}>`;
     const fromPdf = mark && op.evolta && (op.evolta.campos || []).includes(f.k);
     const oblig = faltantes(op).out.find(x => x.k === f.k);
-    return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${(mark && v === '') || oblig ? 'falta' : ''}"><span>${f.l}${oblig ? ` <em class="req" title="${esc(oblig.por)}">obligatorio</em>` : ''}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
+    return `<label class="f ${f.w === 2 ? 'w2' : ''} ${mark ? 'mk' : ''} ${(mark && v === '') || oblig ? 'falta' : ''}"><span data-lbl="${esc(f.l)}" data-lk="${f.k}" data-lt="${f.t}">${f.l}${rotuloExtras(op, f)}${fromPdf ? ' <em class="pdf" title="Dato tomado del estado de cuenta de Evolta">PDF</em>' : ''}</span>${inp}</label>`;
   }
   function kvFor(key, o, d) {
     const kv = (a, b) => `<div><span>${a}</span><b>${b}</b></div>`;
@@ -1001,7 +1016,7 @@
     add('Motivos de demora', tpMotivos(base).map(m => ({ Motivo: m.motivo, Casos: m.n, '%': m.pct, '% acumulado': m.acum, 'Fuera de meta': m.fuera })));
     const T = tpTendencia(base); add('Tendencia', T.filas.map(f => ({ Tramo: f.l, ...Object.fromEntries(T.meses.flatMap((m, i) => [[`${mesTxt(m)} mediana`, f.cel[i].med ?? ''], [`${mesTxt(m)} % meta`, f.cel[i].ok ?? ''], [`${mesTxt(m)} casos`, f.cel[i].n]])) })));
     const xd = (s) => s ? xlDate(s) : '';
-    add('Detalle por cliente', base.map(o => { const x = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, Banco: o.banco, 'Ejecutivo de banco': o.ejecBanco, 'Bono MiVivienda': Number(o.bono) > 0 ? 'Sí' : 'No', Notaría: o.con_notaria, Abogado: o.con_abogado, 'Asistente legal': o.con_asistente, 'Motivo de demora': o.con_motivoDemora || '', 'Obs. banco': o.con_banObs ?? '', 'Obs. notaría': o.con_notObs ?? '', 'Espera cliente banco': o.con_banPausa ?? '', 'Espera cliente notaría': o.con_notPausa ?? '' };
+    add('Detalle por cliente', base.map(o => { const x = { ID: o.id, Cliente: o.cliente, Proyecto: o.proyecto, Unidad: o.unidad, Banco: o.banco, 'Ejecutivo de banco': o.ejecBanco, 'Bono MiVivienda': Number(o.bono) > 0 ? 'Sí' : 'No', Notaría: o.con_notaria, Abogado: o.con_abogado, 'Asistente legal': o.con_asistente, 'Motivo de demora': o.con_motivoDemora || '', 'Obs. banco': o.con_banObs ?? '', 'Obs. notaría': o.con_notObs ?? '', 'Espera cliente banco': o.con_banPausa ?? '', 'Espera cliente notaría': o.con_notPausa ?? '', 'Datos estimados (~)': Object.entries(o.fechaInfo || {}).filter(([, v]) => v && v.tipo === 'estimada').map(([k]) => CRM.FIELD_LABEL[k] || k).join('; '), 'Datos no ubicados': Object.entries(o.fechaInfo || {}).filter(([, v]) => v && v.tipo === 'noUbicada').map(([k]) => CRM.FIELD_LABEL[k] || k).join('; ') };
       Object.entries(TRAMOS).forEach(([k, t]) => { const r = tramo(o, k); x[`${t.l} · inicio`] = xd(o[t.ini]); x[`${t.l} · fin`] = xd(o[t.fin]); x[`${t.l} · días`] = r.dias ?? ''; x[`${t.l} · estado`] = r.dias == null ? '' : (r.enCurso ? 'En curso · ' : 'Terminado · ') + ({ verde: 'en meta', amarillo: 'por vencer', rojo: 'fuera de meta' }[r.sem] || ''); });
       return x; }));
     { const C = cicloResumen(base); add('Ciclo de la venta', [...C.segs.map(x => ({ Tramo: x.de + ' → ' + x.a, [`Mediana (${U})`]: x.med ?? '', 'Casos': x.n, '% del ciclo': x.med && C.suma ? Math.round(x.med * 100 / C.suma) : '' })), { Tramo: 'Venta → desembolso (real)', [`Mediana (${U})`]: C.desemb.med ?? '', Casos: C.desemb.n }, { Tramo: 'Venta → inscripción (real)', [`Mediana (${U})`]: C.insc.med ?? '', Casos: C.insc.n }]); }
@@ -1168,6 +1183,7 @@
       CLR.forEach((k, i) => { if (CLR.slice(i + 1).some(x => filled(o[x])) && !(k === 'fin_fDesembolso')) add(k, 'Ya se registró un paso posterior de la cláusula'); });
       if (['ban', 'not', 'abo'].some(k => tramo(o, k).sem === 'rojo')) add('con_motivoDemora', 'El caso pasó su meta de tiempo');
     }
+    req.forEach(x => { const I = infoDe(o, x.k); if (!x.ok && I && I.tipo === 'noUbicada') { x.ok = true; x.nu = true; } });
     const r = { req, out: req.filter(x => !x.ok) }; FALT.set(o.id, r); return r;
   }
   // % de datos completos por persona (y del área) sobre los datos que le toca llenar
@@ -1188,13 +1204,15 @@
     if (isJefe()) {
       const CR = comprobantesRepetidos();
       const crHtml = CR.length ? `<h2 class="sec">⚠️ Comprobantes de pago repetidos <span class="badge rojo plain">${CR.length}</span></h2><div class="card"><div class="card-b">${CR.slice(0, 8).map(L => `<div class="agrow"><div><b>Operación N° ${esc(L[0].p.operacion)}</b> · ${money(L[0].p.monto)} <span class="small muted">${esc(L[0].p.entidad || '')}</span><div class="small">${L.map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> (${esc(x.p.fecha || '')})`).join(' · ')}</div></div></div>`).join('')}</div></div>` : '';
+      const NU = noUbicados();
+      const nuHtml = NU.length ? `<h2 class="sec">📌 Datos que el equipo no encontró <span class="badge amar plain">${NU.length}</span></h2><div class="card"><div class="card-b">${NU.slice(0, 10).map(x => `<div class="agrow"><div><a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente)}</b></a> · ${esc(x.l)}<div class="small muted">${esc(x.v.por || '')}: "${esc(x.v.nota || '')}"</div></div><button class="btn sm" data-act="completar" data-op="${x.o.id}" data-k="${x.k}">Decidir ›</button></div>`).join('')}</div></div>` : '';
       const pend = Q.filas.filter(f => f.items.length);
-      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>` + crHtml;
+      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>` + nuHtml + crHtml;
     }
     if (!yo || !yo.req) return '';
     const porCli = new Map(); yo.items.forEach(x => { if (!porCli.has(x.o.id)) porCli.set(x.o.id, { o: x.o, L: [] }); porCli.get(x.o.id).L.push(x); });
     const L = [...porCli.values()];
-    return `<h2 class="sec">📝 Te falta completar ${pctDatosBadge(yo.pct)} ${medalla(yo)}</h2><div class="card"><div class="card-b">${L.length ? L.slice(0, 8).map(c => `<div class="agrow"><div><a href="#/cliente/${c.o.id}"><b>${esc(c.o.cliente)}</b></a> <span class="small muted">${esc(c.o.proyecto || '')} ${esc(c.o.unidad || '')}</span><div class="small">${c.L.map(x => `<span class="falta-chip" title="${esc(x.por)}">${esc(x.l)}</span>`).join(' ')}</div></div><button class="btn sm pri" data-act="completar" data-op="${c.o.id}" data-k="${c.L[0].k}">Completar ›</button></div>`).join('') + (L.length > 8 ? `<p class="small muted" style="margin:6px 0 0">Y ${L.length - 8} clientes más.</p>` : '') : '<div class="empty">🏅 ¡Tienes todos tus datos completos! Sigue así.</div>'}</div></div>`;
+    return `<h2 class="sec">📝 Te falta completar ${pctDatosBadge(yo.pct)} ${medalla(yo)} <button type="button" class="btn sm am-btn" data-act="ayuda-datos">💡 ¿No tienes un dato?</button></h2><div class="card"><div class="card-b">${L.length ? L.slice(0, 8).map(c => `<div class="agrow"><div><a href="#/cliente/${c.o.id}"><b>${esc(c.o.cliente)}</b></a> <span class="small muted">${esc(c.o.proyecto || '')} ${esc(c.o.unidad || '')}</span><div class="small">${c.L.map(x => `<span class="falta-chip" title="${esc(x.por)}">${esc(x.l)}</span>`).join(' ')}</div></div><button class="btn sm pri" data-act="completar" data-op="${c.o.id}" data-k="${c.L[0].k}">Completar ›</button></div>`).join('') + (L.length > 8 ? `<p class="small muted" style="margin:6px 0 0">Y ${L.length - 8} clientes más.</p>` : '') : '<div class="empty">🏅 ¡Tienes todos tus datos completos! Sigue así.</div>'}</div></div>`;
   }
   // Equipo: % de datos completos de cada persona
   function equipoDatosHtml() {
@@ -1224,6 +1242,63 @@
       f.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => { f.focus({ preventScroll: true }); const lb = f.closest('.f'); if (lb) { lb.classList.add('resalta'); setTimeout(() => lb.classList.remove('resalta'), 2500); } }, 350); };
     if (location.hash !== '#/cliente/' + id) { location.hash = '#/cliente/' + id; setTimeout(go, 250); } else go();
   }
+
+  /* ---- 📌 "No lo encuentro": dato aproximado (estimado) o no ubicado, con ayuda memoria de dónde buscar ---- */
+  const DONDE = {
+    fRecibeBanco: 'Correo enviado al ejecutivo de banco con el expediente (bandeja Enviados) o el WhatsApp con el banco.',
+    ejecBanco: 'Carta de aprobación del banco o la firma del correo del banco.', banco: 'Carta de aprobación del banco o el estado de cuenta de Evolta.',
+    dni: 'Estado de cuenta de Evolta, la minuta o la ficha de venta.',
+    cob_fInicio: 'Estado de cuenta de Evolta: fecha del primer pago de la inicial.', cob_fCulm: 'Estado de cuenta de Evolta: fecha del último pago de la inicial.',
+    con_fAsignacion: 'Correo o mensaje en que se te asignó el expediente.', con_fValidacion: 'Correo en que se validó el expediente.',
+    con_notaria: 'Correo del banco o de la notaría, o el kardex.', con_fLlegaNotaria: 'Correo del banco enviando el expediente a notaría, o el cargo de notaría.',
+    con_abogado: 'Correo o WhatsApp de la notaría, o el kardex.', con_fAsignaAbogado: 'Correo o WhatsApp de la notaría donde aparece el abogado.',
+    con_fFirmaCliente: 'Minuta firmada, kardex o confirmación de la notaría.', con_fFirmaRL: 'Minuta firmada por el representante, o la notaría.',
+    con_clEnvComercial: 'Correo enviado a comercial con la cláusula (bandeja Enviados).', con_clDevComercial: 'Correo de comercial devolviendo la cláusula firmada.',
+    con_clEnvBanco: 'Correo enviado al banco con la cláusula.', con_clObsLevantada: 'Correo del banco aceptando la cláusula corregida.',
+    fin_fDesembolso: 'Constancia o correo del banco, estado de cuenta de Evolta, o pregúntale a Finanzas.', con_fIngresoNotariaDesemb: 'Cargo de entrega del file a la notaría.',
+    con_motivoDemora: 'Piensa en qué detuvo el caso más tiempo: un documento del cliente, el banco, la notaría, una firma…'
+  };
+  FIELD_LABEL.dato_marca = '📌 Dato';
+  const FUENTES = ['Correo', 'Estado de cuenta de Evolta', 'Minuta / kardex / notaría', 'WhatsApp o llamada', 'Lo indicó la jefatura', 'Otro'];
+  const infoDe = (o, k) => (o && o.fechaInfo && o.fechaInfo[k]) || null;
+  function setInfo(id, k, v) {
+    const o = getOp(id); if (!o) return; const fi = { ...(o.fechaInfo || {}) };
+    if (v) fi[k] = v; else delete fi[k];
+    o.fechaInfo = fi; (pendingOps[id] = pendingOps[id] || {}).fechaInfo = fi;
+    const lbl = (Object.values(FIELDS).flat().find(f => f.k === k) || {}).l || k;
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: id, etapa: k.includes('_') ? k.split('_')[0] : 'gen', campo: 'dato_marca', antes: '', despues: `${lbl}: ` + (v ? (v.tipo === 'estimada' ? 'dato estimado (fuente: ' + (v.fuente || '') + ')' : 'no ubicado — ' + (v.nota || '')) : 'se quitó la marca') });
+    commit();
+  }
+  function ayudaDatos() {
+    const filas = [['Fechas de pago, inicio o fin de la cobranza', 'Estado de cuenta de Evolta'], ['Envíos al banco, a comercial o a notaría', 'Tus correos enviados (busca por nombre o DNI)'],
+      ['Firmas del cliente o del representante', 'Minuta firmada, kardex o la notaría'], ['Notaría, abogado y su fecha', 'Correo o WhatsApp de la notaría'], ['Desembolso', 'Constancia del banco, Evolta o Finanzas'], ['Banco y ejecutivo', 'Carta de aprobación del banco']];
+    modal({ title: '💡 ¿No tienes un dato? Ayuda memoria', ok: 'Entendido', cancel: '', body: `<ol class="am-pasos"><li><b>Búscalo</b> donde suele estar:</li></ol>
+      <table class="am-t">${filas.map(([a, b]) => `<tr><td>${a}</td><td><b>${b}</b></td></tr>`).join('')}</table>
+      <ol class="am-pasos" start="2"><li><b>¿Tienes un dato aproximado?</b> Toca <b>📌</b> junto al campo → <b>"Tengo un dato aproximado"</b>, ponlo y elige de dónde salió. Queda marcado como <em class="est">~ estimado</em>.</li>
+        <li><b>¿No hay ninguna pista?</b> Toca <b>📌</b> → <b>"No lo encuentro"</b> y escribe dónde buscaste. Ya no te cuenta como vacío y le llega a la jefatura para que decida.</li></ol>
+      <p class="ev-falta" style="margin:10px 0 0">✋ Nunca inventes un dato. Es mejor marcarlo como estimado o "no lo encuentro": así los reportes siguen siendo confiables.</p>` });
+  }
+  function datoNoEncontrado(id, k) {
+    const o = getOp(id), f = Object.values(FIELDS).flat().find(x => x.k === k); if (!o || !f) return;
+    const I = infoDe(o, k), v = o[k] ?? '';
+    const inp = f.t === 'date' ? `<input type="date" id="nf-val" value="${esc(v)}">` : f.t === 'select' ? `<select id="nf-val"><option value=""></option>${f.o.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : `<input id="nf-val" value="${esc(v)}" placeholder="Escribe lo que sepas">`;
+    modal({ title: `📌 No encuentro: ${f.l}`, ok: 'Guardar', body: `<p class="am-donde">💡 <b>Dónde buscarlo:</b> ${esc(DONDE[k] || 'Tus correos, el estado de cuenta de Evolta o pregúntale a quien lo sepa (comercial, banco o notaría).')}</p>
+      <label class="nf-op"><input type="radio" name="nf" value="estimada" ${!I || I.tipo === 'estimada' ? 'checked' : ''}> <b>Tengo un dato aproximado</b></label>
+      <div class="nf-box form"><label>${f.t === 'date' ? 'Fecha aproximada' : 'Dato'}${inp}</label><label>¿De dónde sale?<select id="nf-fuente">${FUENTES.map(x => `<option ${I && I.fuente === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>
+      <label class="nf-op"><input type="radio" name="nf" value="noUbicada" ${I && I.tipo === 'noUbicada' ? 'checked' : ''}> <b>No lo encuentro</b> <span class="small muted">(le llega a la jefatura para que decida)</span></label>
+      <div class="nf-box form"><label>¿Dónde buscaste?<textarea id="nf-nota" rows="2" placeholder="Ej.: revisé correos y Evolta; pregunté a comercial">${esc(I && I.nota || '')}</textarea></label></div>
+      ${I ? `<p class="small muted" style="margin:8px 0 0">Marcado por ${esc(I.por || '')} el ${fdate(iso(new Date(I.ts)))}. <button type="button" class="btn sm" data-act="nf-quitar" data-op="${id}" data-k="${k}" data-close>Quitar la marca</button></p>` : ''}`,
+      onOk: (dlg) => {
+        const tipo = dlg.querySelector('[name=nf]:checked').value;
+        if (tipo === 'estimada') { const val = dlg.querySelector('#nf-val').value.trim(); if (!val) { toast('Escribe el dato aproximado'); return false; }
+          ui.nfSet = true; try { setField(id, k, val); } finally { ui.nfSet = false; } setInfo(id, k, { tipo, fuente: dlg.querySelector('#nf-fuente').value, por: S.actor, ts: Date.now() }); toast('Guardado como dato estimado ~'); }
+        else { const nota = dlg.querySelector('#nf-nota').value.trim(); if (!nota) { toast('Escribe dónde buscaste'); return false; }
+          setInfo(id, k, { tipo, nota, por: S.actor, ts: Date.now() }); toast('Marcado como no ubicado: la jefatura lo verá'); }
+        refreshFicha(id);
+      } });
+  }
+  // lista para la jefatura: datos que el equipo no encontró
+  const noUbicados = () => S.ops.flatMap(o => Object.entries(o.fechaInfo || {}).filter(([k, v]) => v && v.tipo === 'noUbicada' && !filled(o[k])).map(([k, v]) => ({ o, k, v, l: (Object.values(FIELDS).flat().find(f => f.k === k) || {}).l || k })));
 
   /* ---- Ciclo completo de la venta: de la venta al desembolso y la inscripción, hito por hito ---- */
   const CICLO = [
@@ -2090,7 +2165,7 @@
       firma === 'firmar' ? `<li><span><b>Firmar la culminación de la etapa</b> (la jefatura dará su V°B°)</span><button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">✍️ Firmar</button></li>` : '',
       firma === 'esperaFirma' ? '<li><span>Falta que el responsable firme la culminación de la etapa</span></li>' : '',
       firma === 'vb' ? '<li><span>⏳ Firmado: falta el V°B° de la jefatura</span></li>' : ''].filter(Boolean);
-    return `<div class="guia"><div class="guia-h"><b>🎯 Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span class="guia-pct">${pct}%</span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
+    return `<div class="guia"><div class="guia-h"><b>🎯 Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span><button type="button" class="btn sm am-btn" data-act="ayuda-datos">💡 ¿No tienes un dato?</button> <span class="guia-pct">${pct}%</span></span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
   }
   function guardarFicha(id) {
     const a = document.activeElement; if (a && a.dataset && a.dataset.fk) a.dispatchEvent(new Event('change', { bubbles: true }));
@@ -2107,6 +2182,7 @@
     const clr = $('#clrec-' + id); if (clr && !clr.contains(document.activeElement)) { const ab = clr.querySelector('details') && clr.querySelector('details').open; clr.innerHTML = clRecorridoHtml(o); if (ab) clr.querySelector('details').open = true; }
     STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
+    refrescarRotulos(id);
     applyPerms();
   }
 
@@ -2892,6 +2968,7 @@
       const cr = comprobantesRepetidos().length; add('rojo', '⚠️', `${pl(cr, 'comprobante de pago repetido', 'comprobantes de pago repetidos')}`, '#/mi', cr);
       const sob = cargaDatos().filas.filter(f => f.estado === 'alta').length; add('amar', '⚖️', `${pl(sob, 'persona sobrecargada', 'personas sobrecargadas')}`, '#/carga', sob);
       const bz = typeof bzNuevos === 'function' ? bzNuevos() : 0; add('info', '💬', `${pl(bz, 'mensaje nuevo', 'mensajes nuevos')} en el Buzón`, '#/buzon', bz);
+      const nu = noUbicados().length; add('amar', '📌', `${pl(nu, 'dato no ubicado espera', 'datos no ubicados esperan')} tu decisión`, '#/mi', nu);
       if (respaldoPendiente()) add('rojo', '🛡️', 'Respaldo de la quincena pendiente', '#/resumen', 1);
     }
     const ord = { rojo: 0, amar: 1, info: 2 };
@@ -3195,6 +3272,9 @@
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
     if (a === 'avisos') return avisosPanel();
+    if (a === 'ayuda-datos') return ayudaDatos();
+    if (a === 'dato-nf') { e.preventDefault(); return datoNoEncontrado(el.dataset.op, el.dataset.k); }
+    if (a === 'nf-quitar') { setInfo(el.dataset.op, el.dataset.k, null); refreshFicha(el.dataset.op); return toast('Marca quitada'); }
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'carga-excel') return cargaExcel();

@@ -636,3 +636,13 @@ dialog.wide{width:min(980px,96vw)} dialog.wide .dlg-b{max-height:76vh}
 .av-list{display:grid;gap:6px}.av-row{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;padding:9px 12px;border-radius:9px;border:1px solid var(--line);text-decoration:none;color:var(--ink);background:var(--surface)}
 .av-row.rojo{border-left:4px solid var(--rojo)}.av-row.amar{border-left:4px solid var(--amar)}.av-row.info{border-left:4px solid var(--accent,#2c6db4)}.av-row.ok{border-left:4px solid var(--verde)}
 a.av-row:hover{background:var(--surface2)}.av-ic{font-size:17px;text-align:center}.av-go{font-weight:650;font-size:12.5px;color:var(--muted);white-space:nowrap}
+
+/* 📌 Dato no encontrado y ayuda memoria */
+.nf-btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:0 5px;font-size:11px;line-height:18px;cursor:pointer;margin-left:4px;vertical-align:middle}.nf-btn:hover{border-color:var(--accent,#2c6db4)}
+.f em.est{font-style:normal;font-size:10.5px;font-weight:650;color:var(--accent,#2c6db4);background:var(--surface2);border:1px dashed var(--accent,#2c6db4);border-radius:5px;padding:0 5px;margin-left:4px}
+em.est{font-style:normal;font-weight:650;color:var(--accent,#2c6db4)}
+.f em.nu{font-style:normal;font-size:10.5px;font-weight:650;color:var(--muted);background:var(--line2);border-radius:5px;padding:0 5px;margin-left:4px}
+.am-btn{font-size:12px;padding:2px 8px;vertical-align:middle}.am-t{width:100%;border-collapse:collapse;margin:6px 0 10px}.am-t td{padding:5px 8px;border-bottom:1px solid var(--line2);font-size:13px}
+.am-pasos{margin:6px 0;padding-left:20px;display:grid;gap:6px}.am-donde{background:var(--surface2);border-radius:8px;padding:8px 10px;margin:0 0 10px}
+.nf-op{display:flex;gap:8px;align-items:center;margin:10px 0 4px;cursor:pointer}.nf-box{margin-left:26px}
+.f em.est,.f em.nu,.f em.req{white-space:nowrap}
