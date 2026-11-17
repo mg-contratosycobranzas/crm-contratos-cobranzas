@@ -648,3 +648,11 @@ em.est{font-style:normal;font-weight:650;color:var(--accent,#2c6db4)}
 .f em.est,.f em.nu,.f em.req{white-space:nowrap}
 .guia em.req{font-style:normal;font-size:10.5px;font-weight:650;color:var(--amar);background:var(--amar-bg);border-radius:5px;padding:0 5px;margin-left:4px;white-space:nowrap}
 .guia-h>span{display:flex;gap:8px;align-items:center;flex:none}
+.cl .cl-k{max-width:240px;font-size:13px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);align-self:flex-end}
+.cl .cl-fe{max-width:170px;margin:0}
+.cl .cl-guia{font-size:12.5px;background:var(--surface2);border-radius:8px;padding:7px 10px;margin:4px 0 8px;line-height:1.5}
+.cl .cl-sec{font-size:14px;margin:16px 0 4px;padding-top:8px;border-top:1px solid var(--line,#e3e6ea)}
+.cl details.cl-det{margin:8px 0;border:1px solid var(--line,#e3e6ea);border-radius:8px;padding:6px 10px}
+.cl details.cl-det summary{cursor:pointer}
+.cl .cl-cred{background:var(--surface2);border-radius:8px;padding:6px 8px}
+.cl .cl-row{flex-wrap:wrap}

@@ -33,12 +33,13 @@
     n = Math.floor(n); if (n === 0) return 'CERO';
     const mill = Math.floor(n / 1e6), miles = Math.floor((n % 1e6) / 1000), resto = n % 1000, out = [];
     if (mill) out.push(mill === 1 ? 'UN MILLÓN' : apocope(cientos(mill)) + ' MILLONES');
-    if (miles) out.push(miles === 1 ? 'MIL' : apocope(cientos(miles)) + ' MIL');
+    if (miles) out.push(miles === 1 ? 'UN MIL' : apocope(cientos(miles)) + ' MIL');
     if (resto) out.push(cientos(resto));
     return out.join(' ');
   }
-  const montoLetras = (n) => { const cent = Math.round((n - Math.floor(n)) * 100); return `${letras(n)} Y ${String(cent).padStart(2, '0')}/100 SOLES`; };
-  const montoNum = (n) => 'S/. ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // bien futuro: "Y 00/100 SOLES" y "S/." · bien inmueble (terminado): "CON 00/100 SOLES" y "S/"
+  const montoLetras = (n, con) => { const cent = Math.round((n - Math.floor(n)) * 100); return `${letras(n)} ${con ? 'CON' : 'Y'} ${String(cent).padStart(2, '0')}/100 SOLES`; };
+  const montoNum = (n, sinPunto) => (sinPunto ? 'S/ ' : 'S/. ') + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   /* ---------- lectura de la minuta (Anexo I) ---------- */
   const amt = (s) => Number(String(s).replace(/,/g, ''));
@@ -89,7 +90,11 @@
       if (pv) pv.obj.texto = flat(RAW.slice(pv.end));
     }
 
+    const seccion = (a, b) => { const i = A.search(a); if (i < 0) return ''; const r = A.slice(i).replace(/^[^\n]*\n/, ''); const j = r.search(b); return (j < 0 ? r : r.slice(0, j)).split('\n').map(x => flat(x)).filter(Boolean).join('\n'); };
+    items.forEach(it => { it.k = tipoDe(it.texto, it.sub); (it.sub || []).forEach(x => { x.k = tipoDe(x.texto); x.fecha = fechaDe(x.texto); }); it.fecha = fechaDe(it.texto); });
     return {
+      infoTxt: seccion(/\bII\.\s*Informaci[oó]n del Proyecto/i, /\n\s*(?:III\.\s*)?Informaci[oó]n de EL COMPRADOR/i),
+      bienTxt: seccion(/\bIV\.\s*Bien/i, /\n\s*(?:V\.\s*)?Precio/i),
       vendedora, compradores, inmuebles, proyecto: get(/denominado\s*[“"](.+?)[”"]/i),
       precio: amt(get(/es de S\/\.?\s*([\d,]+\.\d{2})/i) || 0),
       areaOcupada: get(/[ÁA]rea Ocupada aproximada\s*:\s*([\d.,]+)/i), areaTechada: get(/[ÁA]rea Techada aproximada\s*:\s*([\d.,]+)/i), // para el acta de entrega
@@ -101,10 +106,73 @@
     };
   }
 
-  /* ---------- texto de la cláusula ---------- */
+  /* ---------- empresas y formatos ---------- */
+  // Datos fijos de cada empresa (RUC y partida son públicos en SUNAT/SUNARP). El tipo indica el formato:
+  // "futuro" = contrato de bien futuro (Anexo I, punto VI) · "inmueble" = bien terminado (Cláusula Cuarta).
+  const COMUN = { domicilio: 'Av. Javier Prado Este N° 1540-1542, Distrito de San Isidro, Provincia y Departamento de Lima', rep: 'VICTOR MAX GUEVARA OTINIANO', repDni: '10179629', repCargo: 'Gerente', registro: 'del Registro de Personas Jurídicas de Lima' };
+  const EMPRESAS = [
+    { razon: 'MG PROYECTO 22 S.A.C.', ruc: '20610893679', partida: '15264689', tipo: 'futuro', proy: /dulanto|liberta/i },
+    { razon: 'MG PROYECTO 23 S.A.C.', ruc: '20611409614', partida: '15359217', tipo: 'futuro', proy: /centrium/i },
+    { razon: 'MG PROYECTO 24 S.A.C.', ruc: '20612273929', partida: '15563602', tipo: 'futuro', proy: /huiracocha/i },
+    { razon: 'MG VIDA S.A.C.', ruc: '20600743750', partida: '13503256', tipo: 'inmueble', proy: /vista verde/i },
+    { razon: 'MG VILLA S.A.C.', ruc: '20606189282', partida: '14493092', tipo: 'inmueble', proy: /alborada/i, registro: 'Zona Registral IX – Registro de persona jurídica Sede Lima – Oficina Registral de Lima,' }
+  ].map(e => ({ ...COMUN, ...e }));
+  const nrm = (x) => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  function empresaDe(o) { // por RUC, por razón social o por el nombre del proyecto
+    return EMPRESAS.find(e => o.ruc && e.ruc === String(o.ruc).trim()) || EMPRESAS.find(e => o.razon && nrm(o.razon) && nrm(e.razon).startsWith(nrm(o.razon).replace(/SAC$/, ''))) || EMPRESAS.find(e => e.proy.test(o.proyecto || '')) || null;
+  }
+  const vendedoraDe = (e) => ({ razon: e.razon, ruc: e.ruc, domicilio: e.domicilio, rep: e.rep, repDni: e.repDni, repCargo: e.repCargo, partida: e.partida, registro: e.registro });
+
+  /* ---------- textos modelo de cada pago (tomados de las cláusulas firmadas) ---------- */
+  const TIPOS_ITEM = [['ini', 'Cuota inicial (en varios pagos)'], ['sal', 'Saldo con crédito hipotecario'], ['dir', 'Pago con fecha'], ['otro', 'Texto libre']];
+  const TIPOS_SUB = [['sep', 'Separación (ya pagada)'], ['dep', 'Depósito ya pagado'], ['fut', 'Pago pendiente (con fecha)'], ['bbp', 'Bono del Buen Pagador (BBP)'], ['otro', 'Texto libre']];
+  const CON_FECHA = ['sal', 'dir', 'fut'];
   const DEP = 'que fueron depositados mediante una transferencia bancaria LA VENDEDORA le otorga plenos efectos cancelatorios y declara que no tiene nada que reclamar con respecto a esta cantidad.';
+  const DEP_B = 'que fueron depositados mediante transferencia bancaria proveniente de recursos propios del comprador. Por el presente acto, LA VENDEDORA le otorga plenos efectos cancelatorios y declara que no tiene nada que reclamar con respecto a esta cantidad.';
+  const fechaDe = (t) => isoDeTexto((/a m[aá]s tardar (?:el )?(\d{1,2} de [a-záéíóú]+ del? \d{4})/i.exec(t || '') || [])[1]);
+  function tipoDe(t, sub) {
+    t = t || ''; if (sub) return 'ini';
+    if (/separaci[oó]n/i.test(t)) return 'sep';
+    if (/bono|BBP/i.test(t)) return 'bbp';
+    if (/desembolso|cr[eé]dito hipotecario/i.test(t)) return 'sal';
+    if (/fueron depositad/i.test(t)) return 'dep';
+    if (/ser[aá]n? (?:depositad|cancelad)/i.test(t)) return 'fut';
+    return 'otro';
+  }
+  const rolDe = (cs) => cs.length > 1 ? 'LOS COMPRADORES' : (cs[0] && cs[0].trat === 'Sra.' ? 'LA COMPRADORA' : 'EL COMPRADOR');
+  function textoModelo(k, d, row) {
+    const B = d.tipo === 'inmueble', rol = rolDe(d.compradores || []), cr = d.credito || {};
+    const fe = 'a más tardar el ' + (row.fecha ? fechaLarga(row.fecha) : '____ de ________ del ____');
+    const bco = cr.banco || '________';
+    switch (k) {
+      case 'ini': return B ? `que serán cancelados por ${rol} de la siguiente manera:` : 'por concepto de cuota inicial, suma que será cancelada de la manera siguiente:';
+      case 'sep': return B ? DEP_B : 'que fueron depositados mediante una transferencia bancaria por concepto de separación, con la firma puesta de ambas partes, LA VENDEDORA le otorga plenos efectos cancelatorios y declara que no tiene nada que reclamar con respecto a esta cantidad.';
+      case 'dep': return B ? DEP_B : DEP;
+      case 'fut': return `que serán depositados mediante ${B ? '' : 'una '}transferencia bancaria ${fe}.`;
+      case 'dir': return `que será cancelado por ${rol} mediante transferencia bancaria ${fe}, asimismo, LA VENDEDORA le otorga plenos efectos cancelatorios.`;
+      case 'bbp': return `, correspondientes al Bono Integrador del Buen Pagador (BBP) para vivienda Sostenible, que complementa la cuota inicial, otorgado por el Fondo Mivivienda S.A., a través del ${cr.bbpBanco || bco}, cuya entrega se hará efectiva al momento de la suscripción de la escritura pública que la presente minuta origine mediante cheque de gerencia y/u otro medio de pago, sin mayor constancia de entrega que la firma de las partes puestas en el mencionado instrumento público.`;
+      case 'sal': return B
+        ? `, que será cancelado por ${rol} mediante desembolso del crédito hipotecario otorgado por el ${bco}; que será pagado mediante cheque no negociable que el ${bco}, girará por instrucción de ambas partes a nombre de ${(d.vendedora || {}).razon || '________'} / ${cr.promotor || '________'}, en forma conjunta, a la firma de la escritura pública, ${fe}, para que sea abonado en la cuenta Crediobra N.º ${cr.cuenta || '________'}, que servirá para cumplir con la condición del levantamiento de hipoteca del inmueble. Asimismo, LA VENDEDORA le otorga plenos efectos cancelatorios.`
+        : `, que será cancelado por EL COMPRADOR/ LOS COMPRADORES mediante desembolso del crédito Hipotecario Otorgado por la entidad financiera ${fe}, mediante cheque de gerencia y/u otro medio de pago a la firma de la escritura pública, asimismo, LA VENDEDORA le otorga plenos efectos cancelatorios.`;
+    }
+    return row.texto || '';
+  }
+  // vuelve a escribir el texto de los pagos que siguen un modelo (no toca los de "Texto libre")
+  function rehacerTextos(d) {
+    (d.pago.items || []).forEach(it => { if (it.k && it.k !== 'otro') it.texto = textoModelo(it.k, d, it); (it.sub || []).forEach(x => { if (x.k && x.k !== 'otro') x.texto = textoModelo(x.k, d, x); }); });
+  }
+  // completa un borrador guardado con versiones anteriores del CRM
+  function normalizar(d) {
+    d.tipo = d.tipo || 'futuro'; d.credito = d.credito || {}; d.info = d.info || { incluir: false, num: 'II', texto: '' }; d.bien = d.bien || { incluir: false, num: 'IV', texto: '' };
+    d.reserva = d.reserva || { incluir: false, clausula: 'Quinta' }; d.poder = d.poder || { incluir: false, banco: '' }; d.antecedentes = d.antecedentes || [];
+    d.vendedora = d.vendedora || {}; if (!d.vendedora.registro) d.vendedora.registro = COMUN.registro;
+    (d.pago.items || []).forEach(it => { if (!it.k) it.k = tipoDe(it.texto, it.sub && it.sub.length); if (it.fecha === undefined) it.fecha = fechaDe(it.texto); (it.sub || []).forEach(x => { if (!x.k) x.k = tipoDe(x.texto); if (x.fecha === undefined) x.fecha = fechaDe(x.texto); }); });
+    return d;
+  }
+
+  /* ---------- texto de la cláusula ---------- */
   const fem = (c) => c.trat === 'Sra.';
-  const ecTxt = (c) => { const e = (c.ec || '').toLowerCase().replace(/\(a\)|\(o\)/g, ''); const base = e.replace(/[oa]$/, ''); return /casad|solter|viud|divorciad/.test(e) ? base + (fem(c) ? 'a' : 'o') : e; };
+  const ecTxt = (c) => { const e = (c.ec || '').toLowerCase().replace(/\(a\)|\(o\)/g, ''); const base = e.replace(/[oa]$/, ''); const r = /casad|solter|viud|divorciad/.test(e) ? base + (fem(c) ? 'a' : 'o') : e; return r ? r[0].toUpperCase() + r.slice(1) : r; };
   const idTxt = (c) => `${c.trat === 'Sra.' ? 'la Sra.' : 'el Sr.'} ${c.nombre.toUpperCase()}, identificad${fem(c) ? 'a' : 'o'} con ${c.doc === 'CE' ? 'Carné de Extranjería' : 'DNI'} N.º ${c.dni}`;
   function partesCompradores(cs) {
     const cap = (s) => s[0].toUpperCase() + s.slice(1);
@@ -112,10 +180,9 @@
     let txt;
     if (cs.length === 2 && cs.every(c => /casad/i.test(c.ec)) && flat(cs[0].domicilio) === flat(cs[1].domicilio))
       txt = `${cap(idTxt(cs[0]))}, ${fem(cs[0]) ? 'casada' : 'casado'} con ${idTxt(cs[1])}, ${fem(cs[0]) && fem(cs[1]) ? 'ambas' : 'ambos'} de nacionalidad ${nac(cs[0])} con domicilio en ${cs[0].domicilio}`;
-    else txt = cs.map((c, i) => `${i ? idTxt(c) : cap(idTxt(c))}, de estado civil ${ecTxt(c)}, de nacionalidad ${nac(c)}, con domicilio en ${c.domicilio}`).join('; y ');
-    const uno = cs.length === 1;
-    return { txt: txt + (uno ? `, a quien en adelante se le denominará ${fem(cs[0]) ? 'LA COMPRADORA' : 'EL COMPRADOR'}; y de la otra parte:` : ', a quienes en adelante se les denominarán LOS COMPRADORES; y de la otra parte:'),
-      rol: uno ? (fem(cs[0]) ? '“LA COMPRADORA”' : '“EL COMPRADOR”') : '“LOS COMPRADORES”' };
+    else txt = cs.map((c, i) => `${i ? idTxt(c) : cap(idTxt(c))}, de nacionalidad ${nac(c)}, de estado civil ${ecTxt(c)}, con domicilio en ${c.domicilio}`).join('; y ');
+    const rol = rolDe(cs);
+    return { txt: txt + (cs.length === 1 ? `, a quien en adelante se le denominará ${rol}; y de la otra parte:` : ', a quienes en adelante se les denominarán LOS COMPRADORES; y de la otra parte:'), rol: `“${rol}”` };
   }
 
   /* ---------- Word (OOXML) ---------- */
@@ -127,34 +194,50 @@
   const BL = P('');
 
   function bodyXml(d) {
-    const fm = fechaLarga(d.fechaMinuta), V = d.vendedora, cs = partesCompradores(d.compradores);
-    const vend = `**${V.razon}** con RUC N.º ${V.ruc}, con domicilio en ${V.domicilio}, debidamente representada por su ${V.repCargo || 'Gerente'} el Señor **${V.rep.toUpperCase()}**, identificado con DNI Nº ${V.repDni}, con poderes inscritos en la Partida Electrónica N.º ${V.partida} del Registro de Personas Jurídicas de Lima a quien en adelante se le denominará **LA VENDEDORA**:`;
+    normalizar(d);
+    const B = d.tipo === 'inmueble', fm = fechaLarga(d.fechaMinuta), V = d.vendedora, cs = partesCompradores(d.compradores);
+    const contrato = B ? 'contrato de bien inmueble' : 'contrato de bien futuro';
+    const vend = `**${V.razon}** con RUC Nº ${V.ruc}, con domicilio en ${V.domicilio}, debidamente representada por su ${V.repCargo || 'Gerente'} el Señor **${(V.rep || '').toUpperCase()}**, identificado con DNI Nº ${V.repDni}, con poderes inscritos en la Partida Electrónica N° ${V.partida} ${V.registro || COMUN.registro} a quien en adelante se le denominará **LA VENDEDORA**:`.replace(/,, /g, ', ');
     const empresa = `${V.razon}, con RUC ${V.ruc}`;
+    const parrafos = (t) => String(t || '').split(/\n+/).map(x => x.trim()).filter(Boolean).flatMap(x => [P(x), BL]);
+    const ubic = d.ubicacion ? `, inmueble ubicado en ${d.ubicacion}` : ` del Proyecto ${B ? '' : 'inmobiliario denominado '}“${d.proyecto}”`;
     const out = [P('CLAUSULA ADICIONAL:', { b: true, u: true, jc: 'center' }), BL,
-      P(`Conste por la presente cláusula adicional una de **ACLARACIÓN Y RATIFICACIÓN DE CONTRATO DE COMPRAVENTA DE BIEN INMUEBLE** que celebran las partes a la minuta de compraventa de fecha ${fm}, en los términos siguientes:`), BL,
+      P(`Conste por la presente cláusula adicional una de **ACLARACIÓN Y RATIFICACIÓN DE CONTRATO DE COMPRAVENTA** que celebran las partes a la minuta de compraventa de fecha ${fm}, en los términos siguientes:`), BL,
       P(cs.txt.replace(/(LOS COMPRADORES|EL COMPRADOR|LA COMPRADORA)/, '**$1**')), BL, P(vend), BL,
       P('A quienes en adelante también se les podrá denominar **LAS PARTES**.'), BL,
       P('PRIMERA. - “Antecedentes”', { b: true, u: true }), BL,
-      P(`Las partes contratantes con fecha ${fm}, firmaron contrato de **COMPRA VENTA DE BIEN FUTURO**, por la adquisición del ${d.inmuebles} del Proyecto “${d.proyecto.toUpperCase()}”.`), BL];
+      P(`Las partes contratantes con fecha ${fm} firmaron contrato de **COMPRA VENTA DE ${B ? 'BIEN INMUEBLE' : 'BIEN FUTURO'}**, por la adquisición del ${d.inmuebles}${ubic}.`), BL];
     (d.antecedentes || []).filter(a => a.fecha || a.texto).forEach(a => out.push(P(`Asimismo, con fecha ${fechaLarga(a.fecha)}, **LAS PARTES** suscribieron una cláusula adicional a la referida minuta${a.texto ? `, mediante la cual ${String(a.texto).trim().replace(/[.;]+$/, '')}` : ''}.`), BL));
-    if (d.pago.incluir || d.entrega.incluir) {
+    const info = !B && d.info.incluir && d.info.texto, bien = !B && d.bien.incluir && d.bien.texto, entrega = !B && d.entrega.incluir;
+    const hay = info || bien || d.pago.incluir || entrega || d.reserva.incluir;
+    const punto = (num, titulo) => P(`Según se cita en el punto ${num} del ANEXO I, en “${titulo}” del ${contrato}, **LAS PARTES** aclaran y declaran bajo responsabilidad la siguiente modificación:`);
+    if (hay) {
       out.push(P('SEGUNDA. - “Aclaración”', { b: true, u: true }), BL,
-        P(`Mediante la presente cláusula adicional, que forma parte integrante de la minuta de compraventa de fecha ${fm}, **LAS PARTES** precisan que son materia de aclaración lo siguiente:`), BL);
+        P(`Mediante la presente cláusula adicional, que forma parte integrante de la minuta de compraventa de fecha ${fm}, **LAS PARTES** ${B ? 'establecen por mutuo acuerdo' : 'precisan'} que son materia de aclaración lo siguiente:`), BL);
+      if (info) out.push(punto(d.info.num, 'Información del Proyecto'), BL, P(`${d.info.num}. Información del Proyecto`, { b: true, u: true }), BL, ...parrafos(d.info.texto));
+      if (bien) out.push(punto(d.bien.num, 'Bien/bienes objeto del presente contrato'), BL, ...parrafos(d.bien.texto));
       if (d.pago.incluir) {
-        out.push(P(`Según se cita en el punto ${d.pago.num} del ANEXO I, en “Forma de Pago” del contrato de bien inmueble, **LAS PARTES** aclaran y declaran bajo responsabilidad la siguiente modificación:`), BL,
-          P('Forma de Pago', { b: true, u: true }), BL);
+        if (B) out.push(P(`Según se cita en la Cláusula ${d.pago.clausula || 'Cuarta'} referido a la “forma de pago” del ${contrato}, **LAS PARTES** aclaran y declaran bajo responsabilidad la siguiente modificación:`), BL,
+          P(`El precio de venta, será pagado por **${rolDe(d.compradores)}**, tal como se detalla a continuación:`), BL);
+        else out.push(punto(d.pago.num, 'Forma de Pago'), BL, P('Forma de Pago', { b: true, u: true }), BL);
+        const up = (t) => B ? t.toUpperCase() : t;
+        const monto = (n) => `**${montoNum(n, B)} (${montoLetras(n, B)})**`;
+        const sep = (t) => /^[,;.]/.test(t || '') ? '' : ' ';
         d.pago.items.forEach((it, i) => {
-          out.push(P(`${i + 1}.\t**${montoNum(it.monto)} (${montoLetras(it.monto)})** ${it.texto}`, { ind: 709, hang: 425 }));
-          (it.sub || []).forEach(s => out.push(P(`-\t**${montoNum(s.monto)} (${montoLetras(s.monto)})** ${s.texto}`, { ind: 1418, hang: 425 })));
+          const pre = B && it.k === 'ini' ? 'La cuota inicial asciende a ' : B && it.k === 'sal' ? 'El saldo del precio de venta que asciende a ' : '';
+          out.push(P(up(`${i + 1}.\t${pre}${monto(it.monto)}${sep(it.texto)}${it.texto || ''}`), { ind: 709, hang: 425 }));
+          (it.sub || []).forEach(x => out.push(P(up(`${B ? '■' : '-'}\t${monto(x.monto)}${sep(x.texto)}${x.texto || ''}`), { ind: 1418, hang: 425 })));
           out.push(BL);
         });
       }
-      if (d.entrega.incluir) {
-        out.push(P(`Según se cita en el punto ${d.entrega.num} del ANEXO I, en “Fecha de entrega de EL INMUEBLE/LOS INMUEBLES” del contrato de bien futuro, **LAS PARTES** aclaran y declaran bajo responsabilidad la siguiente modificación:`), BL,
+      if (entrega) {
+        out.push(punto(d.entrega.num, 'Fecha de entrega de EL INMUEBLE/LOS INMUEBLES'), BL,
           P('Fecha de entrega de EL INMUEBLE/LOS INMUEBLES', { b: true, u: true }), BL,
-          P(`El plazo para la entrega de EL INMUEBLE/LOS INMUEBLES será el **${fechaLarga(d.entrega.fecha)}**. Sin embargo, si **LA VENDEDORA** culminase el edificio con fecha anterior a la antes mencionada, podrá hacer entrega anticipada de EL INMUEBLE/LOS INMUEBLES en cuestión siempre y cuando éstos se encuentren debidamente cancelados en su totalidad.`), BL,
+          P(`El plazo para la entrega de EL INMUEBLE/LOS INMUEBLES será en el **${fechaLarga(d.entrega.fecha)}**. Sin embargo, si **LA VENDEDORA** culminase el edificio con fecha anterior a la antes mencionada, podrá hacer entrega anticipada de EL INMUEBLE/LOS INMUEBLES en cuestión siempre y cuando éstos se encuentren debidamente cancelados en su totalidad.`), BL,
           P('Sin perjuicio de lo antes indicado, **LA VENDEDORA** contara con días de gracia indicado en la presente minuta para la entrega de EL INMUEBLE/LOS INMUEBLES.'), BL);
       }
+      if (d.reserva.incluir) out.push(P(`Así mismo por medio de la presente cláusula adicional que se incorpora a la minuta de compraventa de fecha ${fm} (en adelante “EL CONTRATO”), **LAS PARTES** conviene en:`), BL,
+        P(`“Dejar sin efecto la Reserva de Propiedad indicada en la Cláusula ${d.reserva.clausula || 'Quinta'} de EL CONTRATO. Dejando expresa constancia que la transferencia del inmueble opera desde la suscripción EL CONTRATO”.`), BL);
     }
     if (d.poder.incluir) {
       const lista = [
@@ -169,18 +252,17 @@
         `${empresa}, podrán representar al cliente a sola firma y de manera indistinta, para los actos señalados precedentemente.`];
       out.push(P('Asimismo, las partes convienen en incluir en la presente cláusula adicional lo sgte:'), BL,
         P('CLAUSULA ADICIONAL. - PODER IRREVOCABLE:', { b: true, u: true }), BL,
-        P(`Las partes declaran que es de su interés la inscripción, en el registro de predios de la oficina registral competente, de la transferencia de propiedad de los INMUEBLES a favor del Cliente; así como, de la Hipoteca y la emisión –en caso así lo solicite el ${d.poder.banco.toUpperCase()} al Registro de Predios de la Oficina Registral competente- del TCHN.`), BL,
+        P(`Las partes declaran que es de su interés la inscripción, en el registro de predios de la oficina registral competente, de la transferencia de propiedad de los INMUEBLES a favor del Cliente; así como, de la Hipoteca y la emisión –en caso así lo solicite el ${(d.poder.banco || (d.credito || {}).banco || '').toUpperCase()} al Registro de Predios de la Oficina Registral competente- del TCHN.`), BL,
         P(`En este sentido, por la presente cláusula, el Cliente otorga poder irrevocable a favor de ${empresa}, para que, pueda ejercer a sola firma, en forma indistinta, las facultades detalladas a continuación:`), BL,
         ...lista.map(t => P('•\t' + t, { ind: 709, hang: 357 })), BL,
         P(`El plazo de vigencia del poder irrevocable que en virtud a esta cláusula el cliente otorga a favor de ${empresa} será de un (1) año, plazo que será computado a partir de la fecha en que se inscriba la independización del inmueble o que se inscriba el poder en el registro de mandatos y poderes correspondiente, lo que suceda primero.`), BL);
     }
-    const ord = (d.pago.incluir || d.entrega.incluir) ? 'TERCERA' : 'SEGUNDA';
-    out.push(P(`${ord}. - “Ratificación”`, { b: true, u: true }), BL,
-      P(`Mediante la presente cláusula las partes intervinientes prestan su conformidad y ratificación los demás términos y condiciones pactadas en la minuta de compraventa de fecha ${fm}, antes aludida, la cual mantiene su plena vigencia y validez legal en tanto no se oponga al presente instrumento.`),
+    out.push(P(`${hay ? 'TERCERA' : 'SEGUNDA'}. - “Ratificación”`, { b: true, u: true }), BL,
+      P(`Mediante la presente cláusula las partes intervinientes prestan su conformidad y ratificación los demás términos y condiciones pactadas en la minuta de compraventa de fecha ${fm} antes aludida, la cual mantiene su plena vigencia y validez legal en tanto no se oponga al presente instrumento.`), BL,
       P('Agregue usted señor notario, lo demás que fuere de ley, y sírvase cursar los partes correspondientes al Registro de la Propiedad Inmueble de Lima para su inscripción.'), BL,
-      P(`${d.ciudad || 'Lima'}, ${fechaLarga(d.fecha)}.`, { jc: 'right' }), BL, BL, BL, BL);
+      P(`${d.ciudad || 'Lima'}, ${fechaLarga(d.fecha)}.`), BL, BL, BL, BL);
     const firma = (n, dni, extra, rol) => [P('________________________________', { jc: 'center' }), P(n.toUpperCase(), { b: true, jc: 'center' }), P(`DNI Nº ${dni}`, { jc: 'center' }), extra ? P(extra, { b: true, jc: 'center' }) : '', P(rol, { b: true, jc: 'center' }), BL, BL, BL, BL].join('');
-    out.push(firma(V.rep, V.repDni, V.razon, '“LA VENDEDORA”'));
+    out.push(firma(V.rep || '', V.repDni, V.razon, '“LA VENDEDORA”'));
     d.compradores.forEach(c => out.push(firma(c.nombre, c.dni, '', cs.rol)));
     return out.join('');
   }
@@ -196,5 +278,5 @@
     return Z.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   }
 
-  window.CLAUSULA = { zipLib, parseMinuta, docx, letras, montoLetras, montoNum, fechaLarga, isoDeTexto, DEP };
+  window.CLAUSULA = { zipLib, parseMinuta, docx, letras, montoLetras, montoNum, fechaLarga, isoDeTexto, DEP, EMPRESAS, empresaDe, vendedoraDe, TIPOS_ITEM, TIPOS_SUB, CON_FECHA, textoModelo, rehacerTextos, normalizar, tipoDe, fechaDe, rolDe, bodyXml };
 })();

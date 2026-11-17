@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', evtab: 'a_edit', 'export-ops': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -1927,7 +1927,7 @@
       <div class="cl-rec-t small"><span>Comercial (firma del cliente): ${t('clc')}</span><span>Banco → desembolso: ${t('clb')}</span><span>Desembolso → notaría: ${t('dnot')}</span></div>
       <div class="f-grid">${CL_PASOS.map(([k, l]) => fieldInput(o, { ...campoDe(k), l })).join('')}${fieldInput(o, campoDe('con_clObsBanco'))}${fieldInput(o, campoDe('con_clFechasOk'))}${fieldInput(o, campoDe('con_clObs'))}</div></details>`;
   }
-  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta || (o.clausula && o.clausula.manual) ? '' : ' (subir minuta PDF o Word)'}</button>${o.minuta ? '' : ` <button class="btn sm" data-act="clausula-manual" data-op="${o.id}" title="Para contratos de bien terminado o si no tienes la minuta">✍️ Sin minuta: llenar a mano</button>`}${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
   /* ---- Carta notarial de resolución (cláusula sexta): datos de la minuta + revisión + Word con el formato del área ---- */
   const CN_K = 'crm-mg-carta-firma';
   const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">⚖️ Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
@@ -1975,80 +1975,145 @@
     if ((D.obsInterna || '') !== (op.con_clObs || '')) setField(op.id, 'con_clObs', D.obsInterna || '');
     const fc = D.fechasConfirmadas ? 'Sí' : (D.obsInterna ? 'No, por confirmar' : (op.con_clFechasOk || '')); if (fc !== (op.con_clFechasOk || '')) setField(op.id, 'con_clFechasOk', fc); };
   function setPath(o, path, v) { const k = path.split('.'); let x = o; k.slice(0, -1).forEach(p => { x = x[p]; }); x[k[k.length - 1]] = v; }
+  const getPath = (o, path) => path.split('.').reduce((x, p) => x && x[p], o);
   function clauseCollect(box, D) {
     box.querySelectorAll('[name]').forEach(el => setPath(D, el.name, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) || 0 : el.value));
-    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (!it || !el.value || el.value === el.dataset.orig) return; const f = 'a más tardar el ' + CLAUSULA.fechaLarga(el.value);
-      it.texto = /a más tardar el .+? del? \d{4}/i.test(it.texto) ? it.texto.replace(/a más tardar el .+? del? \d{4}/i, f) : String(it.texto || '').replace(/[\s.,;]*$/, '') + ', ' + f + '.'; });
     D.pago.items.forEach(it => { if (it.sub && it.sub.length) it.monto = it.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
   }
+  // "minuta" armada con los datos de la ficha, para cuando no hay minuta de Evolta (p. ej. bien terminado)
+  function minutaManual(op) {
+    const precio = Number(op.precio) || 0, cred = Number(op.montoBanco) || 0, bono = Number(op.bono) || 0, ini = Math.max(precio - cred, 0);
+    const sub = [{ monto: Math.max(ini - bono, 0), k: 'sep', texto: '' }]; if (bono) sub.push({ monto: bono, k: 'bbp', texto: '' });
+    return { vendedora: {}, compradores: [{ trat: '', nombre: op.cliente || '', dni: op.dni || '', doc: 'DNI', ec: '', domicilio: '', nac: 'peruana' }], inmuebles: op.unidad ? `Departamento N° ${op.unidad}` : '', proyecto: op.proyecto || '', precio, fechaMinuta: '',
+      pago: { incluir: true, num: 'VI', items: [{ monto: ini, k: 'ini', texto: '', sub }, { monto: cred, k: 'sal', texto: '', fecha: '' }] }, entrega: { incluir: false, num: 'VII', fecha: '' } };
+  }
+  // pendientes que impiden descargar el Word (se avisa qué falta y dónde)
+  function clauseFaltas(D) {
+    const f = [];
+    if (D.compradores.some(c => !c.trat)) f.push('el trato (Sr. / Sra.) de cada comprador');
+    if (D.compradores.some(c => !c.nombre || !c.dni)) f.push('nombre y DNI de cada comprador');
+    if (!D.vendedora.razon || !D.vendedora.ruc || !D.vendedora.partida) f.push('los datos de la empresa vendedora');
+    if (!D.fechaMinuta) f.push('la fecha de la minuta');
+    if (!D.inmuebles) f.push('el inmueble');
+    if (D.pago.incluir) D.pago.items.forEach((it, i) => { if (/_{4}/.test(it.texto || '') || (it.sub || []).some(x => /_{4}/.test(x.texto || ''))) f.push(`los espacios ____ del pago ${i + 1} (fecha, banco o cuenta)`); });
+    if (D.entrega.incluir && D.tipo !== 'inmueble' && !D.entrega.fecha) f.push('la nueva fecha de entrega');
+    return f;
+  }
   function clauseForm(D, op) {
-    const L = CLAUSULA, inp = (name, val, label, o = {}) => `<label class="f ${o.w2 ? 'w2' : ''}">${label}<input name="${name}" value="${esc(val ?? '')}" ${o.type ? `type="${o.type}"` : ''} ${o.ro ? 'readonly' : ''}></label>`;
-    const ta = (name, val) => `<textarea name="${name}" rows="2">${esc(val || '')}</textarea>`;
+    const L = CLAUSULA, B = D.tipo === 'inmueble', inp = (name, val, label, o = {}) => `<label class="f ${o.w2 ? 'w2' : ''}">${label}<input name="${name}" value="${esc(val ?? '')}" ${o.type ? `type="${o.type}"` : ''} ${o.ro ? 'readonly' : ''} ${o.regen ? 'data-regen' : ''} ${o.ph ? `placeholder="${esc(o.ph)}"` : ''}></label>`;
+    const ta = (name, val, rows = 2) => `<textarea name="${name}" rows="${rows}">${esc(val || '')}</textarea>`;
+    const sel = (name, val, opts) => `<select name="${name}" class="cl-k">${opts.map(([v, t]) => `<option value="${v}" ${v === val ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+    const fecha = (name, r) => L.CON_FECHA.includes(r.k) ? `<label class="f cl-fe">A más tardar el<input type="date" name="${name}" value="${esc(r.fecha || '')}"></label>` : '';
     const total = D.pago.items.reduce((t, i) => t + (Number(i.monto) || 0), 0);
-    const items = D.pago.items.map((it, i) => {
-      const fd = CLAUSULA.isoDeTexto((/a más tardar el (.+? del? \d{4})/i.exec(it.texto) || [])[1]);
-      return `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}<span class="small muted cl-let">${L.montoLetras(it.monto || 0)}</span></div>${ta(`pago.items.${i}.texto`, it.texto)}
-        <label class="f cl-row" style="max-width:300px">${fd ? 'Fecha (a más tardar el)' : 'Fecha de este pago (opcional)'}<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>
-        ${(it.sub || []).map((s, j) => `<div class="cl-sub"><div class="cl-row">– ${inp(`pago.items.${i}.sub.${j}.monto`, s.monto, 'Monto (S/)', { type: 'number' })}<span class="small muted cl-let">${L.montoLetras(s.monto || 0)}</span><button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div>${ta(`pago.items.${i}.sub.${j}.texto`, s.texto)}</div>`).join('')}
-        <div class="cl-row">${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : `<button type="button" class="btn sm" data-cl="to-sub" data-i="${i}">+ Dividir en varios pagos</button>`} <button type="button" class="btn sm" data-cl="del-item" data-i="${i}">✕ Quitar este punto</button></div></div>`;
-    }).join('');
+    const iEmp = L.EMPRESAS.findIndex(e => e.ruc === D.vendedora.ruc);
+    const items = D.pago.items.map((it, i) => `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}${sel(`pago.items.${i}.k`, it.k || 'otro', L.TIPOS_ITEM)}${fecha(`pago.items.${i}.fecha`, it)}</div><div class="small muted cl-let">${L.montoNum(it.monto || 0, B)} (${L.montoLetras(it.monto || 0, B)})</div>${ta(`pago.items.${i}.texto`, it.texto)}
+        ${(it.sub || []).map((x, j) => `<div class="cl-sub"><div class="cl-row">${B ? '■' : '–'} ${inp(`pago.items.${i}.sub.${j}.monto`, x.monto, 'Monto (S/)', { type: 'number' })}${sel(`pago.items.${i}.sub.${j}.k`, x.k || 'otro', L.TIPOS_SUB)}${fecha(`pago.items.${i}.sub.${j}.fecha`, x)}<button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div><div class="small muted cl-let">${L.montoLetras(x.monto || 0, B)}</div>${ta(`pago.items.${i}.sub.${j}.texto`, x.texto)}</div>`).join('')}
+        <div class="cl-row">${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : `<button type="button" class="btn sm" data-cl="to-sub" data-i="${i}">+ Dividir en varios pagos</button>`} <button type="button" class="btn sm" data-cl="del-item" data-i="${i}">✕ Quitar este punto</button></div></div>`).join('');
     const pagosEv = op.evolta && (op.evolta.pagos || []).length;
-    return `<div class="cl"><p class="small muted" style="margin-top:0">Datos tomados de la minuta (Anexo I). Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 Cargar otra minuta</button></p>
-      <h3>Minuta y bien</h3><div class="f-grid">${inp('fechaMinuta', D.fechaMinuta, 'Fecha de la minuta', { type: 'date' })}${inp('proyecto', D.proyecto, 'Proyecto')}${inp('inmuebles', D.inmuebles, 'Inmueble(s)', { w2: true })}</div>
-      <h3>Compradores</h3>${D.compradores.map((c, i) => `<div class="f-grid cl-block"><label class="f">Trato<select name="compradores.${i}.trat"><option value="">Elegir…</option><option ${c.trat === 'Sr.' ? 'selected' : ''}>Sr.</option><option ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label>${inp(`compradores.${i}.nombre`, c.nombre, 'Nombre completo', { w2: true })}${inp(`compradores.${i}.dni`, c.dni, 'DNI')}${inp(`compradores.${i}.ec`, c.ec, 'Estado civil')}${inp(`compradores.${i}.nac`, c.nac, 'Nacionalidad')}${inp(`compradores.${i}.domicilio`, c.domicilio, 'Domicilio', { w2: true })}</div>`).join('')}
-      <h3>Vendedora</h3><div class="f-grid">${inp('vendedora.razon', D.vendedora.razon, 'Razón social')}${inp('vendedora.ruc', D.vendedora.ruc, 'RUC')}${inp('vendedora.domicilio', D.vendedora.domicilio, 'Domicilio', { w2: true })}${inp('vendedora.rep', D.vendedora.rep, 'Representante')}${inp('vendedora.repDni', D.vendedora.repDni, 'DNI representante')}${inp('vendedora.repCargo', D.vendedora.repCargo, 'Cargo')}${inp('vendedora.partida', D.vendedora.partida, 'Partida electrónica')}</div>
+    const faltas = clauseFaltas(D);
+    const opc = (key, titulo, cuerpo, extra = '') => `<h3 class="cl-h"><label><input type="checkbox" name="${key}.incluir" ${D[key].incluir ? 'checked' : ''}> ${titulo}</label>${extra}</h3>${D[key].incluir ? cuerpo : ''}`;
+    return `<div class="cl"><p class="small muted" style="margin-top:0">${D.manual ? '✍️ Cláusula llenada a mano con los datos de la ficha (sin minuta).' : 'Datos tomados de la minuta (Anexo I).'} Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 ${D.manual ? 'Cargar la minuta' : 'Cargar otra minuta'}</button></p>
+      <div class="cl-guia"><b>1.</b> Revisa la empresa y el tipo de contrato · <b>2.</b> Revisa compradores · <b>3.</b> Arma la forma de pago eligiendo el <b>tipo</b> de cada pago (el texto se escribe solo, igual a las cláusulas firmadas) · <b>4.</b> Marca lo demás que se aclara · <b>5.</b> Descarga el Word.</div>
+      ${faltas.length ? `<div class="ev-falta">⚠️ Para descargar falta: ${faltas.map(esc).join(' · ')}</div>` : '<div class="guia ok">✅ Todo listo para descargar el Word.</div>'}
+      <h3>Empresa y tipo de contrato</h3><div class="f-grid"><label class="f">Empresa vendedora<select data-emp>${L.EMPRESAS.map((e, k) => `<option value="${k}" ${k === iEmp ? 'selected' : ''}>${e.razon}</option>`).join('')}<option value="-1" ${iEmp < 0 ? 'selected' : ''}>Otra (escribir abajo)</option></select></label>
+        <label class="f w2">Tipo de contrato<select name="tipo"><option value="futuro" ${!B ? 'selected' : ''}>Bien futuro (en planos) · Anexo I, punto VI · MG Proyecto 22, 23, 24</option><option value="inmueble" ${B ? 'selected' : ''}>Bien inmueble (terminado) · Cláusula Cuarta · MG Vida, MG Villa</option></select></label></div>
+      <p class="small muted" style="margin:4px 0 0">Al elegir la empresa se llenan solos el RUC, la partida, el domicilio y el representante. El tipo de contrato cambia la redacción (el de bien terminado va en MAYÚSCULAS, con cheque no negociable y cuenta Crediobra).</p>
+      <h3>Minuta y bien</h3><div class="f-grid">${inp('fechaMinuta', D.fechaMinuta, 'Fecha de la minuta', { type: 'date' })}${inp('proyecto', D.proyecto, 'Proyecto')}${inp('inmuebles', D.inmuebles, 'Inmueble(s)', { w2: true, ph: 'Ej.: Dpto. N.º 405 + Estacionamiento N.º 1' })}${B ? inp('ubicacion', D.ubicacion, 'Dirección del inmueble (opcional: reemplaza "del Proyecto …")', { w2: true, ph: 'Ej.: Av. La Paz N° 1150, Urb. Miramar, Distrito de San Miguel…' }) : ''}</div>
+      <h3>Compradores</h3>${D.compradores.map((c, i) => `<div class="f-grid cl-block"><label class="f">Trato<select name="compradores.${i}.trat"><option value="">Elegir…</option><option ${c.trat === 'Sr.' ? 'selected' : ''}>Sr.</option><option ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label>${inp(`compradores.${i}.nombre`, c.nombre, 'Nombre completo', { w2: true })}${inp(`compradores.${i}.dni`, c.dni, 'DNI')}${inp(`compradores.${i}.ec`, c.ec, 'Estado civil')}${inp(`compradores.${i}.nac`, c.nac, 'Nacionalidad')}${inp(`compradores.${i}.domicilio`, c.domicilio, 'Domicilio', { w2: true })}${D.compradores.length > 1 ? `<button type="button" class="btn sm" data-cl="del-comp" data-i="${i}">✕ Quitar comprador</button>` : ''}</div>`).join('')}
+      <p><button type="button" class="btn sm" data-cl="add-comp">+ Agregar comprador (cónyuge / copropietario)</button></p>
+      <details class="cl-det"><summary><b>Datos de la vendedora</b> <span class="small muted">· ${esc(D.vendedora.razon || 'sin empresa')} · RUC ${esc(D.vendedora.ruc || '—')} · Partida ${esc(D.vendedora.partida || '—')}</span></summary><div class="f-grid">${inp('vendedora.razon', D.vendedora.razon, 'Razón social', { regen: true })}${inp('vendedora.ruc', D.vendedora.ruc, 'RUC')}${inp('vendedora.domicilio', D.vendedora.domicilio, 'Domicilio', { w2: true })}${inp('vendedora.rep', D.vendedora.rep, 'Representante')}${inp('vendedora.repDni', D.vendedora.repDni, 'DNI representante')}${inp('vendedora.repCargo', D.vendedora.repCargo, 'Cargo')}${inp('vendedora.partida', D.vendedora.partida, 'Partida electrónica')}${inp('vendedora.registro', D.vendedora.registro, 'Registro (texto después de la partida)', { w2: true })}</div></details>
       <h3>Cláusulas adicionales anteriores (antecedentes)</h3><p class="small muted" style="margin:0 0 6px">Si el cliente ya firmó otra cláusula adicional, agrégala: se menciona en la PRIMERA cláusula (Antecedentes).</p>
       ${(D.antecedentes || []).map((a, i) => `<div class="cl-item"><div class="f-grid">${inp(`antecedentes.${i}.fecha`, a.fecha, 'Fecha de esa cláusula', { type: 'date' })}<label class="f w2">Qué se acordó<input name="antecedentes.${i}.texto" value="${esc(a.texto || '')}" placeholder="Ej.: se modificó la forma de pago"></label></div><button type="button" class="btn sm" data-cl="del-ant" data-i="${i}">✕ Quitar</button></div>`).join('')}
       <p><button type="button" class="btn sm" data-cl="add-ant">+ Agregar cláusula antecedente</button></p>
-      <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Aclarar la forma de pago</label> <span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span></h3>
-      ${D.pago.incluir ? `${!D.pago.items.length ? '<div class="ev-falta">⚠️ No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}<p><button type="button" class="btn sm" data-cl="add-item">+ Agregar punto de pago</button></p>
+      <h2 class="cl-sec">SEGUNDA · Qué se aclara</h2>
+      ${!B ? opc('info', 'Información del Proyecto', `<p class="small muted" style="margin:0 0 4px">Texto del punto II de la minuta: corrígelo como debe quedar (dirección del lote, partida, municipalidad).</p>${ta('info.texto', D.info.texto, 5)}`, ` <span class="small muted">punto</span> <input name="info.num" value="${esc(D.info.num)}" class="cl-num"> <span class="small muted">del Anexo I</span>`) : ''}
+      ${!B ? opc('bien', 'Bien / bienes objeto del contrato', `<p class="small muted" style="margin:0 0 4px">Texto del punto IV: tipo, vista, áreas y ambientes como deben quedar.</p>${ta('bien.texto', D.bien.texto, 5)}`, ` <span class="small muted">punto</span> <input name="bien.num" value="${esc(D.bien.num)}" class="cl-num"> <span class="small muted">del Anexo I</span>`) : ''}
+      <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Forma de pago</label> ${B ? `<span class="small muted">Cláusula</span> <input name="pago.clausula" value="${esc(D.pago.clausula || 'Cuarta')}" class="cl-num" style="width:80px">` : `<span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span>`}</h3>
+      ${D.pago.incluir ? `<div class="f-grid cl-cred">${inp('credito.banco', D.credito.banco, 'Banco del crédito hipotecario', { regen: true, ph: 'Ej.: BANCO BBVA' })}${inp('credito.bbpBanco', D.credito.bbpBanco, 'Banco del Bono BBP (si aplica)', { regen: true, ph: 'Si está vacío, se usa el banco del crédito' })}${B ? inp('credito.promotor', D.credito.promotor, 'Banco promotor (el cheque sale a nombre de la empresa / este banco)', { regen: true, ph: 'Ej.: BANCO DE CREDITO DEL PERU' }) + inp('credito.cuenta', D.credito.cuenta, 'Cuenta Crediobra N.º', { regen: true }) : ''}</div>
+        ${B ? '<p class="small muted" style="margin:2px 0 6px">El banco promotor y la cuenta Crediobra se recuerdan por proyecto para la próxima cláusula.</p>' : ''}
+        ${!D.pago.items.length ? '<div class="ev-falta">⚠️ No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}
+        <p class="small"><button type="button" class="btn sm" data-cl="rehacer">🔄 Rehacer los textos con el modelo</button> <span class="muted">Escribe de nuevo cada pago según su tipo. Si cambiaste un texto a mano y quieres conservarlo, elige "Texto libre".</span></p>
+        ${items}<p><button type="button" class="btn sm" data-cl="add-item">+ Agregar punto de pago</button></p>
         <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' ⚠️ no coincide' : ' ✓'}` : ''}</div>` : ''}
-      <h3 class="cl-h"><label><input type="checkbox" name="entrega.incluir" ${D.entrega.incluir ? 'checked' : ''}> Aclarar la fecha de entrega</label> <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num"></h3>
-      ${D.entrega.incluir ? `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>` : ''}
-      <h3 class="cl-h"><label><input type="checkbox" name="poder.incluir" ${D.poder.incluir ? 'checked' : ''}> Incluir poder irrevocable</label></h3>
-      ${D.poder.incluir ? `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>` : ''}
+      ${!B ? opc('entrega', 'Fecha de entrega', `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>`, ` <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num">`) : ''}
+      ${opc('reserva', 'Dejar sin efecto la Reserva de Propiedad', '<p class="small muted" style="margin:0">Se agrega: “Dejar sin efecto la Reserva de Propiedad indicada en la Cláusula … de EL CONTRATO. Dejando expresa constancia que la transferencia del inmueble opera desde la suscripción EL CONTRATO”.</p>', ` <span class="small muted">Cláusula</span> <input name="reserva.clausula" value="${esc(D.reserva.clausula || 'Quinta')}" class="cl-num" style="width:80px">`)}
+      ${opc('poder', 'Incluir poder irrevocable <span class="small muted">(los modelos actuales no lo llevan)</span>', `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>`)}
       <h3>Observaciones y fechas</h3><div class="f-grid"><label class="f w2">Observaciones (no salen en el Word): fechas a confirmar, cambios pedidos<textarea name="obsInterna" rows="2">${esc(D.obsInterna || '')}</textarea></label></div><label class="cl-ok"><input type="checkbox" name="fechasConfirmadas" ${D.fechasConfirmadas ? 'checked' : ''}> <b>Fechas confirmadas</b> <span class="small muted">(si no, la ficha muestra "Fechas por confirmar")</span></label>
       <h3>Lugar y fecha de firma</h3><div class="f-grid">${inp('ciudad', D.ciudad, 'Ciudad')}${inp('fecha', D.fecha, 'Fecha', { type: 'date' })}</div></div>`;
   }
-  function openClausula(op) {
-    const m = op.minuta, base = JSON.parse(JSON.stringify(m));
-    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, obsInterna: op.con_clObs || '', fechasConfirmadas: op.con_clFechasOk === 'Sí', minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
+  function openClausula(op, manual) {
+    const m = !manual && op.minuta ? op.minuta : null;
+    const prev = op.clausula && (m ? op.clausula.minutaCargada === m.cargado : op.clausula.manual) ? op.clausula : null;
+    let D;
+    if (prev) D = CLAUSULA.normalizar(JSON.parse(JSON.stringify(prev)));
+    else {
+      const base = m ? JSON.parse(JSON.stringify(m)) : minutaManual(op), mv = base.vendedora || {};
+      const emp = CLAUSULA.empresaDe({ ruc: mv.ruc, razon: mv.razon || op.empresa, proyecto: op.proyecto || base.proyecto });
+      const mem = ((S.params.clProyecto || {})[op.proyecto]) || {}, banco = BANCO_LARGO[op.banco] || op.banco || '';
+      D = { ...base, manual: !m, tipo: emp ? emp.tipo : 'futuro', vendedora: emp ? CLAUSULA.vendedoraDe(emp) : { ...mv, registro: '' },
+        credito: { banco, bbpBanco: '', promotor: mem.promotor || '', cuenta: mem.cuenta || '' },
+        info: { incluir: false, num: 'II', texto: base.infoTxt || '' }, bien: { incluir: false, num: 'IV', texto: base.bienTxt || '' }, reserva: { incluir: false, clausula: 'Quinta' },
+        obsInterna: op.con_clObs || '', fechasConfirmadas: op.con_clFechasOk === 'Sí', minutaPrecio: base.precio, minutaCargada: m ? m.cargado : 'manual', poder: { incluir: false, banco }, ciudad: 'Lima', fecha: iso(today()) };
+      CLAUSULA.normalizar(D);
+      if (D.manual || D.tipo === 'inmueble') CLAUSULA.rehacerTextos(D); // sin minuta o bien terminado: textos del modelo
+    }
     modal({ title: `Cláusula adicional · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true, body: clauseForm(D, op),
       onCancel: () => { if (box.isConnected) clauseCollect(box, D); keepClause(op, D); },
       onOk: (dlg) => {
         clauseCollect(box, D);
-        if (D.compradores.some(c => !c.trat)) { toast('Elige el trato (Sr. / Sra.) de cada comprador'); return false; }
+        const faltas = clauseFaltas(D);
+        if (faltas.length) { redraw(); box.scrollTop = 0; toast('Falta completar: ' + faltas.join(' · ')); return false; }
+        if (D.tipo === 'inmueble' && (D.credito.promotor || D.credito.cuenta) && op.proyecto && can('a_params')) { S.params.clProyecto = { ...(S.params.clProyecto || {}), [op.proyecto]: { promotor: D.credito.promotor, cuenta: D.credito.cuenta } }; save(); }
         CLAUSULA.docx(D).then(blob => {
-          const name = `CLAUSULA ADICIONAL ${D.inmuebles.replace(/N\.º\s*/g, '').replace(/[.\\/:*?"<>|]/g, '').toUpperCase()} - ${D.proyecto.replace(/^EDIFICIO\s+/i, '').toUpperCase()}.docx`;
+          const name = `CLAUSULA ADICIONAL ${D.inmuebles.replace(/N\.?\s*[º°]\s*/g, '').replace(/[.\\/:*?"<>|]/g, '').toUpperCase()} - ${D.proyecto.replace(/^EDIFICIO\s+/i, '').toUpperCase()}.docx`;
           download(name, blob); D.generada = Date.now(); D.por = S.actor; keepClause(op, D);
-          S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'clausula', antes: '', despues: 'Word generado' }); commit();
-          toast('Cláusula descargada'); dlg._ok = true; dlg.close(); render(true);
+          S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'clausula', antes: '', despues: `Word generado · ${D.vendedora.razon} · ${D.tipo === 'inmueble' ? 'bien inmueble' : 'bien futuro'}` }); commit();
+          toast('Cláusula descargada: revísala antes de enviarla'); dlg._ok = true; dlg.close(); render(true);
         }).catch(e => toast('No se pudo generar el Word: ' + e.message));
         return false;
       } });
     const dlg = $('#dlg'), box = dlg.querySelector('.dlg-b');
-    const redraw = () => { const y = box.scrollTop; box.innerHTML = clauseForm(D, op); box.scrollTop = y; };
-    box.onchange = (e) => { if (/number|checkbox|date/.test(e.target.type) || e.target.tagName === 'SELECT') { clauseCollect(box, D); redraw(); } };
+    let pintando = false; // al redibujar, el campo enfocado dispara otro "change": se ignora
+    const redraw = () => { if (pintando) return; pintando = true; try { const y = box.scrollTop; box.innerHTML = clauseForm(D, op); box.scrollTop = y; } finally { pintando = false; } };
+    const fila = (n) => getPath(D, n.split('.').slice(0, -1).join('.'));
+    box.onchange = (e) => {
+      const t = e.target, n = t.name || ''; if (pintando) return;
+      if (!(/number|checkbox|date/.test(t.type) || t.tagName === 'SELECT' || t.dataset.regen !== undefined)) return;
+      clauseCollect(box, D);
+      if (t.dataset.emp !== undefined) { const em = CLAUSULA.EMPRESAS[+t.value]; if (em) { D.vendedora = CLAUSULA.vendedoraDe(em); D.tipo = em.tipo; } CLAUSULA.rehacerTextos(D); }
+      else if (n === 'tipo' || t.dataset.regen !== undefined || /^compradores\.\d+\.trat$/.test(n)) CLAUSULA.rehacerTextos(D);
+      else if (/^pago\.items\..*\.(k|fecha)$/.test(n)) {
+        const r = fila(n);
+        if (/^pago\.items\.\d+\.k$/.test(n)) { if (r.k === 'ini' && !r.sub) r.sub = [{ monto: r.monto || 0, k: 'dep', texto: '' }].map(x => ({ ...x, texto: CLAUSULA.textoModelo('dep', D, x) })); if (r.k !== 'ini' && r.sub) delete r.sub; }
+        if (r.k !== 'otro') r.texto = CLAUSULA.textoModelo(r.k, D, r);
+        else if (n.endsWith('.fecha') && r.fecha) { const f = 'a más tardar el ' + CLAUSULA.fechaLarga(r.fecha); r.texto = /a más tardar (?:el )?.+? del? \d{4}/i.test(r.texto) ? r.texto.replace(/a más tardar (?:el )?.+? del? \d{4}/i, f) : String(r.texto || '').replace(/[\s.,;]*$/, '') + ', ' + f + '.'; }
+        D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t2, s2) => t2 + (Number(s2.monto) || 0), 0); });
+      }
+      redraw();
+    };
     box.onclick = (e) => {
       const b = e.target.closest('[data-cl]'); if (!b) return;
-      clauseCollect(box, D); const it = D.pago.items[+b.dataset.i];
-      if (b.dataset.cl === 'add-item') D.pago.items.push({ monto: 0, texto: '' });
+      clauseCollect(box, D); const it = D.pago.items[+b.dataset.i], nuevo = (k, extra = {}) => { const r = { monto: 0, k, texto: '', fecha: '', ...extra }; r.texto = CLAUSULA.textoModelo(k, D, r); return r; };
+      if (b.dataset.cl === 'add-item') D.pago.items.push(nuevo('sal'));
       if (b.dataset.cl === 'del-item') D.pago.items.splice(+b.dataset.i, 1);
-      if (b.dataset.cl === 'to-sub' && it) it.sub = [{ monto: it.monto || 0, texto: CLAUSULA.DEP }];
+      if (b.dataset.cl === 'to-sub' && it) { it.sub = [nuevo('dep', { monto: it.monto || 0 })]; it.k = 'ini'; it.texto = CLAUSULA.textoModelo('ini', D, it); }
       if (b.dataset.cl === 'add-ant') (D.antecedentes = D.antecedentes || []).push({ fecha: '', texto: '' });
       if (b.dataset.cl === 'del-ant') D.antecedentes.splice(+b.dataset.i, 1);
-      if (b.dataset.cl === 'add-sub') it.sub.push({ monto: 0, texto: (it.sub[it.sub.length - 1] || {}).texto || CLAUSULA.DEP });
+      if (b.dataset.cl === 'add-comp') D.compradores.push({ trat: '', nombre: '', dni: '', doc: 'DNI', ec: '', domicilio: (D.compradores[0] || {}).domicilio || '', nac: 'peruana' });
+      if (b.dataset.cl === 'del-comp') D.compradores.splice(+b.dataset.i, 1);
+      if (b.dataset.cl === 'add-sub') { const ult = it.sub[it.sub.length - 1]; it.sub.push(nuevo(ult && ult.k !== 'sep' ? ult.k : 'dep')); }
       if (b.dataset.cl === 'del-sub') it.sub.splice(+b.dataset.j, 1);
-      if (b.dataset.cl === 'evolta') { if (!D.pago.items.length) D.pago.items.push({ monto: 0, texto: 'por concepto de cuota inicial, ', sub: [] }); const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; if (!ini.sub) ini.sub = []; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
+      if (b.dataset.cl === 'rehacer') { CLAUSULA.rehacerTextos(D); toast('Textos rehechos según el modelo de cada pago'); }
+      if (b.dataset.cl === 'evolta') { if (!D.pago.items.length) D.pago.items.push(nuevo('ini', { sub: [] })); const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; ini.k = 'ini'; ini.texto = CLAUSULA.textoModelo('ini', D, ini); ini.sub = op.evolta.pagos.map((p2, k) => nuevo(k ? 'dep' : 'sep', { monto: p2.monto })); }
       if (b.dataset.cl === 'otra') { keepClause(op, D); ui.minOp = op.id; dlg.close(); return $('#minfile').click(); }
-      D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
+      D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t, s2) => t + (Number(s2.monto) || 0), 0); });
       redraw();
     };
   }
   async function loadMinuta(file, opId) {
     const op = getOp(opId); if (!op) return;
     toast('Leyendo la minuta…'); let m;
-    try { const buf = await file.arrayBuffer(); m = CLAUSULA.parseMinuta(/\.docx$/i.test(file.name) ? await CARTA.leerDocx(buf) : await EVOLTA.readText(buf)); } catch (e) { console.error(e); ui.minNext = ''; return toast('No se pudo leer la minuta: ' + e.message); }
+    try { const buf = await file.arrayBuffer(); m = CLAUSULA.parseMinuta(/\.docx$/i.test(file.name) ? await CARTA.leerDocx(buf) : await EVOLTA.readText(buf)); } catch (e) { console.error(e); const paraCarta = ui.minNext === 'carta'; ui.minNext = ''; if (!paraCarta && await ask(`No se pudo leer la minuta (${e.message}). Esto pasa con los contratos de bien terminado (Cláusula Cuarta). ¿Deseas llenar la cláusula a mano con los datos de la ficha?`)) return openClausula(op, true); return toast('No se pudo leer la minuta: ' + e.message); }
     const dnis = m.compradores.map(c => c.dni);
     if (op.dni && dnis.length && !dnis.includes(String(op.dni).trim()) && !await ask(`La minuta es de ${m.compradores.map(c => c.nombre).join(' y ')} (DNI ${dnis.join(', ')}), pero este cliente tiene DNI ${op.dni}. ¿Usarla igual?`)) return;
     m.cargado = Date.now(); m.por = S.actor;
@@ -3298,7 +3363,8 @@
     if (a === 'cierre-obs') return cierreObs(getOp(el.dataset.op), el.dataset.s);
     if (a === 'carta-otra') { const op = getOp(el.dataset.op); if (!op) return; $('#dlg').close(); ui.minOp = op.id; ui.minNext = 'carta'; return $('#minfile').click(); }
     if (a === 'carta') { const op = getOp(el.dataset.op); if (!op) return; if (op.minuta) return openCarta(op); ui.minOp = op.id; ui.minNext = 'carta'; toast('Elige la minuta (PDF o Word)'); return $('#minfile').click(); }
-    if (a === 'clausula') { const op = getOp(el.dataset.op); if (op && op.minuta) return openClausula(op); ui.minOp = el.dataset.op; return $('#minfile').click(); }
+    if (a === 'clausula') { const op = getOp(el.dataset.op); if (op && op.minuta) return openClausula(op); if (op && op.clausula && op.clausula.manual) return openClausula(op, true); ui.minOp = el.dataset.op; return $('#minfile').click(); }
+    if (a === 'clausula-manual') { const op = getOp(el.dataset.op); if (op) return openClausula(op, true); }
     if (a === 'chip') { flt(el.dataset.v, {})[el.dataset.k] = el.dataset.val; return refresh(el.dataset.r); }
     if (a === 'sort') { const id = el.dataset.t, i = +el.dataset.i, s = ui.sort[id]; ui.sort[id] = s && s.i === i ? { i, dir: -s.dir } : { i, dir: 1 }; const rg = Object.keys(regions).find(r => id === r || id.startsWith(r + '-')) || id; return regions[rg] ? refresh(rg) : render(true); }
     if (a === 'tab') { ui.tab[el.dataset.t] = el.dataset.val; return render(true); }
