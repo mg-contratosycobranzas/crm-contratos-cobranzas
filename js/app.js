@@ -288,10 +288,20 @@
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
     commit();
     if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('⚠️ Revisa la fecha: ' + p.txt); }, 50);
+    autoTomar(op, k);
     return true;
   }
 
   /* ================= acciones de un toque ================= */
+  // si una asistente completa un dato de su etapa y el cliente no tiene responsable, queda como responsable
+  function autoTomar(op, k) {
+    const u = user(S.actor); if (!u || !STAGE[u.stage] || !op) return;
+    const st = STAGES.find(x => (FIELDS[x.key] || []).some(f => f.k === k)); if (!st || st.key !== u.stage) return;
+    const ok = STAGE[st.key].ownerKey; if (!ok || k === ok || (op[ok] && op[ok] !== 'Sin asignar')) return;
+    setField(op.id, ok, S.actor);
+    if (st.key === 'con' && !op.con_fAsignacion) setField(op.id, 'con_fAsignacion', iso(today()));
+    setTimeout(() => toast(`👤 Quedaste como responsable de ${STAGE[st.key].name} de ${op.cliente}`), 700);
+  }
   const applyMany = (id, obj) => { const op = getOp(id); const prev = {}; let ch = false; for (const k in obj) { prev[k] = op[k] === undefined ? '' : op[k]; if (setField(id, k, obj[k])) ch = true; } return ch ? prev : null; };
   const rerenderOp = (id) => { if ($('#f-head')) { refreshFicha(id); $('#nav').innerHTML = navHtml(route()); } else render(true); };
   function pickStageUser(sk, cb) {
@@ -811,6 +821,9 @@
   /* ---- Tiempos y efectividad: cuánto tarda cada tramo (banco, notaría, abogado, equipo interno),
      contra una meta, en días hábiles y descontando lo que se esperó al cliente. Con Excel e informe PDF. ---- */
   const TRAMOS = {
+    clc: { ini: 'con_clEnvComercial', fin: 'con_clDevComercial', meta: 'metaClCom', l: 'Comercial: firma de la cláusula por el cliente', c: 'Ejecutivo de ventas', quien: o => [o.vendedor] },
+    clb: { ini: 'con_clEnvBanco', fin: 'fin_fDesembolso', meta: 'metaClBan', l: 'Banco: cláusula → desembolso', c: 'Banco', quien: o => [o.banco] },
+    dnot: { ini: 'fin_fDesembolso', fin: 'con_fIngresoNotariaDesemb', meta: 'metaDnot', l: 'Desembolso → file en notaría', c: 'Notaría', quien: o => [o.con_notaria] },
     cob: { ini: 'cob_fInicio', fin: 'cob_fCulm', meta: 'metaCob', l: 'Cobranza de la inicial', c: 'Asistente de cobranza', quien: o => [o.cob_asistente] },
     val: { ini: 'con_fAsignacion', fin: 'con_fValidacion', meta: 'metaVal', l: 'Validación legal (interno)', c: 'Asistente legal', quien: o => [o.con_asistente] },
     ban: { ini: 'fRecibeBanco', fin: 'con_fLlegaNotaria', meta: 'metaBan', l: 'Banco → notaría', c: 'Ejecutivo de banco', pausa: 'con_banPausa', obs: 'con_banObs', quien: o => [o.banco, o.ejecBanco] },
@@ -957,8 +970,8 @@
       <div class="kpis ops-kpis">${['cob', 'ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
       ${prodExplicaHtml(false)}
       ${cicloCard(base)}
-      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
-        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
+      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Cláusula comercial ${P.metaClCom} · Cláusula banco ${P.metaClBan} · Desembolso → notaría ${P.metaDnot} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
+        <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaClCom', 'Comercial: firma de la cláusula')}${mf('metaClBan', 'Banco: cláusula → desembolso')}${mf('metaDnot', 'Desembolso → file en notaría')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
           <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
           <label class="f" style="grid-column:1/-1">Feriados o días no laborables adicionales <input type="text" data-pt="feriadosExtra" value="${esc(P.feriadosExtra || '')}" placeholder="Ej.: 02/01/2026, 26/12/2026"><span class="small">Los feriados nacionales del Perú (incluidos Jueves y Viernes Santo) ya se descuentan solos.</span></label></div></details>
       ${(() => { const C = cartasPorVencer(base); return C.length ? `<div class="ev-falta tp-avisos" style="background:var(--rojo-bg);color:var(--rojo)"><b>📄 Cartas de aprobación por vencer (${C.length}):</b> ${C.slice(0, 8).map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> ${x.dias < 0 ? `venció hace ${-x.dias} d` : x.dias === 0 ? 'vence hoy' : `vence en ${x.dias} d`}`).join(' · ')}${C.length > 8 ? ` · y ${C.length - 8} más` : ''}</div>` : ''; })()}
@@ -967,6 +980,9 @@
       ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
       ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
       ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
+      ${card('📝 Cláusula: firma de los clientes (comercial)', 'Desde que se envía la cláusula a comercial hasta que la devuelve firmada por el cliente', tabla('tp-clc', 'clc', ['Ejecutivo de ventas'], false, 'Aún no hay cláusulas con fecha de envío a comercial.'))}
+      ${card('🏦 Cláusula en el banco → desembolso', 'Desde que se envía la cláusula al banco hasta el desembolso', tabla('tp-clb', 'clb', ['Banco'], false, 'Aún no hay cláusulas con fecha de envío al banco.'))}
+      ${card('📂 Desembolso → file en notaría', 'Desde el desembolso hasta que el file de desembolso ingresa a notaría', tabla('tp-dnot', 'dnot', ['Notaría'], false, 'Aún no hay desembolsos con fecha.'))}
       ${card('👥 Equipo interno', 'Validación legal y firma del representante legal: lo que depende de nosotros', `<div class="ops-tw">${tbl('tp-val', colsDe(['Asistente legal']), tpGrupos('val', base), 'Sin casos con fecha de asignación y validación.')}</div><div class="ops-tw">${tbl('tp-rl', colsDe(['Empresa (firma RL)']), tpGrupos('rl', base), 'Sin casos con firma del cliente.')}</div>`)}
       ${card('💰 Desembolso', 'Desde la firma del representante legal hasta el desembolso del banco', tabla('tp-des', 'des', ['Banco'], false, 'Sin casos con firma del representante legal.'))}
       ${card('🔎 Motivos de demora', 'Dónde se pierde el tiempo: las primeras filas explican la mayoría de los retrasos', mot.length ? `<div class="ops-tw"><table><thead><tr><th>Motivo</th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th><th class="r">Fuera de meta</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}<div class="tp-bar"><i style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td><td class="r">${m.fuera}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Aún no hay motivos de demora registrados. Se elige en la ficha del cliente → Contratos → "Motivo principal de demora".</div>')}
@@ -980,7 +996,7 @@
     const fila = (s) => ({ Casos: s.n, Terminados: s.hechos, [`Mediana (${U})`]: s.mediana ?? '', Promedio: s.promedio ?? '', 'Más rápido': s.min ?? '', 'Más lento': s.max ?? '', [`Meta (${U})`]: s.meta ?? '', 'EFICACIA %': s.eficacia ?? '', 'EFICIENCIA %': s.eficiencia ?? '', 'PRODUCTIVIDAD %': s.productividad ?? '', '% en meta': s.enMeta ?? '', 'En curso': s.curso, 'Vencidos en curso': s.vencidos, 'Por vencer': s.porVencer, 'Obs. promedio por caso': s.obsProm ?? '', '% sin observaciones': s.sinObs ?? '', [`Pocos casos (<${MIN_CASOS})`]: s.pocos ? 'Sí' : '' });
     add('Resumen', Object.keys(TRAMOS).map(k => ({ Tramo: TRAMOS[k].l, ...fila(tpStats(tpCasos(k, base))) })));
     const grp = (name, k, heads) => add(name, tpGrupos(k, base).map(g => ({ ...Object.fromEntries(heads.map((h, i) => [h, g.ks[i] || '(sin registrar)'])), ...fila(g.s) })));
-    grp('Cobranza', 'cob', ['Asistente de cobranza']); grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
+    grp('Cobranza', 'cob', ['Asistente de cobranza']); grp('Cláusula comercial', 'clc', ['Ejecutivo de ventas']); grp('Cláusula banco', 'clb', ['Banco']); grp('Desembolso a notaría', 'dnot', ['Notaría']); grp('Ejecutivos de banco', 'ban', ['Banco', 'Ejecutivo']); grp('Notarías', 'not', ['Notaría']); grp('Abogados', 'abo', ['Notaría', 'Abogado']);
     grp('Validación legal', 'val', ['Asistente legal']); grp('Firma RL', 'rl', ['Empresa']); grp('Desembolso', 'des', ['Banco']);
     add('Motivos de demora', tpMotivos(base).map(m => ({ Motivo: m.motivo, Casos: m.n, '%': m.pct, '% acumulado': m.acum, 'Fuera de meta': m.fuera })));
     const T = tpTendencia(base); add('Tendencia', T.filas.map(f => ({ Tramo: f.l, ...Object.fromEntries(T.meses.flatMap((m, i) => [[`${mesTxt(m)} mediana`, f.cel[i].med ?? ''], [`${mesTxt(m)} % meta`, f.cel[i].ok ?? ''], [`${mesTxt(m)} casos`, f.cel[i].n]])) })));
@@ -1012,7 +1028,7 @@
     const glob = prodDe(['cob', 'val', 'ban', 'not', 'rl', 'des'].flatMap(k => tpCasos(k, base).map(x => ({ cerrado: !x.t.enCurso, dias: x.t.dias, meta: x.t.meta, vencido: x.t.sem === 'rojo' }))));
     const dona = (v, m, l, q) => { const R = 44, C = 2 * Math.PI * R, p = Math.max(0, Math.min(100, v || 0));
       return `<div class="g"><svg viewBox="0 0 110 110" aria-hidden="true"><circle cx="55" cy="55" r="${R}" fill="none" stroke="#e7ecea" stroke-width="12"/><circle cx="55" cy="55" r="${R}" fill="none" stroke="${col(v, m)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${p / 100 * C} ${C}" transform="rotate(-90 55 55)"/><text x="55" y="61" text-anchor="middle" font-size="22" font-weight="700" fill="#17302d">${v == null ? '—' : v + '%'}</text></svg><b>${l}</b><span>${q}</span><em style="color:${col(v, m)}">${v == null ? 'Sin datos' : v >= m ? '✔ Cumple la meta' : 'Meta ' + m + '%'}</em></div>`; };
-    const tr = ['cob', 'ban', 'not', 'abo', 'val', 'rl', 'des'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
+    const tr = ['cob', 'clc', 'clb', 'ban', 'not', 'abo', 'val', 'rl', 'des', 'dnot'].map(k => ({ k, s: tpStats(tpCasos(k, base)) }));
     const barras = tr.map(({ k, s }) => `<div class="tr"><span class="tl">${esc(TRAMOS[k].l.replace(' (interno)', ''))}${/interno/.test(TRAMOS[k].l) ? ' <i>interno</i>' : ''}</span><div class="tb"><i style="width:${s.productividad ?? 0}%;background:${col(s.productividad, mP)}"></i><u style="left:${mP}%"></u></div><b style="color:${col(s.productividad, mP)}">${s.productividad == null ? '—' : s.productividad + '%'}</b><small>${s.mediana == null ? '' : s.mediana + ' d'}</small></div>`).join('');
     // destacados y a mejorar (solo grupos con casos suficientes)
     const lideres = [['ban', 'Ejecutivo de banco'], ['not', 'Notaría'], ['abo', 'Abogado']].map(([k, l]) => { const G = tpGrupos(k, base).filter(g => !g.s.pocos && g.s.productividad != null).sort((a, b) => b.s.productividad - a.s.productividad); return { l, mej: G[0], peor: G.length > 1 ? G[G.length - 1] : null }; }).filter(x => x.mej);
@@ -1113,6 +1129,8 @@
       ${(() => { const C = cicloResumen(base); if (!C.segs.some(x => x.n)) return ''; return sec('Ciclo completo de la venta', `<p>Mediana de la venta al desembolso: <b>${C.desemb.med ?? '—'} ${U}</b> (${C.desemb.n} casos) · a la inscripción: <b>${C.insc.med ?? '—'} ${U}</b> (${C.insc.n} casos).</p><div style="display:flex;height:22px;border-radius:5px;overflow:hidden;margin:6px 0">${C.segs.filter(x => x.med).map(x => `<div style="flex:${x.med};background:${CICLO_COL[x.i]};color:#fff;font-size:10px;display:grid;place-items:center;-webkit-print-color-adjust:exact;print-color-adjust:exact">${x.med}</div>`).join('')}</div><table><tbody>${C.segs.map(x => `<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${CICLO_COL[x.i]};-webkit-print-color-adjust:exact;print-color-adjust:exact"></span> ${esc(x.de)} → ${esc(x.a)}</td><td class="r"><b>${x.med ?? '—'}</b> ${U}</td><td class="r">${x.med && C.suma ? Math.round(x.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${x.n} casos</td></tr>`).join('')}</tbody></table>`); })()}
       ${sec('Resumen ejecutivo', hall.length ? `<ul>${hall.map(h => `<li>${h}</li>`).join('')}</ul>` : '<p class="m">Aún no hay suficientes casos terminados para sacar conclusiones.</p>')}
       ${sec('Cobranza de la inicial · por asistente', barras('cob', ['Asistente de cobranza']))}
+      ${sec('Cláusula · firma de los clientes por ejecutivo de ventas', barras('clc', ['Ejecutivo de ventas']))}
+      ${sec('Cláusula en el banco → desembolso', barras('clb', ['Banco']))}
       ${sec('Ejecutivos de banco · banco → notaría', barras('ban', ['Banco', 'Ejecutivo']))}
       ${sec('Notarías · llegada → firma del cliente', barras('not', ['Notaría']))}
       ${sec('Abogados de notaría · asignación → firma del cliente', barras('abo', ['Notaría', 'Abogado']))}
@@ -1146,6 +1164,8 @@
       REQ_GEN.forEach(k => add(k, 'Dato básico del cliente'));
       const conHecho = !!(d.done && d.done.con);
       REQ_CON.forEach((grp, i) => { const despues = REQ_CON.slice(i + 1).flat().some(k => filled(o[k])); if (conHecho || despues) grp.forEach(k => add(k, conHecho ? 'Contratos ya culminó' : 'Ya se registró un paso posterior')); });
+      const CLR = ['con_clEnvComercial', 'con_clDevComercial', 'con_clEnvBanco', 'fin_fDesembolso', 'con_fIngresoNotariaDesemb'];
+      CLR.forEach((k, i) => { if (CLR.slice(i + 1).some(x => filled(o[x])) && !(k === 'fin_fDesembolso')) add(k, 'Ya se registró un paso posterior de la cláusula'); });
       if (['ban', 'not', 'abo'].some(k => tramo(o, k).sem === 'rojo')) add('con_motivoDemora', 'El caso pasó su meta de tiempo');
     }
     const r = { req, out: req.filter(x => !x.ok) }; FALT.set(o.id, r); return r;
@@ -1820,7 +1840,17 @@
 
   /* ---- Cláusula adicional (desde la minuta que exporta Evolta) ---- */
   const BANCO_LARGO = { BCP: 'BANCO DE CRÉDITO DEL PERÚ', INTERBANK: 'BANCO INTERNACIONAL DEL PERÚ - INTERBANK', BBVA: 'BBVA PERÚ', SCOTIABANK: 'SCOTIABANK PERÚ', BANBIF: 'BANCO INTERAMERICANO DE FINANZAS', PICHINCHA: 'BANCO PICHINCHA', GNB: 'BANCO GNB PERÚ' };
-  const clauseBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const CL_PASOS = [['con_clEnvComercial', '1. Enviada al equipo comercial'], ['con_clDevComercial', '2. Firmada por el cliente y devuelta por comercial'], ['con_clEnvBanco', '3. Enviada al banco'],
+    ['con_clObsLevantada', '4. Observación del banco levantada (si hubo)'], ['fin_fDesembolso', '5. Desembolso del banco'], ['con_fIngresoNotariaDesemb', '6. File de desembolso ingresado a notaría']];
+  const campoDe = (k) => Object.values(FIELDS).flat().find(f => f.k === k);
+  function clRecorridoHtml(o) {
+    const t = (k) => { const x = tramo(o, k); return x.dias == null ? '<span class="muted">—</span>' : `${semDot(x.sem)} <b>${x.dias}</b> / ${x.meta} d${x.enCurso ? ' <span class="muted">en curso</span>' : ''}`; };
+    const porConf = o.con_clFechasOk && o.con_clFechasOk !== 'Sí';
+    return `<details class="cl-rec" ${o.con_clEnvComercial || o.clausula ? 'open' : ''}><summary><b>📝 Recorrido de la cláusula</b>${porConf ? ' <span class="badge amar">Fechas por confirmar</span>' : ''}</summary>
+      <div class="cl-rec-t small"><span>Comercial (firma del cliente): ${t('clc')}</span><span>Banco → desembolso: ${t('clb')}</span><span>Desembolso → notaría: ${t('dnot')}</span></div>
+      <div class="f-grid">${CL_PASOS.map(([k, l]) => fieldInput(o, { ...campoDe(k), l })).join('')}${fieldInput(o, campoDe('con_clObsBanco'))}${fieldInput(o, campoDe('con_clFechasOk'))}${fieldInput(o, campoDe('con_clObs'))}</div></details>`;
+  }
+  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta ? '' : ' (subir minuta PDF o Word)'}</button>${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
   /* ---- Carta notarial de resolución (cláusula sexta): datos de la minuta + revisión + Word con el formato del área ---- */
   const CN_K = 'crm-mg-carta-firma';
   const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">⚖️ Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
@@ -1864,11 +1894,14 @@
       } });
     document.querySelectorAll('[data-cnl]').forEach(x => x.addEventListener('change', () => x.closest('.cn-cau').classList.toggle('on', x.checked)));
   }
-  const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save(); };
+  const keepClause = (op, D) => { op.clausula = D; (pendingOps[op.id] = pendingOps[op.id] || {}).clausula = D; save();
+    if ((D.obsInterna || '') !== (op.con_clObs || '')) setField(op.id, 'con_clObs', D.obsInterna || '');
+    const fc = D.fechasConfirmadas ? 'Sí' : (D.obsInterna ? 'No, por confirmar' : (op.con_clFechasOk || '')); if (fc !== (op.con_clFechasOk || '')) setField(op.id, 'con_clFechasOk', fc); };
   function setPath(o, path, v) { const k = path.split('.'); let x = o; k.slice(0, -1).forEach(p => { x = x[p]; }); x[k[k.length - 1]] = v; }
   function clauseCollect(box, D) {
     box.querySelectorAll('[name]').forEach(el => setPath(D, el.name, el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) || 0 : el.value));
-    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (el.value && el.value !== el.dataset.orig) it.texto = it.texto.replace(/a más tardar el .+? del? \d{4}/i, 'a más tardar el ' + CLAUSULA.fechaLarga(el.value)); });
+    box.querySelectorAll('[data-desemb]').forEach(el => { const it = D.pago.items[+el.dataset.desemb]; if (!it || !el.value || el.value === el.dataset.orig) return; const f = 'a más tardar el ' + CLAUSULA.fechaLarga(el.value);
+      it.texto = /a más tardar el .+? del? \d{4}/i.test(it.texto) ? it.texto.replace(/a más tardar el .+? del? \d{4}/i, f) : String(it.texto || '').replace(/[\s.,;]*$/, '') + ', ' + f + '.'; });
     D.pago.items.forEach(it => { if (it.sub && it.sub.length) it.monto = it.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
   }
   function clauseForm(D, op) {
@@ -1878,27 +1911,31 @@
     const items = D.pago.items.map((it, i) => {
       const fd = CLAUSULA.isoDeTexto((/a más tardar el (.+? del? \d{4})/i.exec(it.texto) || [])[1]);
       return `<div class="cl-item"><div class="cl-row"><b>${i + 1}.</b> ${inp(`pago.items.${i}.monto`, it.monto, 'Monto (S/)', { type: 'number', ro: it.sub && it.sub.length })}<span class="small muted cl-let">${L.montoLetras(it.monto || 0)}</span></div>${ta(`pago.items.${i}.texto`, it.texto)}
-        ${fd ? `<label class="f cl-row" style="max-width:260px">Desembolso a más tardar el<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>` : ''}
+        <label class="f cl-row" style="max-width:300px">${fd ? 'Fecha (a más tardar el)' : 'Fecha de este pago (opcional)'}<input type="date" data-desemb="${i}" data-orig="${fd}" value="${fd}"></label>
         ${(it.sub || []).map((s, j) => `<div class="cl-sub"><div class="cl-row">– ${inp(`pago.items.${i}.sub.${j}.monto`, s.monto, 'Monto (S/)', { type: 'number' })}<span class="small muted cl-let">${L.montoLetras(s.monto || 0)}</span><button type="button" class="btn sm" data-cl="del-sub" data-i="${i}" data-j="${j}" title="Quitar este pago">✕</button></div>${ta(`pago.items.${i}.sub.${j}.texto`, s.texto)}</div>`).join('')}
-        ${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : ''}</div>`;
+        <div class="cl-row">${it.sub ? `<button type="button" class="btn sm" data-cl="add-sub" data-i="${i}">+ Agregar pago a este punto</button>` : `<button type="button" class="btn sm" data-cl="to-sub" data-i="${i}">+ Dividir en varios pagos</button>`} <button type="button" class="btn sm" data-cl="del-item" data-i="${i}">✕ Quitar este punto</button></div></div>`;
     }).join('');
     const pagosEv = op.evolta && (op.evolta.pagos || []).length;
     return `<div class="cl"><p class="small muted" style="margin-top:0">Datos tomados de la minuta (Anexo I). Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 Cargar otra minuta</button></p>
       <h3>Minuta y bien</h3><div class="f-grid">${inp('fechaMinuta', D.fechaMinuta, 'Fecha de la minuta', { type: 'date' })}${inp('proyecto', D.proyecto, 'Proyecto')}${inp('inmuebles', D.inmuebles, 'Inmueble(s)', { w2: true })}</div>
       <h3>Compradores</h3>${D.compradores.map((c, i) => `<div class="f-grid cl-block"><label class="f">Trato<select name="compradores.${i}.trat"><option value="">Elegir…</option><option ${c.trat === 'Sr.' ? 'selected' : ''}>Sr.</option><option ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label>${inp(`compradores.${i}.nombre`, c.nombre, 'Nombre completo', { w2: true })}${inp(`compradores.${i}.dni`, c.dni, 'DNI')}${inp(`compradores.${i}.ec`, c.ec, 'Estado civil')}${inp(`compradores.${i}.nac`, c.nac, 'Nacionalidad')}${inp(`compradores.${i}.domicilio`, c.domicilio, 'Domicilio', { w2: true })}</div>`).join('')}
       <h3>Vendedora</h3><div class="f-grid">${inp('vendedora.razon', D.vendedora.razon, 'Razón social')}${inp('vendedora.ruc', D.vendedora.ruc, 'RUC')}${inp('vendedora.domicilio', D.vendedora.domicilio, 'Domicilio', { w2: true })}${inp('vendedora.rep', D.vendedora.rep, 'Representante')}${inp('vendedora.repDni', D.vendedora.repDni, 'DNI representante')}${inp('vendedora.repCargo', D.vendedora.repCargo, 'Cargo')}${inp('vendedora.partida', D.vendedora.partida, 'Partida electrónica')}</div>
+      <h3>Cláusulas adicionales anteriores (antecedentes)</h3><p class="small muted" style="margin:0 0 6px">Si el cliente ya firmó otra cláusula adicional, agrégala: se menciona en la PRIMERA cláusula (Antecedentes).</p>
+      ${(D.antecedentes || []).map((a, i) => `<div class="cl-item"><div class="f-grid">${inp(`antecedentes.${i}.fecha`, a.fecha, 'Fecha de esa cláusula', { type: 'date' })}<label class="f w2">Qué se acordó<input name="antecedentes.${i}.texto" value="${esc(a.texto || '')}" placeholder="Ej.: se modificó la forma de pago"></label></div><button type="button" class="btn sm" data-cl="del-ant" data-i="${i}">✕ Quitar</button></div>`).join('')}
+      <p><button type="button" class="btn sm" data-cl="add-ant">+ Agregar cláusula antecedente</button></p>
       <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Aclarar la forma de pago</label> <span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span></h3>
-      ${D.pago.incluir ? `${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}
+      ${D.pago.incluir ? `${!D.pago.items.length ? '<div class="ev-falta">⚠️ No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}${items}<p><button type="button" class="btn sm" data-cl="add-item">+ Agregar punto de pago</button></p>
         <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' ⚠️ no coincide' : ' ✓'}` : ''}</div>` : ''}
       <h3 class="cl-h"><label><input type="checkbox" name="entrega.incluir" ${D.entrega.incluir ? 'checked' : ''}> Aclarar la fecha de entrega</label> <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num"></h3>
       ${D.entrega.incluir ? `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>` : ''}
       <h3 class="cl-h"><label><input type="checkbox" name="poder.incluir" ${D.poder.incluir ? 'checked' : ''}> Incluir poder irrevocable</label></h3>
       ${D.poder.incluir ? `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>` : ''}
+      <h3>Observaciones y fechas</h3><div class="f-grid"><label class="f w2">Observaciones (no salen en el Word): fechas a confirmar, cambios pedidos<textarea name="obsInterna" rows="2">${esc(D.obsInterna || '')}</textarea></label></div><label class="cl-ok"><input type="checkbox" name="fechasConfirmadas" ${D.fechasConfirmadas ? 'checked' : ''}> <b>Fechas confirmadas</b> <span class="small muted">(si no, la ficha muestra "Fechas por confirmar")</span></label>
       <h3>Lugar y fecha de firma</h3><div class="f-grid">${inp('ciudad', D.ciudad, 'Ciudad')}${inp('fecha', D.fecha, 'Fecha', { type: 'date' })}</div></div>`;
   }
   function openClausula(op) {
     const m = op.minuta, base = JSON.parse(JSON.stringify(m));
-    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
+    const D = op.clausula && op.clausula.minutaCargada === m.cargado ? JSON.parse(JSON.stringify(op.clausula)) : { ...base, obsInterna: op.con_clObs || '', fechasConfirmadas: op.con_clFechasOk === 'Sí', minutaPrecio: m.precio, minutaCargada: m.cargado, poder: { incluir: true, banco: BANCO_LARGO[op.banco] || op.banco || '' }, ciudad: 'Lima', fecha: iso(today()) };
     modal({ title: `Cláusula adicional · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true, body: clauseForm(D, op),
       onCancel: () => { if (box.isConnected) clauseCollect(box, D); keepClause(op, D); },
       onOk: (dlg) => {
@@ -1918,9 +1955,14 @@
     box.onclick = (e) => {
       const b = e.target.closest('[data-cl]'); if (!b) return;
       clauseCollect(box, D); const it = D.pago.items[+b.dataset.i];
+      if (b.dataset.cl === 'add-item') D.pago.items.push({ monto: 0, texto: '' });
+      if (b.dataset.cl === 'del-item') D.pago.items.splice(+b.dataset.i, 1);
+      if (b.dataset.cl === 'to-sub' && it) it.sub = [{ monto: it.monto || 0, texto: CLAUSULA.DEP }];
+      if (b.dataset.cl === 'add-ant') (D.antecedentes = D.antecedentes || []).push({ fecha: '', texto: '' });
+      if (b.dataset.cl === 'del-ant') D.antecedentes.splice(+b.dataset.i, 1);
       if (b.dataset.cl === 'add-sub') it.sub.push({ monto: 0, texto: (it.sub[it.sub.length - 1] || {}).texto || CLAUSULA.DEP });
       if (b.dataset.cl === 'del-sub') it.sub.splice(+b.dataset.j, 1);
-      if (b.dataset.cl === 'evolta') { const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
+      if (b.dataset.cl === 'evolta') { if (!D.pago.items.length) D.pago.items.push({ monto: 0, texto: 'por concepto de cuota inicial, ', sub: [] }); const ini = D.pago.items.find(x => x.sub) || D.pago.items[0]; if (!ini.sub) ini.sub = []; ini.sub = op.evolta.pagos.map(p => ({ monto: p.monto, texto: CLAUSULA.DEP })); }
       if (b.dataset.cl === 'otra') { keepClause(op, D); ui.minOp = op.id; dlg.close(); return $('#minfile').click(); }
       D.pago.items.forEach(x => { if (x.sub && x.sub.length) x.monto = x.sub.reduce((t, s) => t + (Number(s.monto) || 0), 0); });
       redraw();
@@ -2018,7 +2060,7 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details></div></details>`).join('')}
+        <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}<div class="f-grid">${FIELDS[s.key].map(f => fieldInput(o, f, s.key === 'cob')).join('')}</div></details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">💾 Guardar</button><span class="small muted">Cada dato también se guarda solo al salir del campo.</span></div></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr"><div class="f-grid">${FIELDS.gen.map(f => fieldInput(o, f, true)).join('')}</div></div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
@@ -2032,13 +2074,37 @@
         <button class="btn pri" type="submit">Registrar seguimiento</button>
       </form></details><hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div id="tl">${timelineHtml(o)}</div></div></div></div>`;
   }
+  // qué le falta a la etapa para llegar al 100%, con el botón que lleva a cada cosa
+  function guiaHtml(o, d, k) {
+    if (!d || !d.state || d.state[k] === 'porllegar') return '';
+    const items = d.check[k] || [], pend = items.map((c, i) => ({ c, i })).filter(x => !x.c.done);
+    const setKeys = new Set(pend.flatMap(x => Object.keys(x.c.set || {})));
+    const obl = faltantes(o, d).out.filter(x => (k === 'con' ? x.k.startsWith('con_') : k === 'cob' ? !x.k.startsWith('con_') : false) && !setKeys.has(x.k));
+    const c = typeof cierre === 'function' ? cierre(o, k) : null, culm = d.state[k] === 'culminada';
+    const firma = culm && !pend.length && (!c || c.estado === 'observado') ? (canFirmar(o, d, k) ? 'firmar' : 'esperaFirma') : culm && c && c.estado === 'pendiente' ? 'vb' : '';
+    const pct = d.progress[k] ?? 0, nombre = STAGE[k].name;
+    if (!pend.length && !obl.length && !firma) return `<div class="guia ok">✅ <b>${nombre} al 100%</b>${c && c.estado === 'aprobado' ? ' · con V°B° de jefatura' : ''}</div>`;
+    const li = [...pend.map(x => `<li><span>${esc(x.c.label)}</span><button class="btn sm" data-act="step" data-op="${o.id}" data-s="${k}" data-i="${x.i}">${stepLabel(x.c) || 'Ver'} ›</button></li>`),
+      ...obl.map(x => `<li><span>${esc(x.l)} <em class="req" title="${esc(x.por)}">obligatorio</em></span><button class="btn sm" data-act="completar" data-op="${o.id}" data-k="${x.k}">Completar ›</button></li>`),
+      firma === 'firmar' ? `<li><span><b>Firmar la culminación de la etapa</b> (la jefatura dará su V°B°)</span><button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">✍️ Firmar</button></li>` : '',
+      firma === 'esperaFirma' ? '<li><span>Falta que el responsable firme la culminación de la etapa</span></li>' : '',
+      firma === 'vb' ? '<li><span>⏳ Firmado: falta el V°B° de la jefatura</span></li>' : ''].filter(Boolean);
+    return `<div class="guia"><div class="guia-h"><b>🎯 Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span class="guia-pct">${pct}%</span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
+  }
+  function guardarFicha(id) {
+    const a = document.activeElement; if (a && a.dataset && a.dataset.fk) a.dispatchEvent(new Event('change', { bubbles: true }));
+    setTimeout(() => { save(); const o = getOp(id), d = D.get(id); if (!o || !d) return toast('✓ Guardado');
+      const k = d.etapa === 'cerrado' ? null : d.etapa, falta = k ? (guiaHtml(o, d, k).match(/<li>/g) || []).length : 0;
+      toast(k ? `✓ Guardado · ${STAGE[k].name} al ${d.progress[k] ?? 0}%${falta ? ` · te falta${falta > 1 ? 'n' : ''} ${falta} paso${falta > 1 ? 's' : ''} (mira la lista 🎯)` : ' · ¡completo!'}` : '✓ Guardado'); }, 120);
+  }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
     $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
-    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
+    const clr = $('#clrec-' + id); if (clr && !clr.contains(document.activeElement)) { const ab = clr.querySelector('details') && clr.querySelector('details').open; clr.innerHTML = clRecorridoHtml(o); if (ab) clr.querySelector('details').open = true; }
+    STAGES.forEach(s => { if (!$('#sh-' + s.key)) return; /* etapa oculta para este usuario */ $('#sh-' + s.key).innerHTML = stageHead(s.key, d); const gg = $('#g-' + s.key); if (gg) gg.innerHTML = guiaHtml(o, d, s.key); $('#sk-' + s.key).innerHTML = checkHtml(s.key, d, o); const cb = $('#cb-' + s.key); if (cb) cb.innerHTML = stickerBar(o, d, s.key); });
     $$('#view [data-fk]').forEach(el => { const v = o[el.dataset.fk]; if (document.activeElement !== el) el.value = v === undefined || v === null ? '' : v; });
     applyPerms();
   }
@@ -3048,6 +3114,7 @@
     if (a === 'export-ops') return exportOps();
     if (a === 'tp-excel') return tpExcel();
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
+    if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'carga-excel') return cargaExcel();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-resumen') return tpResumen();
