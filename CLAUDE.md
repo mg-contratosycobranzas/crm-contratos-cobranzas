@@ -8,7 +8,7 @@ Todo lo que se construye es para **mejorar la eficiencia de la cobranza** del Á
 ## Reglas de trabajo
 - Responder siempre en **español**, claro y fácil de explicar al equipo y a gerencia. Actuar como asesor: recomendar, no listar opciones de más.
 - **Costo cero**: GitHub Pages + Firebase plan gratuito (Spark). Nada de servicios de pago, plan Blaze, API de WhatsApp ni licencias.
-- **Vista previa antes de publicar**: cada cambio se trabaja en una rama aparte, se prueba y se muestran capturas. Se pasa a `main` (lo que ve el equipo) solo cuando la jefatura dice "publica".
+- **Vista previa SIEMPRE antes de publicar** (capturas con datos de prueba): cada cambio se trabaja en una rama aparte, se prueba y se muestran capturas. Se pasa a `main` (lo que ve el equipo) solo cuando la jefatura dice "publica".
 - Al publicar, **cambiar la versión `?v=` en `index.html`** para que los navegadores carguen los archivos nuevos.
 
 ## Todo módulo debe tener
@@ -27,4 +27,5 @@ Todo lo que se construye es para **mejorar la eficiencia de la cobranza** del Á
 ## Datos
 - Los datos de clientes viven en Firebase (proyecto crm-mg-4faf9). Nunca se suben al repositorio (`data/operaciones.js` queda vacío).
 - Archivos: `js/model.js` (campos, metas, etapas), `js/app.js` (pantallas, Excel, informes), `js/cloud.js` (Firebase), `css/styles.css`.
+- **Respaldo en Google Drive ya activo** (cuenta del área): hoja "Respaldo CRM" que se actualiza a diario desde Firebase y copia semanal (lunes) en la carpeta "Respaldos CRM". No crear otro respaldo automático; el respaldo quincenal (.json + Excel) del CRM complementa para restaurar.
 - Prueba local: servir la carpeta y bloquear `gstatic` (sin Firebase la app corre en modo local con `localStorage`).
