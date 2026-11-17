@@ -656,3 +656,11 @@ em.est{font-style:normal;font-weight:650;color:var(--accent,#2c6db4)}
 .cl details.cl-det summary{cursor:pointer}
 .cl .cl-cred{background:var(--surface2);border-radius:8px;padding:6px 8px}
 .cl .cl-row{flex-wrap:wrap}
+.lab-frase{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:14px 16px;margin-bottom:12px;font-size:14.5px;flex-wrap:wrap}
+.lab-meta{min-width:220px}.lab-bar{height:10px;border-radius:6px;background:var(--gris-bg);overflow:hidden;margin:4px 0}.lab-bar i{display:block;height:100%;border-radius:6px}
+.lab-clis{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.lab-ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}.lab-ul li{display:flex;gap:8px;font-size:13px}.lab-ul .h{color:var(--muted);font-variant-numeric:tabular-nums;flex:none;width:44px}
+.lab-ul li.lg{color:var(--verde);font-weight:600}
+.lab-mini{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;margin:10px 0;flex-wrap:wrap}
+.lab-f{align-items:center}.txt-verde{color:var(--verde)}
+@media (max-width:600px){.lab-clis{grid-template-columns:1fr}}
