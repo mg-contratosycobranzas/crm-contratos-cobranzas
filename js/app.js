@@ -319,6 +319,7 @@
   }
   function stepTap(opId, sk, i) {
     const d = D.get(opId), it = d && d.check[sk][i]; if (!it) return;
+    if (it.tab) { if (!can('a_edit')) return toast(NOPERM); return openTab(getOp(opId), it.tab); } // un solo paso: pegar la captura de Evolta
     const done = (prev, msg) => { if (!prev) return; rerenderOp(opId); toast(msg, () => { applyMany(opId, prev); rerenderOp(opId); }); };
     // Los pasos se marcan solos al completar los datos. Marcarlos (o desmarcarlos) a mano es una excepción de jefatura.
     // Elegir una opción (p. ej. "¿aplica carta fianza?") sí es completar un dato.
@@ -897,7 +898,7 @@
     return '';
   }
   // quién puede marcar pasos a mano ve "Marcar ✓ / Deshacer"; el resto ve el dato que debe completar
-  const stepLabel = (c) => can('a_pasos') ? (c.done ? 'Deshacer' : (c.set || c.choose) ? 'Marcar ✓' : 'Completar') : (c.done ? '' : c.choose ? 'Elegir' : 'Completar dato');
+  const stepLabel = (c) => c.tab ? (c.done ? 'Volver a validar' : 'Pegar captura') : can('a_pasos') ? (c.done ? 'Deshacer' : (c.set || c.choose) ? 'Marcar ✓' : 'Completar') : (c.done ? '' : c.choose ? 'Elegir' : 'Completar dato');
   const checkHtml = (key, d, o) => `<ul class="chk">${d.check[key].map((c, i) => `<li class="tap ${c.done ? 'ok' : ''}" data-act="step" data-op="${o.id}" data-s="${key}" data-i="${i}" role="button" tabindex="0"><span class="tk">${c.done ? '✓' : ''}</span><span class="cl">${esc(c.label)}</span>${c.espera ? '<span class="bf-tag">En espera · bien futuro</span>' : ''}<em>${stepLabel(c)}</em></li>`).join('')}</ul><div class="kv">${kvFor(key, o, d)}</div>`;
   const stageHead = (key, d, o) => `${key === 'fin' && o && o.fin_tipo === 'No aplica' ? '<span class="badge plain gris">No aplica · no requiere carta fianza ni minuta</span>' : stateChip(d.state[key])}<span class="small muted">Responsable: <b style="color:var(--ink)">${respCell(d.owner[key])}</b></span>${bar(d.progress[key])}`;
   const headHtml = (o, d) => `<div class="t"><h1>${esc(o.cliente)}</h1>${d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(d.etapa)}${alertBadge(d.alerta)}</div>
@@ -1918,8 +1919,8 @@
   function tabHtml(o, tk) {
     const T = CRM.EV_TABS[tk], G = T.groups;
     const card = (gs) => `<div class="nkb-card ${T.wide ? 'nkb-row' : ''}">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text', list: { ejecBanco: 'ejecBanco', con_notaria: 'notaria', con_abogado: 'abogado' }[f.k] }, 'siempre')).join('')}`).join('')}</div>`;
-    return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm" data-act="evtab" data-tab="${tk}" data-op="${o.id}">📋 Cotejar con Evolta</button></div>
-      ${tabStatus(o, tk)}<div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></div>`;
+    return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm pri" data-act="evtab" data-tab="${tk}" data-op="${o.id}">📋 Pegar captura de Evolta</button></div>
+      ${tabStatus(o, tk)}<details class="fe-mas"><summary>🔎 Ver o corregir los datos de esta pestaña <span class="muted small">· ${TAB_F(tk).filter(f => !filled(o[f.k])).length} por completar</span></summary><div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></details></div>`;
   }
   function openTab(op, tk) {
     let ev = null;
@@ -1928,10 +1929,11 @@
       body: `<ol class="small" style="margin:0 0 10px;padding-left:18px"><li>En Evolta abre la venta y entra a la pestaña <b>${T.t}</b>.</li>
         <li>Toma una captura (<b>Windows + Shift + S</b>) y pégala abajo con <b>Ctrl + V</b>. También puedes seleccionar el texto de la pestaña, copiarlo y pegarlo.</li></ol>
         <div class="nkb-paste" contenteditable="true" tabindex="0" data-ph="Haz clic aquí y pega (Ctrl + V)"></div>
-        <p class="small" style="margin:8px 0"><label class="btn sm">🖼️ Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p><div id="nkb-res"></div>`,
+        <p class="small" style="margin:8px 0"><label class="btn sm">🖼️ Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p>${tk === 'nkb' ? `<div class="nkb-abo"><b class="small">Además (no viene en la captura)</b><div class="f-grid"><label class="f">Abogado / doctor a cargo en notaría<input id="nkb-abo" list="dl-abogado" value="${esc(op.con_abogado || '')}" autocomplete="off"></label><label class="f">Fecha de asignación del abogado<input type="date" id="nkb-fab" value="${esc(op.con_fAsignaAbogado || (op.con_abogado ? '' : iso(today())))}"></label></div></div>` : ''}<div id="nkb-res"></div>`,
       onOk: () => {
         if (!ev) { toast('Primero pega la captura o el texto de Evolta'); return false; }
         $$('#nkb-res [data-nk]').forEach(c => { if (c.checked) setField(op.id, c.dataset.nk, ev[c.dataset.nk]); });
+        if (tk === 'nkb') { const ab = (($('#nkb-abo') || {}).value || '').trim(), fa = ($('#nkb-fab') || {}).value || ''; if (ab) setField(op.id, 'con_abogado', ab); if (ab && fa && +fa.slice(0, 4) >= 1990) setField(op.id, 'con_fAsignaAbogado', fa); }
         const faltaEvolta = [], faltaAmbos = [], faltaCrm = [], difieren = [];
         F.forEach(f => { const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]); if (!a && !b) faltaAmbos.push(f.k); else if (!a) faltaEvolta.push(f.k); else if (!b) faltaCrm.push(f.k); else if (a !== b) difieren.push(f.k); });
         const chk = { ts: Date.now(), por: S.actor, faltaEvolta, faltaAmbos, faltaCrm, difieren, pendientes: faltaEvolta.length + faltaAmbos.length + faltaCrm.length + difieren.length, evolta: ev };
@@ -1954,7 +1956,13 @@
         else st = '<span class="badge verde">Coincide</span>';
         return `<tr><td>${esc(f.l)}</td><td>${show(op[f.k])}</td><td>${show(ev[f.k])}</td><td>${st}</td><td>${box}</td></tr>`;
       };
-      res.innerHTML = `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${T.groups.map(g => `<tr><td colspan="5" class="nkb-gr">${g.t}</td></tr>${g.f.map(row).join('')}`).join('')}</tbody></table></div>        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
+      const todos = F.map(f => ({ f, a: nkbNorm(f, ev[f.k]), b: nkbNorm(f, op[f.k]) })), tipo = (x) => !x.a && !x.b ? 'amb' : !x.a ? 'evo' : !x.b ? 'copiar' : x.a !== x.b ? 'dist' : 'ok';
+      const cnt = (t) => todos.filter(x => tipo(x) === t).length, tabla = (L) => `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${L.map(x => row(x.f)).join('')}</tbody></table></div>`;
+      const atn = todos.filter(x => ['dist', 'amb', 'evo'].includes(tipo(x))), cop = todos.filter(x => tipo(x) === 'copiar'), oks = todos.filter(x => tipo(x) === 'ok');
+      res.innerHTML = `<div class="ev-res-sum"><b>📥 ${cop.length}</b> datos se copian al CRM · <b>✅ ${oks.length}</b> ya coinciden · <b>${atn.length ? '⚠️' : '👍'} ${atn.length}</b> para revisar</div>
+        ${atn.length ? `<p class="small" style="margin:8px 0 4px"><b>Revisa estos:</b></p>${tabla(atn)}` : ''}
+        ${cop.length ? `<details class="fe-mas"><summary>Ver los ${cop.length} datos que se copiarán</summary>${tabla(cop)}</details>` : ''}
+        ${oks.length ? `<details class="fe-mas"><summary>Ver los ${oks.length} datos que ya coinciden</summary>${tabla(oks)}</details>` : ''}        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
     };
     const fromImage = async (file) => {
       res.innerHTML = '<div class="small muted">Leyendo la imagen… <b id="nkb-pg">0%</b> (la primera vez tarda un poco más)</div>';
