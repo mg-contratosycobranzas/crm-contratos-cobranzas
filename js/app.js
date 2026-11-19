@@ -682,7 +682,7 @@
       (FIELDS[key] || []).forEach(f => {
         const llenos = base.filter(r => filled(r.o[f.k])).length, pct = base.length ? Math.round(llenos * 100 / base.length) : null, visible = !esc0 || esc0.includes(f.k);
         const nivel = pct == null ? 'nd' : pct >= 80 ? 'alto' : pct >= 40 ? 'medio' : pct > 0 ? 'bajo' : 'cero';
-        const sug = base.length < 10 ? 'Pocos casos para decidir' : !visible && pct >= 60 ? '⬆️ Se usa mucho: subirlo a los visibles' : visible && nivel === 'cero' ? '🗑️ Nadie lo llena: candidato a quitar' : visible && nivel === 'bajo' ? '⬇️ Se llena poco: candidato a "Más datos"' : !visible && nivel === 'cero' ? '🗑️ Oculto y sin uso: candidato a quitar' : '—';
+        const sug = base.length < 10 ? 'Pocos casos' : !visible && pct >= 60 ? '⬆️ Subirlo a visibles' : visible && nivel === 'cero' ? '🗑️ Candidato a quitar' : visible && nivel === 'bajo' ? '⬇️ Candidato a "Más datos"' : !visible && nivel === 'cero' ? '🗑️ Candidato a quitar' : '—';
         out.push({ grupo: nombre, key, k: f.k, campo: f.l, base: base.length, llenos, pct, nivel, visible, ed: ed.get(f.k) || 0, ult: ult.get(f.k) || 0, sug });
       });
     });
