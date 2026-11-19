@@ -111,6 +111,16 @@
       { k: 'pos_derivado', l: 'Derivado a postventa', t: 'select', o: YN }, { k: 'pos_entregada', l: 'Unidad entregada', t: 'select', o: YN }
     ]
   };
+  /* Campos que se ven siempre en la ficha. El resto va en "➕ Más datos (opcional)": son datos que ya se editan en otro
+     lado (recorrido de la cláusula, pestaña Notaría y Kardex, panel de bien futuro) o que casi no se usan.
+     Siempre se muestran además: los obligatorios que faltan y los que pide un paso de la guía. null = todos. */
+  const ESENCIAL = {
+    gen: ['cliente', 'dni', 'telefono', 'proyecto', 'unidad', 'vendedor', 'banco', 'ejecBanco', 'fRecibeBanco', 'montoBanco', 'bono', 'precio', 'observaciones'],
+    cob: null, fin: null, pos: null,
+    con: ['con_asistente', 'con_fAsignacion', 'con_fValidacion', 'con_actDocs', 'con_clausula', 'con_docsNotaria', 'con_fInicioFirmas', 'con_cheque', 'con_estadoKardex',
+      'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_banObs', 'con_banPausa', 'con_notObs', 'con_notPausa', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL', 'con_datosCRM', 'con_fCulm'],
+    for: ['for_asistente', 'for_fInicio', 'for_aplicaLev', 'for_fFirmaMinuta', 'for_fIngresoNotaria', 'for_fInscripcion', 'for_estadoIns', 'for_titulo', 'for_copiaEvolta', 'for_fIndep']
+  };
   /* Pestaña "Notaría y Kardex/Banco" de Evolta: mismos campos, en el mismo orden.
      `ev` = cómo se llama el campo en Evolta (para leer la captura). Algunos reutilizan campos que ya existían. */
   const NKB = [
@@ -342,6 +352,6 @@
     return ops;
   }
 
-  global.CRM = { BF_MOTIVOS, ESTADOS_INS, STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
+  global.CRM = { ESENCIAL, BF_MOTIVOS, ESTADOS_INS, STAGES, STAGE, JEFATURA, FIELDS, FIELD_LABEL, NKB, NKB_KEYS, nkbOk, EV_TABS, tabOk, NUM_KEYS, DEFAULT_PARAMS, DEFAULT_USERS, derive, milestones, normalize, ownerOf, importWorkbook,
     pd, iso, today, addDays, diff, fdate, num };
 })(window);
