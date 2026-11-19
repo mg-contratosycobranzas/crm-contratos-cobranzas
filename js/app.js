@@ -865,13 +865,16 @@
   }
   // separa los campos de una etapa en los que se ven siempre y los de "Más datos (opcional)"
   function camposFicha(o, key, d, mark) {
-    const todos = FIELDS[key], esc0 = CRM.ESENCIAL[key];
-    if (!esc0) return `<div class="f-grid">${todos.map(f => fieldInput(o, f, mark)).join('')}</div>`;
+    const todos = FIELDS[key], esc0 = CRM.ESENCIAL[key], lleno = (f) => o[f.k] !== undefined && o[f.k] !== null && o[f.k] !== '';
     const forzados = new Set(faltantes(o, d).out.map(x => x.k));
     ((d && d.check && d.check[key]) || []).forEach(c => { Object.keys(c.set || {}).forEach(k => forzados.add(k)); if (c.choose) forzados.add(c.choose.k); });
-    const vis = todos.filter(f => esc0.includes(f.k) || forzados.has(f.k)), oc = todos.filter(f => !vis.includes(f));
-    const conDatos = oc.filter(f => o[f.k] !== undefined && o[f.k] !== null && o[f.k] !== '').length;
-    return `<div class="f-grid">${vis.map(f => fieldInput(o, f, mark)).join('')}</div>${oc.length ? `<details class="fe-mas"><summary>➕ Más datos (opcional) <span class="muted small">· ${oc.length} campos${conDatos ? `, ${conDatos} con datos` : ''}</span></summary><p class="small muted" style="margin:6px 0 8px">Datos de apoyo que casi no se usan o que ya se editan en otro lado (recorrido de la cláusula, pestaña Notaría y Kardex, panel de bien futuro). No hace falta llenarlos para avanzar.</p><div class="f-grid">${oc.map(f => fieldInput(o, f, mark)).join('')}</div></details>` : ''}`;
+    const vis = esc0 ? todos.filter(f => esc0.includes(f.k) || forzados.has(f.k)) : todos, oc = todos.filter(f => !vis.includes(f));
+    const pend = vis.filter(f => !lleno(f) || faltantes(o, d).out.some(x => x.k === f.k)), hecho = vis.filter(f => !pend.includes(f));
+    const grid = (L) => `<div class="f-grid">${L.map(f => fieldInput(o, f, mark)).join('')}</div>`;
+    const ocConDatos = oc.filter(lleno).length;
+    return `${pend.length ? `<p class="small" style="margin:2px 0 8px"><b>Falta llenar: ${pend.length}</b> <span class="muted">· solo se muestra lo pendiente</span></p>${grid(pend)}` : '<div class="guia ok">🎉 <b>No falta ningún dato en esta etapa.</b> Lo ya registrado está abajo por si necesitas corregirlo.</div>'}
+      ${hecho.length ? `<details class="fe-mas fe-ok"><summary>✅ Ya registrado <span class="muted small">· ${hecho.length} ${hecho.length === 1 ? 'dato' : 'datos'}, toca para ver o corregir</span></summary><div style="margin-top:8px">${grid(hecho)}</div></details>` : ''}
+      ${oc.length ? `<details class="fe-mas"><summary>➕ Más datos (opcional) <span class="muted small">· ${oc.length} campos${ocConDatos ? `, ${ocConDatos} con datos` : ''}</span></summary><p class="small muted" style="margin:6px 0 8px">Datos de apoyo que casi no se usan o que ya se editan en otro lado (recorrido de la cláusula, pestaña Notaría y Kardex, panel de bien futuro). No hace falta llenarlos para avanzar.</p>${grid(oc)}</details>` : ''}`;
   }
   function fieldInput(op, f, mark) {
     const v = op[f.k] ?? '', base = `data-fk="${f.k}" data-op="${op.id}" autocomplete="off"`; // sin autocompletar: evita que el navegador ofrezca guardar "pasaporte" o direcciones

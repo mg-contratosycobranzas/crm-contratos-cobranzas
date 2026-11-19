@@ -118,7 +118,7 @@
     gen: ['cliente', 'dni', 'telefono', 'proyecto', 'unidad', 'vendedor', 'banco', 'ejecBanco', 'fRecibeBanco', 'montoBanco', 'bono', 'precio', 'observaciones'],
     cob: null, fin: null, pos: null,
     con: ['con_asistente', 'con_fAsignacion', 'con_fValidacion', 'con_actDocs', 'con_clausula', 'con_docsNotaria', 'con_fInicioFirmas', 'con_cheque', 'con_estadoKardex',
-      'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_banObs', 'con_banPausa', 'con_notObs', 'con_notPausa', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL', 'con_datosCRM', 'con_fCulm'],
+      'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL', 'con_datosCRM'],
     for: ['for_asistente', 'for_fInicio', 'for_aplicaLev', 'for_fFirmaMinuta', 'for_fIngresoNotaria', 'for_fInscripcion', 'for_estadoIns', 'for_titulo', 'for_copiaEvolta', 'for_fIndep']
   };
   /* Pestaña "Notaría y Kardex/Banco" de Evolta: mismos campos, en el mismo orden.
