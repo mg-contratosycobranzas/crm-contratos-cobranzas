@@ -11,6 +11,8 @@ Todo lo que se construye es para **mejorar la eficiencia de la cobranza** del Á
 - **Vista previa SIEMPRE antes de publicar** (capturas con datos de prueba): cada cambio se trabaja en una rama aparte, se prueba y se muestran capturas. Se pasa a `main` (lo que ve el equipo) solo cuando la jefatura dice "publica".
 - Al publicar, **cambiar la versión `?v=` en `index.html`** para que los navegadores carguen los archivos nuevos.
 
+- **Ayuda y soporte siempre**: toda pantalla, paso o ventana nueva lleva su botón o texto de ayuda ("¿Cómo leer esta pantalla?", 💡, instrucciones paso a paso) en lenguaje simple. Menos campos y menos pasos: mostrar solo lo pendiente.
+
 ## Todo módulo debe tener
 1. **Tiempos**: días hábiles (feriados del Perú), meta configurable, semáforo (verde / amarillo / rojo) y productividad = eficacia × eficiencia (las mismas funciones `prodDe`, `diasEntre`, `metaProd`).
 2. **Reportes**: resumen en pantalla y, cuando aplique, informe para imprimir o guardar en PDF ("Área de Contratos y Cobranzas presenta").
