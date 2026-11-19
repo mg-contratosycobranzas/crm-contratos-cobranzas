@@ -13,6 +13,8 @@ Todo lo que se construye es para **mejorar la eficiencia de la cobranza** del Á
 
 - **Ayuda y soporte siempre**: toda pantalla, paso o ventana nueva lleva su botón o texto de ayuda ("¿Cómo leer esta pantalla?", 💡, instrucciones paso a paso) en lenguaje simple. Menos campos y menos pasos: mostrar solo lo pendiente.
 
+- **Mejora continua**: al terminar un trabajo, revisar si hay mejores prácticas en otros CRM (cobranzas, inmobiliario, de otros continentes) y proponer ideas **solo de costo cero**, con fuente y diciendo qué es dato verificado y qué es publicidad del proveedor. Nada se publica sin vista previa y sin el "publica" de la jefatura.
+
 ## Todo módulo debe tener
 1. **Tiempos**: días hábiles (feriados del Perú), meta configurable, semáforo (verde / amarillo / rojo) y productividad = eficacia × eficiencia (las mismas funciones `prodDe`, `diasEntre`, `metaProd`).
 2. **Reportes**: resumen en pantalla y, cuando aplique, informe para imprimir o guardar en PDF ("Área de Contratos y Cobranzas presenta").
