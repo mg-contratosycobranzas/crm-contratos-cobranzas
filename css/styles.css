@@ -678,3 +678,4 @@ details.cob-g{margin-bottom:10px}details.cob-g>summary{cursor:pointer;padding:8p
 .cob-row:first-child{border-top:0}.cob-m{text-align:right}.cob-a{display:flex;gap:4px;justify-content:flex-end}.cob-p{color:var(--amar)}
 @media (max-width:760px){.cob-row{grid-template-columns:1fr auto;grid-template-areas:'c m' 'd k' 'a a'}.cob-c{grid-area:c}.cob-m{grid-area:m}.cob-d{grid-area:d}.cob-k{grid-area:k;text-align:right}.cob-a{grid-area:a;justify-content:flex-start}}
 .cob-ult{font-size:13px;color:var(--muted)}.cob-ult.alerta{color:var(--rojo);font-weight:600}
+.carga-op{display:grid;gap:6px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0 12px}.carga-op label{display:flex;gap:6px;align-items:flex-start}.carga-av{color:var(--amar);margin-top:2px}

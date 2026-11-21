@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', carga_excel: 'Carga masiva desde Excel', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -761,6 +761,111 @@
     const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) [8, 9, 10, 11].forEach(c => { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; });
     ws['!autofilter'] = { ref: ws['!ref'] };
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'A quién cobrar'); XLSX.writeFile(wb, `A_quien_cobrar_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${list.length} créditos`);
+  }
+  /* ---- Carga masiva desde Excel (formato de cobranza): cruza por DNI, muestra qué cambiaría y recién ahí guarda ---- */
+  const CARGA_COLS = [
+    ['unidad', ['DEPARTAMENTO', 'UNIDAD', 'DPTO', 'N DEPARTAMENTO'], 'id'], ['cliente', ['CLIENTE', 'NOMBRE'], 'id'], ['dni', ['DNI', 'DOCUMENTO', 'DNI CE'], 'id'], ['proyecto', ['PROYECTO'], 'id'],
+    ['montoBanco', ['SALDO A FINANCIAR', 'MONTO A FINANCIAR', 'FINANCIAMIENTO'], 'n'], ['bono', ['BONOS MIVIENDA', 'BONO MIVIENDA', 'BONOS', 'BONO'], 'n'], ['cob_porRecibir', ['CUOTA INICIAL PENDIENTE', 'INICIAL PENDIENTE'], 'n'],
+    ['vendedor', ['VENDEDOR', 'EJECUTIVO DE VENTAS'], 't'], ['jefeVentas', ['JEFE DE VENTAS'], 't'], ['banco', ['BANCO'], 't'], ['ejecBanco', ['EJECUTIVO DE BANCO', 'EJECUTIVO BANCO', 'ASESOR DE BANCO'], 't'],
+    ['observaciones', ['COMENTARIO', 'COMENTARIOS', 'OBSERVACIONES'], 't'], ['con_abogado', ['ABOGADO', 'ABOGADO A CARGO'], 't'], ['con_kardexMonto', ['KARDEX', 'N KARDEX'], 'n'],
+    ['con_fFirmaCliente', ['FECHA DE FIRMA DEL CLIENTE', 'FECHA FIRMA CLIENTE'], 'd'], ['con_fFirmaRL', ['FECHA DE FIRMA INMOBILIARIA', 'FECHA FIRMA INMOBILIARIA'], 'd']];
+  const hn = (x) => String(x ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+  const cNum = (v) => { if (v === '' || v == null) return {}; if (typeof v === 'number') return v < 0 || !isFinite(v) ? { err: 'es negativo' } : { v }; const t = String(v).replace(/S\/\.?|\s/gi, '').replace(/,(?=\d{3}(\D|$))/g, ''); const n = Number(t.replace(',', '.')); return t !== '' && isFinite(n) && n >= 0 ? { v: n } : { err: 'no es un número' }; };
+  function cFecha(v) {
+    if (v === '' || v == null) return {}; let y, m, d;
+    if (v instanceof Date) { const x = new Date(v.getTime() + 12 * 36e5); y = x.getFullYear(); m = x.getMonth() + 1; d = x.getDate(); }
+    else if (typeof v === 'number') { const p = XLSX.SSF.parse_date_code(v); if (!p) return { err: 'no es una fecha' }; y = p.y; m = p.m; d = p.d; }
+    else { const t = String(v).trim(), a = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/.exec(t), b = /^(\d{4})-(\d{2})-(\d{2})/.exec(t); if (a) { d = +a[1]; m = +a[2]; y = +a[3]; if (y < 100) y += 2000; } else if (b) { y = +b[1]; m = +b[2]; d = +b[3]; } else return { err: 'no es una fecha' }; }
+    const real = new Date(y, m - 1, d); return y >= 1990 && y <= 2100 && real.getFullYear() === y && real.getMonth() === m - 1 && real.getDate() === d ? { v: `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` } : { err: 'es una fecha no válida' };
+  }
+  function cargaLeer(buf) {
+    const wb = XLSX.read(buf, { type: 'array', cellDates: true }), M = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
+    const hi = M.findIndex((r, i) => i < 30 && r.some(c => hn(c) === 'CLIENTE') && r.some(c => /^DNI/.test(hn(c))));
+    if (hi < 0) throw new Error('no encontré la fila de encabezados (con CLIENTE y DNI)');
+    const col = {}; M[hi].forEach((c, i) => { const h = hn(c); CARGA_COLS.forEach(([k, al]) => { if (!(k in col) && al.includes(h)) col[k] = i; }); });
+    const filas = [];
+    M.slice(hi + 1).forEach((r, i) => {
+      if (!Object.values(col).some(ci => r[ci] !== '' && r[ci] != null)) return;
+      const f = { n: hi + 2 + i, v: {}, err: [] };
+      CARGA_COLS.forEach(([k, , tipo]) => { if (!(k in col)) return; const raw = r[col[k]]; if (raw === '' || raw == null) return;
+        const x = tipo === 'n' ? cNum(raw) : tipo === 'd' ? cFecha(raw) : { v: String(raw).trim() };
+        if (x.err) f.err.push(`${CRM.FIELD_LABEL[k] || k}: "${String(raw).slice(0, 20)}" ${x.err}, se omitió`); else if (x.v !== undefined && x.v !== '') f.v[k] = x.v; });
+      if (f.v.dni && /^\d+$/.test(f.v.dni) && f.v.dni.length === 7) f.v.dni = '0' + f.v.dni;
+      if (/^total/i.test(f.v.cliente || '')) return;
+      filas.push(f);
+    });
+    return { filas, cols: Object.keys(col) };
+  }
+  function cargaPlan(filas, modo, crear) {
+    const dig = (x) => String(x || '').replace(/\D/g, ''), vistos = new Set(), out = [], NUMS = new Set(['montoBanco', 'bono', 'cob_porRecibir', 'con_kardexMonto']);
+    filas.forEach(f => {
+      const it = { n: f.n, nombre: f.v.cliente || f.v.dni || '(sin nombre)', tipo: '', op: null, cambios: [], avisos: [...f.err] };
+      if (!f.v.cliente && !f.v.dni) { it.tipo = 'prob'; it.avisos.push('Sin nombre ni DNI: se omitió la fila'); return out.push(it); }
+      const dni = dig(f.v.dni), uni = hn(f.v.unidad), clave = (dni || hn(f.v.cliente)) + '|' + uni;
+      if (vistos.has(clave)) { it.tipo = 'prob'; it.avisos.push('Está repetido en el Excel (mismo cliente y unidad): se omitió'); return out.push(it); }
+      vistos.add(clave);
+      let cand = dni ? S.ops.filter(o => dig(o.dni) === dni) : S.ops.filter(o => hn(o.cliente) === hn(f.v.cliente));
+      if (cand.length > 1 && uni) { const c2 = cand.filter(o => hn(o.unidad) === uni); if (c2.length) cand = c2; }
+      if (cand.length === 1 && uni && cand[0].unidad && hn(cand[0].unidad) !== uni) { it.avisos.push(`Mismo cliente pero otra unidad (${cand[0].unidad} → ${f.v.unidad}): se toma como un caso nuevo`); cand = []; }
+      if (cand.length > 1) { it.tipo = 'prob'; it.avisos.push(`Hay ${cand.length} clientes con ese DNI y no sé cuál es: agrega la unidad (DEPARTAMENTO). Se omitió`); return out.push(it); }
+      if (cand.length === 1) {
+        const o = cand[0]; it.op = o; it.tipo = 'act';
+        Object.entries(f.v).forEach(([k, v]) => {
+          const id = ['cliente', 'dni', 'unidad', 'proyecto'].includes(k), ant = o[k], vacio = ant === undefined || ant === null || ant === '';
+          if (id ? !vacio : (modo === 'vacios' ? !vacio : (NUMS.has(k) ? Number(ant) === v : hn(ant) === hn(v)))) return;
+          it.cambios.push({ k, antes: ant, despues: v }); });
+        if (!it.cambios.length) it.tipo = 'igual';
+      } else if (!f.v.cliente) { it.tipo = 'prob'; it.avisos.push('No existe en el CRM y falta el nombre para crearlo: se omitió'); }
+      else if (!crear) { it.tipo = 'omit'; it.avisos.push('No existe en el CRM (no se crea porque lo desmarcaste)'); }
+      else { it.tipo = 'nuevo'; it.cambios = Object.entries(f.v).map(([k, v]) => ({ k, antes: '', despues: v })); }
+      out.push(it);
+    });
+    return out;
+  }
+  function cargaAplicar(plan) {
+    let nAct = 0, nNue = 0, max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0));
+    plan.forEach(it => {
+      if (it.tipo === 'act') { const o = it.op; it.cambios.forEach(c => { const antes = o[c.k]; o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
+          S.log.push({ ts: Date.now(), usuario: S.actor, opId: o.id, etapa: c.k.includes('_') ? c.k.split('_')[0] : 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); nAct++; }
+      if (it.tipo === 'nuevo') { const v = {}; it.cambios.forEach(c => { v[c.k] = c.despues; }); max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), ...v };
+        marcaIngreso(op); S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); nNue++; }
+    });
+    if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'carga_excel', antes: '', despues: `${nAct} clientes actualizados, ${nNue} nuevos` });
+    commit(); return { nAct, nNue };
+  }
+  function importarExcel() {
+    if (typeof XLSX === 'undefined') return toast('No se cargó la librería de Excel.');
+    const inp = $('#cargafile'); if (!inp) return toast('Recarga la página (Ctrl + F5) y vuelve a intentar');
+    inp.value = '';
+    inp.onchange = async () => {
+      const file = inp.files[0]; inp.value = ''; if (!file) return;
+      let L; try { L = cargaLeer(await file.arrayBuffer()); } catch (e) { console.error(e); return toast('No se pudo leer el Excel: ' + e.message); }
+      if (!L.filas.length) return toast('El Excel no tiene filas con datos debajo de los encabezados');
+      const O = { modo: 'vacios', crear: true, resp: true }, ET = { act: 'Se actualiza', nuevo: 'Cliente nuevo', prob: 'Revisar', omit: 'No se carga' };
+      const pintar = () => {
+        const plan = cargaPlan(L.filas, O.modo, O.crear), c = (t) => plan.filter(x => x.tipo === t).length, nCamb = plan.reduce((t, x) => t + (x.tipo === 'act' || x.tipo === 'nuevo' ? x.cambios.length : 0), 0), mostrar = plan.filter(x => x.tipo !== 'igual');
+        const val = (k, v) => v === '' || v == null ? '<span class="muted">vacío</span>' : /^(montoBanco|bono|cob_porRecibir)$/.test(k) ? money(v) : /^con_fFirma/.test(k) ? fdate(v) : esc(String(v));
+        return { plan, nCamb, html: `<p class="small" style="margin-top:0">Se leyeron <b>${L.filas.length}</b> filas de <b>${esc(file.name)}</b>: <b>${c('act')}</b> clientes se actualizan, <b>${c('nuevo')}</b> son nuevos, <b>${c('igual')}</b> ya están igual y <b>${c('prob') + c('omit')}</b> no se cargan. Aún no se guardó nada.</p>
+          <div class="carga-op"><b class="small">¿Qué hacer con los datos que ya existen en el CRM?</b>
+            <label class="small"><input type="radio" name="c-modo" value="vacios" ${O.modo === 'vacios' ? 'checked' : ''}> <b>Solo completar lo que está vacío</b> (recomendado: no pisa nada)</label>
+            <label class="small"><input type="radio" name="c-modo" value="todo" ${O.modo === 'todo' ? 'checked' : ''}> Actualizar también los que son distintos (el Excel manda)</label>
+            <label class="small"><input type="checkbox" id="c-crear" ${O.crear ? 'checked' : ''}> Crear los clientes que no existen en el CRM</label>
+            <label class="small"><input type="checkbox" id="c-resp" ${O.resp ? 'checked' : ''}> Descargar un respaldo antes de aplicar (por si necesitas volver atrás)</label></div>
+          ${mostrar.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Fila</th><th>Cliente</th><th>Qué pasa</th><th>Cambios</th></tr></thead><tbody>${mostrar.slice(0, 80).map(x => `<tr><td>${x.n}</td><td>${esc(x.nombre)}${x.op ? `<div class="small muted">${x.op.id}</div>` : ''}</td><td>${ET[x.tipo]}</td><td class="small">${x.cambios.map(ch => `${esc(CRM.FIELD_LABEL[ch.k] || ch.k)}: ${ch.antes === '' || ch.antes == null ? '' : val(ch.k, ch.antes) + ' → '}<b>${val(ch.k, ch.despues)}</b>`).join('<br>')}${x.avisos.map(a => `<div class="carga-av">${esc(a)}</div>`).join('')}</td></tr>`).join('')}</tbody></table></div>${mostrar.length > 80 ? `<p class="small muted">Se muestran 80 de ${mostrar.length}; todos se cargan al aplicar.</p>` : ''}` : '<div class="empty">No hay cambios para aplicar con estas opciones.</div>'}` };
+      };
+      let ult = null;
+      modal({ title: 'Cargar clientes desde Excel', ok: 'Aplicar cambios', wide: true, body: '<div id="carga-box"></div>',
+        onOk: (dlg) => {
+          if (!ult || !ult.nCamb) { toast('No hay cambios para aplicar'); return false; }
+          if (O.resp) { try { const R = respaldoArmar(); download(`Respaldo_antes_de_carga_${R.f}.json`, R.json, 'application/json'); } catch (e) { console.error(e); } }
+          const r = cargaAplicar(ult.plan); toast(`✓ Carga lista: ${r.nAct} clientes actualizados y ${r.nNue} nuevos`); render(true); } });
+      const dlg = $('#dlg'), box = dlg.querySelector('#carga-box');
+      const draw = () => { ult = pintar(); box.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.nCamb ? `Aplicar ${ult.nCamb} cambios` : 'Aplicar cambios'; };
+      box.onchange = (e) => { if (e.target.name === 'c-modo') O.modo = e.target.value; if (e.target.id === 'c-crear') O.crear = e.target.checked; if (e.target.id === 'c-resp') { O.resp = e.target.checked; return; } draw(); };
+      draw();
+    };
+    inp.click();
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">🔒 Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
@@ -1688,7 +1793,7 @@
     const sel = (k, label, opts, noAll) => `<select data-f="operaciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
     const tip = diasTipicos();
-    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
+    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>${can('a_import') ? ' <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
       <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
         ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
           // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
@@ -3558,6 +3663,7 @@
     if (a === 'sticker') return sticker(el.dataset.op, el.dataset.s);
     if (a === 'export-ops') return exportOps();
     if (a === 'export-cobro') return exportCobro();
+    if (a === 'carga-excel') return cargaExcel();
     if (a === 'ops-limpiar') { const F = opsFilter(); ['q', 'emp', 'proy', 'banco', 'etapa', 'mesIng', 'mes', 'vend', 'jefe', 'ejec', 'abog', 'firma'].forEach(k => { F[k] = ''; }); F.page = 1; return render(true); }
     if (a === 'tp-excel') return tpExcel();
     if (a === 'avisos') return avisosPanel();
@@ -3566,7 +3672,7 @@
     if (a === 'nf-quitar') { setInfo(el.dataset.op, el.dataset.k, null); refreshFicha(el.dataset.op); return toast('Marca quitada'); }
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
-    if (a === 'carga-excel') return cargaExcel();
+    if (a === 'importar-excel') return importarExcel();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-resumen') return tpResumen();
     if (a === 'campos-excel') return camposExcel();
