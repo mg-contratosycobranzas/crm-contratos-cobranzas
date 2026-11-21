@@ -115,7 +115,7 @@
      lado (recorrido de la cláusula, pestaña Notaría y Kardex, panel de bien futuro) o que casi no se usan.
      Siempre se muestran además: los obligatorios que faltan y los que pide un paso de la guía. null = todos. */
   const ESENCIAL = {
-    gen: ['cliente', 'dni', 'telefono', 'proyecto', 'unidad', 'vendedor', 'banco', 'ejecBanco', 'fRecibeBanco', 'montoBanco', 'bono', 'precio', 'observaciones'],
+    gen: ['cliente', 'dni', 'telefono', 'proyecto', 'unidad', 'vendedor', 'jefeVentas', 'banco', 'ejecBanco', 'fRecibeBanco', 'montoBanco', 'bono', 'precio', 'observaciones'],
     cob: null, fin: null, pos: null,
     con: ['con_asistente', 'con_fAsignacion', 'con_fValidacion', 'con_actDocs', 'con_clausula', 'con_docsNotaria', 'con_fInicioFirmas', 'con_cheque', 'con_estadoKardex',
       'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL', 'con_datosCRM'],
