@@ -698,3 +698,16 @@ details.cob-g{margin-bottom:10px}details.cob-g>summary{cursor:pointer;padding:8p
 .page-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .qs-more{margin:8px 0}.qs-more>summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 2px}.qs-more .qs{margin-top:8px}
 .apps{display:flex;gap:12px;flex-wrap:wrap}
+
+/* estilo sobrio: sin emojis, sin etiquetas de color tipo "píldora" */
+.badge{background:transparent!important;padding:0;border-radius:0;gap:0;font-weight:600;color:var(--ink)}
+.badge::before{display:none}
+.badge.rojo{color:var(--rojo)}.badge.amar{color:var(--amar)}.badge.verde{color:var(--verde)}.badge.gris,.badge.plain{color:var(--muted)}.badge.bf{color:#2b5fb0}
+.nav .cnt,.nav-g>summary .cnt{background:transparent;padding:0;color:var(--muted);font-weight:500}.nav .cnt.hot{background:transparent;color:var(--rojo);font-weight:700}
+i:empty,.av-ic:empty,.bz-ic:empty,.bf-ic:empty,.cg-ph:empty{display:none}
+.av-row{grid-template-columns:1fr auto}
+.hero{background:var(--surface)}
+.tile{padding:14px 18px}.tile i{display:none}
+.ins>i{display:none}
+.top .bell svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hn:empty{display:none}

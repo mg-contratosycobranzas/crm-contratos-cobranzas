@@ -71,32 +71,32 @@
   // el acceso a etapas lo deciden solo los interruptores de "Etapas que puede ver"
   // mensaje corto del día para el equipo (cambia cada día, igual para todos)
   const MOTIVA = [
-    'Cada expediente cerrado es una familia más cerca de su hogar. 🏡',
-    'Paso a paso se llega lejos: hoy cierra al menos uno. 💪',
-    'Lo que se anota hoy, no se olvida mañana. ✍️',
-    'Un buen seguimiento vale más que mil urgencias. 📞',
-    'Somos un equipo: si alguien se traba, le damos una mano. 🤝',
-    'Hecho es mejor que perfecto. ¡A avanzar! 🚀',
-    'Tu orden de hoy es la tranquilidad del cliente mañana. ✨',
-    'Primero lo urgente, luego lo importante, siempre con calma. 🧭',
-    'Cada dato bien registrado ahorra una llamada. ✅',
-    'Las metas grandes se logran con días pequeños bien hechos. 📈',
-    'Una sonrisa también se nota por teléfono. 😊',
-    'Hoy es un buen día para dejar algo cerrado. 🔒',
-    'La constancia gana a la prisa. 🐢',
-    'Revisa, confirma y avanza: así trabajamos. 🔍',
-    'Lo que hacemos bien se nota en cada entrega. 🔑',
-    'Pequeños avances diarios, grandes resultados al mes. 🌱',
-    'Pregunta sin miedo: entre todos sabemos más. 💬',
-    'Un expediente al día es un problema menos. 📂',
-    'Gracias por tu esfuerzo: se ve y se valora. 🙌',
-    'Empieza por lo que más tiempo lleva esperando. ⏳'
+    'Cada expediente cerrado es una familia más cerca de su hogar. ',
+    'Paso a paso se llega lejos: hoy cierra al menos uno. ',
+    'Lo que se anota hoy, no se olvida mañana. ',
+    'Un buen seguimiento vale más que mil urgencias. ',
+    'Somos un equipo: si alguien se traba, le damos una mano. ',
+    'Hecho es mejor que perfecto. ¡A avanzar! ',
+    'Tu orden de hoy es la tranquilidad del cliente mañana. ',
+    'Primero lo urgente, luego lo importante, siempre con calma. ',
+    'Cada dato bien registrado ahorra una llamada. ',
+    'Las metas grandes se logran con días pequeños bien hechos. ',
+    'Una sonrisa también se nota por teléfono. ',
+    'Hoy es un buen día para dejar algo cerrado. ',
+    'La constancia gana a la prisa. ',
+    'Revisa, confirma y avanza: así trabajamos. ',
+    'Lo que hacemos bien se nota en cada entrega. ',
+    'Pequeños avances diarios, grandes resultados al mes. ',
+    'Pregunta sin miedo: entre todos sabemos más. ',
+    'Un expediente al día es un problema menos. ',
+    'Gracias por tu esfuerzo: se ve y se valora. ',
+    'Empieza por lo que más tiempo lleva esperando. '
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
-  const NOPERM = '🔒 Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
+  const NOPERM = 'Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
   const hashPin = (p) => { let h = 5381; const s = 'mg|' + p; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); };
@@ -174,9 +174,9 @@
   const AUTH_ERR = { 'auth/invalid-credential': 'Correo o contraseña incorrectos', 'auth/wrong-password': 'Correo o contraseña incorrectos', 'auth/user-not-found': 'Ese correo no tiene cuenta', 'auth/invalid-email': 'Correo no válido', 'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.', 'auth/network-request-failed': 'Sin conexión a internet' };
   function gateHtml() {
     const logo = '<h1>CRM</h1>';
-    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p>${navigator.onLine ? '' : '<p class="ev-falta">📴 Sin internet no se puede iniciar sesión. Si ya habías entrado en esta computadora, espera a que vuelva la conexión o usa los datos del celular.</p>'}<form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label>${idleMsg ? `<p class="small cl-wait" style="margin:0">⏱️ ${esc(idleMsg)}</p>` : ''}<button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
+    if (cloudState === 'login') return `<div class="gcard">${logo}<p class="muted">Entra con tu correo para trabajar en equipo y en tiempo real.</p>${navigator.onLine ? '' : '<p class="ev-falta">Sin internet no se puede iniciar sesión. Si ya habías entrado en esta computadora, espera a que vuelva la conexión o usa los datos del celular.</p>'}<form id="login-form" class="form"><label>Correo<input type="email" id="lg-e" autocomplete="username" required></label><label>Contraseña<input type="password" id="lg-p" autocomplete="current-password" required></label>${idleMsg ? `<p class="small cl-wait" style="margin:0">${esc(idleMsg)}</p>` : ''}<button class="btn pri" type="submit">Entrar</button></form><button class="btn sm" data-act="login-reset" style="margin-top:10px">Olvidé mi contraseña / crear contraseña</button><p class="gfoot">Creado por el Área de Contratos y Cobranzas</p></div>`;
     if (cloudState === 'seed') return `<div class="gcard">${logo}<p>Todavía no hay datos en la nube.</p><p class="muted small">Si eres la administradora, sube ahora los 139 expedientes iniciales. Quedarás como administradora con el correo <b>${esc(authEmail)}</b>.</p><button class="btn pri" data-act="seed">Subir datos iniciales</button> <button class="btn" data-act="logout">Salir</button></div>`;
-    if (cloudState === 'denied') return `<div class="gcard">${logo}<p>🔒 ${esc(denyMsg)}</p><button class="btn" data-act="logout">Cerrar sesión</button></div>`;
+    if (cloudState === 'denied') return `<div class="gcard">${logo}<p>${esc(denyMsg)}</p><button class="btn" data-act="logout">Cerrar sesión</button></div>`;
     return `<div class="gcard">${logo}<p class="muted">Conectando…</p></div>`;
   }
   function gateCheck() {
@@ -192,7 +192,7 @@
   const sbadge = (k) => { const s = STAGE[k]; return `<span class="sbadge" style="--sc:${colVar(k)}"><i>${s.n}</i>${s.name}</span>`; };
   const alertBadge = (a) => a ? alertChip(a) : '';
   const semBadge = (s) => ({ ROJO: `<span class="badge rojo">Vencido</span>`, AMARILLO: `<span class="badge amar">Por vencer</span>`, VERDE: `<span class="badge verde">En plazo</span>`, COMPLETADO: `<span class="badge verde">Completado</span>` }[s] || '<span class="muted">—</span>');
-  const stateChip = (st) => st === 'espera' ? '<span class="badge bf">⏸️ En espera · Bien futuro</span>' : st === 'culminada' ? `<span class="badge verde">Culminada</span>` : st === 'actual' ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">En curso</span>` : `<span class="badge gris">Por llegar</span>`;
+  const stateChip = (st) => st === 'espera' ? '<span class="badge bf">En espera · Bien futuro</span>' : st === 'culminada' ? `<span class="badge verde">Culminada</span>` : st === 'actual' ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">En curso</span>` : `<span class="badge gris">Por llegar</span>`;
   const cumpBadge = (c) => c === 'FUERA DE PLAZO' ? `<span class="badge rojo">Fuera de plazo</span>` : c === 'PROXIMO A VENCER' ? `<span class="badge amar">Próximo a vencer</span>` : c ? `<span class="badge verde">Dentro del plazo</span>` : '<span class="muted">—</span>';
   const respCell = (n) => n === 'Sin asignar' ? `<span class="badge rojo plain">Sin asignar</span>` : (n === '—' ? '—' : userLink(n));
   const userLink = (n) => `<a href="#/usuario/${encodeURIComponent(n)}">${esc(n)}</a>`;
@@ -287,7 +287,7 @@
     S.log.push({ ts: Date.now(), usuario: S.actor, opId: id, etapa: k.includes('_') ? k.split('_')[0] : 'gen', campo: k, antes: before ?? '', despues: v ?? '' });
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
     commit();
-    if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('⚠️ Revisa la fecha: ' + p.txt); }, 50);
+    if (v && TP_FECHAS.includes(k)) setTimeout(() => { const p = tpProblemas([op]).find(x => x.txt.includes(fdate(v))); if (p) toast('Revisa la fecha: ' + p.txt); }, 50);
     if (!ui.nfSet && op.fechaInfo && op.fechaInfo[k] && v !== undefined) setTimeout(() => setInfo(id, k, null), 0);
     autoTomar(op, k);
     return true;
@@ -301,7 +301,7 @@
     const ok = STAGE[st.key].ownerKey; if (!ok || k === ok || (op[ok] && op[ok] !== 'Sin asignar')) return;
     setField(op.id, ok, S.actor);
     if (st.key === 'con' && !op.con_fAsignacion) setField(op.id, 'con_fAsignacion', iso(today()));
-    setTimeout(() => toast(`👤 Quedaste como responsable de ${STAGE[st.key].name} de ${op.cliente}`), 700);
+    setTimeout(() => toast(`Quedaste como responsable de ${STAGE[st.key].name} de ${op.cliente}`), 700);
   }
   const applyMany = (id, obj) => { const op = getOp(id); const prev = {}; let ch = false; for (const k in obj) { prev[k] = op[k] === undefined ? '' : op[k]; if (setField(id, k, obj[k])) ch = true; } return ch ? prev : null; };
   const rerenderOp = (id) => { if ($('#f-head')) { refreshFicha(id); $('#nav').innerHTML = navHtml(route()); } else render(true); };
@@ -350,7 +350,7 @@
     if (f) setTimeout(() => { f.focus({ preventScroll: true }); const lb = f.closest('.f'); if (lb) { lb.classList.add('resalta'); setTimeout(() => lb.classList.remove('resalta'), 2500); } }, 300);
   }
   const OUTCOMES = { Llamada: ['Contestó, todo en orden', 'No contestó', 'Pidió más tiempo', 'Confirmó fecha de firma', 'Prometió pago'], WhatsApp: ['Envié mensaje', 'Cliente respondió', 'Envié documentos', 'Sin respuesta'], Correo: ['Envié correo', 'Cliente respondió', 'Envié documentos'], Reunión: ['Reunión realizada', 'Reunión reprogramada'], Trámite: ['Presenté documentos', 'Recogí documentos', 'Seguimiento en notaría', 'Seguimiento en banco'], Nota: [] };
-  const TIPO_IC = { Llamada: '📞', WhatsApp: '💬', Correo: '✉️', Reunión: '🤝', Trámite: '📑', Nota: '📝' };
+  const TIPO_IC = { Llamada: '', WhatsApp: '', Correo: '', Reunión: '', Trámite: '', Nota: '' };
   function quickSeg(opId, tipo) {
     const o = getOp(opId), d = D.get(opId); let out = '', when = '';
     const days = (n) => { const x = new Date(today()); x.setDate(x.getDate() + n); return iso(x); };
@@ -403,12 +403,12 @@
     const llegan = new Set(S.ops.filter(o => { const d = D.get(o.id), a = antes.get(o.id); return d && a && SMART.has(d.etapa) && a.etapa !== d.etapa && d.owner[d.etapa] === 'Sin asignar'; }).map(o => o.id));
     if (!llegan.size) return;
     autoBusy = true;
-    try { const plan = planAssign(llegan).filter(p => SMART.has(p.stage)); applyPlan(plan); const msg = plan.map(p => `📥 ${getOp(p.op).cliente} pasó a ${STAGE[p.stage].name} y se asignó a ${p.who} (${p.por})`).join(' · ');
+    try { const plan = planAssign(llegan).filter(p => SMART.has(p.stage)); applyPlan(plan); const msg = plan.map(p => `${getOp(p.op).cliente} pasó a ${STAGE[p.stage].name} y se asignó a ${p.who} (${p.por})`).join(' · ');
       if (msg) setTimeout(() => toast(msg), 300); } // después del "Guardado" para que se alcance a leer
     finally { autoBusy = false; }
   }
   function autoAssign() {
-    const plan = planAssign(); if (!plan.length) return toast('No hay expedientes sin responsable 🎉');
+    const plan = planAssign(); if (!plan.length) return toast('No hay expedientes sin responsable ');
     const by = {}; plan.forEach(p => { (by[p.stage] = by[p.stage] || {})[p.who] = (by[p.stage][p.who] || 0) + 1; });
     const det = plan.filter(p => SMART.has(p.stage)).map(p => `<tr><td>${esc(getOp(p.op).cliente)}</td><td>${esc(getOp(p.op).proyecto || '')}</td><td><b>${esc(p.who)}</b></td><td class="small muted">${esc(p.por)}</td></tr>`).join('');
     modal({ title: `Repartir ${plan.length} expedientes`, ok: 'Repartir ahora', wide: !!det, body: `<p class="muted" style="margin-top:0"><b>Contratos:</b> cada expediente va a quien tiene su proyecto a cargo (salvo que ya tenga ${S.params.topeCarga || 5} o más expedientes que el otro), y se reparte primero lo de desembolso más cercano. <b>Otras etapas:</b> al de menos carga, empezando por los más antiguos.</p>${Object.keys(by).map(k => `<div style="margin:8px 0">${sbadge(k)}<div class="small" style="margin-top:4px">${Object.entries(by[k]).map(([n, c]) => `<b>${esc(n)}</b> +${c}`).join(' · ')}</div></div>`).join('')}
@@ -417,7 +417,7 @@
   }
   function fabMenu() {
     const b = (act, ic, l, on) => on ? `<button type="button" class="bigopt" data-act="${act}" data-close><i>${ic}</i><span>${l}</span></button>` : '';
-    modal({ title: '¿Qué quieres hacer?', ok: 'Cerrar', cancel: '', body: `<div class="bigopts">${b('fab-seg', '📞', 'Anotar una gestión', can('a_seg'))}${b('newop', '➕', 'Nuevo cliente', can('a_newop'))}${b('goto" data-href="#/mi', '☀️', 'Mi día', can('v_mi'))}${b('goto" data-href="#/cargos', '📦', 'Cargo de documentos', can('v_cargos'))}${b('acta-elegir', '🏠', 'Acta de entrega', can('v_cargos') && can('a_edit'))}${b('export-xlsx', '⬇️', 'Descargar Excel', can('a_export'))}</div>` });
+    modal({ title: '¿Qué quieres hacer?', ok: 'Cerrar', cancel: '', body: `<div class="bigopts">${b('fab-seg', '', 'Anotar una gestión', can('a_seg'))}${b('newop', '➕', 'Nuevo cliente', can('a_newop'))}${b('goto" data-href="#/mi', '', 'Mi día', can('v_mi'))}${b('goto" data-href="#/cargos', '', 'Cargo de documentos', can('v_cargos'))}${b('acta-elegir', '', 'Acta de entrega', can('v_cargos') && can('a_edit'))}${b('export-xlsx', '', 'Descargar Excel', can('a_export'))}</div>` });
     $('#dlg').querySelector('.dlg-f').hidden = true; // se cierra con la ✕ o tocando fuera
   }
   function pickList(q) {
@@ -508,7 +508,7 @@
     const gauge = (pct, meta, big, label, sub) => { const v = Math.max(0, Math.min(100, Number(pct) || 0)), R = 38, C = 2 * Math.PI * R; return `<div class="gauge"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="11" stroke-linecap="round" stroke-dasharray="${v / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${gcol(v, meta)}"/><text x="50" y="56" text-anchor="middle" class="g-big">${big}</text></svg><div><b>${label}</b><span class="small muted">${sub}</span><span class="small" style="color:${gcol(v, meta)}">${v >= meta ? '✔ Meta cumplida' : 'Meta: ' + meta + '%'}</span></div></div>`; };
     const ins = insights(all, abiertos, venc, Pm);
     const apps = homeApps(crit.length, venc.length);
-    return `${respaldoAviso()}<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} 👋</h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p><p class="motiva">${esc(motivaHoy())}</p></div>
+    return `${respaldoAviso()}<div class="hero card"><div><h1>${saludo}, ${esc(nombre)} </h1><p class="muted">${fdate(iso(T))} · ¿Qué quieres hacer?</p><p class="motiva">${esc(motivaHoy())}</p></div>
       <div class="apps">${apps}</div></div>
     <h2 class="sec">Resultados del área ${tip('Eficacia: de lo que ya debía estar terminado, cuánto se terminó. Eficiencia: plazo previsto ÷ días reales de cada caso cerrado. Productividad = eficacia × eficiencia. Basado en ISO 9000 y en la fórmula de Gutiérrez Pulido. Las metas se cambian en Configurar.')}</h2>
     <div class="grid three gauges">${gauge(Pm.eficacia, S.params.metaEficacia, (Pm.eficacia === '' ? '—' : Math.round(Pm.eficacia) + '%'), 'Eficacia', '¿Se terminó lo que tocaba?')}${gauge(Pm.eficiencia, S.params.metaEficiencia, (Pm.eficiencia === '' ? '—' : Math.round(Pm.eficiencia) + '%'), 'Eficiencia', '¿Con cuánto tiempo?')}${gauge(Pm.productividad, metaProd(), (Pm.productividad === '' ? '—' : Math.round(Pm.productividad) + '%'), 'Productividad', `eficacia × eficiencia · meta ${metaProd()} %`)}</div>
@@ -516,7 +516,7 @@
     ${ins.length ? `<h2 class="sec">Mejoras sugeridas ${tip('Ideas automáticas para ganar tiempo, según cómo están hoy los expedientes.')}</h2><div class="grid ucards">${ins.map(x => `<div class="card ins"><i>${x.ic}</i><div><b>${x.t}</b><p class="small muted">${x.d}</p>${x.btn || ''}</div></div>`).join('')}</div>` : ''}
     <div class="hero card" style="margin-top:14px"><div><b>Lo urgente de hoy</b></div>
       <div class="todos">${go('urgentes', crit.length, 'data-act="gofilter" data-view="clientes" data-k="alerta" data-val="Inmediato"', crit.length ? 'bad' : 'ok')}${go('sin responsable', sinA.length, 'data-act="gofilter" data-view="clientes" data-k="sin" data-val="1"', sinA.length ? 'warn' : 'ok')}${go('seguimientos vencidos', venc.length, 'data-act="goto" data-href="#/agenda"', venc.length ? 'bad' : 'ok')}</div></div>
-    <details class="more" style="margin-top:14px"><summary>📊 Ver más detalle del área</summary>
+    <details class="more" style="margin-top:14px"><summary>Ver más detalle del área</summary>
     <div class="grid kpis" style="margin-top:12px">
       ${kpi('folder', all.length, 'Expedientes', 'Total de clientes registrados en el CRM.')}${kpi('open', abiertos.length, 'Abiertos', 'Expedientes que todavía no terminan las 5 etapas.')}
       ${kpi('alert', riesgo.length, 'En riesgo', 'Fuera de plazo o con semáforo rojo. Todavía no son urgentes, pero lo serán.', 'warn')}${kpi('late', fuera.length, 'Contratos fuera de plazo', 'Expedientes en Contratos que pasaron el plazo objetivo de ' + S.params.plazo + ' días desde la validación.', 'warn')}</div>
@@ -524,14 +524,14 @@
     <div class="flow">${flow}</div>
     <div class="grid two" style="margin-top:16px">
       <div class="card"><div class="card-h"><h2>¿Cómo van los expedientes? ${tip('Semáforo general. Toca una fila para ver esos clientes.')}</h2></div><div class="card-b donut-wrap">${donut(order.map(a => ({ label: ALERT_LABEL[a], value: alertas[a] || 0, color: ALERT_FILL[a] })), all.length, 'expedientes')}<div class="legend">${legend}</div></div></div>
-      <div class="card"><div class="card-h"><h2>¿Dónde se traban? ${tip('Quién o qué está frenando a los expedientes que pasaron su plazo.')}</h2></div><div class="card-b">${Object.keys(cuello).length ? Object.entries(cuello).sort((x, y) => y[1] - x[1]).map(([k, n]) => `<div class="hb2"><span>${CUELLO_LABEL[k] || k}</span><div class="bar"><span style="width:${n / maxCu * 100}%"></span></div><b>${n}</b></div>`).join('') : '<div class="empty">Nada trabado por ahora 🎉</div>'}</div></div>
+      <div class="card"><div class="card-h"><h2>¿Dónde se traban? ${tip('Quién o qué está frenando a los expedientes que pasaron su plazo.')}</h2></div><div class="card-b">${Object.keys(cuello).length ? Object.entries(cuello).sort((x, y) => y[1] - x[1]).map(([k, n]) => `<div class="hb2"><span>${CUELLO_LABEL[k] || k}</span><div class="bar"><span style="width:${n / maxCu * 100}%"></span></div><b>${n}</b></div>`).join('') : '<div class="empty">Nada trabado por ahora </div>'}</div></div>
     </div>
     <div class="grid two" style="margin-top:16px">
       <div class="card"><div class="card-h"><h2>Carga por colaborador ${tip('Cuántos expedientes tiene cada persona en su etapa. La parte roja son los urgentes.')}</h2></div><div class="card-b">${carga}</div></div>
       <div class="card"><div class="card-h"><h2>Procesos culminados por mes ${tip('Cuántas etapas se cerraron cada mes, con el color de la etapa.')}</h2></div><div class="card-b">${monthsCols(P)}<div class="mleg">${STAGES.map(s => `<span><i style="background:${colVar(s.key)}"></i>${s.name}</span>`).join('')}</div></div></div>
     </div>
     <h2 class="sec">Para atender primero ${tip('Los expedientes urgentes más antiguos.')}</h2>
-    ${urg.length ? `<div class="grid ucards">${urg.map(r => `<a class="card urg" href="#/cliente/${r.o.id}" style="--sc:${colVar(r.d.etapa)}"><div class="u-top">${sbadge(r.d.etapa)}<span class="small muted">${r.d.diasTotal ?? '—'} días</span></div><b>${esc(r.o.cliente)}</b><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')}</div><div class="u-need"><span class="small muted">Qué falta</span>${esc(r.d.siguiente)}</div><div class="small">Responsable: ${r.d.responsable === 'Sin asignar' ? '<span class="badge rojo plain">Sin asignar</span>' : esc(r.d.responsable)}</div></a>`).join('')}</div>` : '<div class="card"><div class="empty">No hay expedientes urgentes. ¡Buen trabajo! 🎉</div></div>'}
+    ${urg.length ? `<div class="grid ucards">${urg.map(r => `<a class="card urg" href="#/cliente/${r.o.id}" style="--sc:${colVar(r.d.etapa)}"><div class="u-top">${sbadge(r.d.etapa)}<span class="small muted">${r.d.diasTotal ?? '—'} días</span></div><b>${esc(r.o.cliente)}</b><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')}</div><div class="u-need"><span class="small muted">Qué falta</span>${esc(r.d.siguiente)}</div><div class="small">Responsable: ${r.d.responsable === 'Sin asignar' ? '<span class="badge rojo plain">Sin asignar</span>' : esc(r.d.responsable)}</div></a>`).join('')}</div>` : '<div class="card"><div class="empty">No hay expedientes urgentes. ¡Buen trabajo! </div></div>'}
     <h2 class="sec">Expedientes por proyecto ${tip('Cada barra muestra en qué etapa está cada cliente del proyecto.')}</h2>
     <div class="card"><div class="card-b">${proj}<div class="mleg" style="margin-top:12px">${STAGES.map(s => `<span><i style="background:${colVar(s.key)}"></i>${s.name}</span>`).join('')}<span><i style="background:var(--f-verde)"></i>Cerrado</span></div></div></div>
     </details>
@@ -540,18 +540,18 @@
   function homeApps(nCrit, nVenc) {
     const t = (href, ic, l, n, cls) => `<a class="tile ${cls || ''}" href="${href}"><i>${ic}</i><span>${l}</span>${n ? `<em>${n}</em>` : ''}</a>`;
     const bt = (act, ic, l) => `<button class="tile" data-act="${act}"><i>${ic}</i><span>${l}</span></button>`;
-    return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/cobrar', '🎯', 'A quién cobrar'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente')].filter(Boolean).join('');
+    return [can('v_mi') && t('#/mi', '', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/cobrar', '', 'A quién cobrar'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente')].filter(Boolean).join('');
   }
   function insights(all, abiertos, venc, Pm) {
     const out = [], sinA = abiertos.filter(r => r.d.responsable === 'Sin asignar').length;
-    if (sinA && can('a_tomar')) out.push({ ic: '⚖️', t: `${sinA} expedientes sin responsable`, d: 'Repártelos de forma pareja con un toque. Nadie debería quedarse esperando.', btn: '<button class="btn pri sm" data-act="autoassign">Repartir automáticamente</button>' });
+    if (sinA && can('a_tomar')) out.push({ ic: '', t: `${sinA} expedientes sin responsable`, d: 'Repártelos de forma pareja con un toque. Nadie debería quedarse esperando.', btn: '<button class="btn pri sm" data-act="autoassign">Repartir automáticamente</button>' });
     const cu = {}; abiertos.forEach(r => { if (r.d.cuello !== 'N/A') cu[r.d.cuello] = (cu[r.d.cuello] || 0) + 1; });
     const top = Object.entries(cu).sort((x, y) => y[1] - x[1])[0];
-    if (top) out.push({ ic: '🚧', t: `Mayor traba: ${CUELLO_LABEL[top[0]] || top[0]}`, d: `${top[1]} expedientes pasaron su plazo por este motivo. Conviene una reunión o llamada de escalamiento esta semana.` });
+    if (top) out.push({ ic: '', t: `Mayor traba: ${CUELLO_LABEL[top[0]] || top[0]}`, d: `${top[1]} expedientes pasaron su plazo por este motivo. Conviene una reunión o llamada de escalamiento esta semana.` });
     const team = S.users.filter(u => u.stage !== JEFATURA).map(u => ({ u, c: userStats(u).cartera }));
-    for (const s of STAGES) { const g = team.filter(t => t.u.stage === s.key); if (g.length > 1) { const hi = g.reduce((m, x) => x.c > m.c ? x : m), lo = g.reduce((m, x) => x.c < m.c ? x : m); if (hi.c - lo.c >= 4 && hi.c >= lo.c * 2) { out.push({ ic: '📊', t: `Carga despareja en ${s.name}`, d: `${hi.u.name.split(' ')[0]} tiene ${hi.c} y ${lo.u.name.split(' ')[0]} tiene ${lo.c}. Equilibrar acelera el cierre.` }); break; } } }
-    if (venc.length) out.push({ ic: '⏰', t: `${venc.length} compromisos vencidos`, d: 'Hay clientes esperando una respuesta. Ciérralos o reprograma la fecha.', btn: '<a class="btn sm" href="#/agenda">Ver agenda</a>' });
-    if (Pm.venc) out.push({ ic: '📅', t: `${Pm.venc} procesos en curso fuera de plazo`, d: 'Prioriza estos primero: son los que más bajan la eficiencia del área.', btn: '<a class="btn sm" href="#/mi">Ir a Mi día</a>' });
+    for (const s of STAGES) { const g = team.filter(t => t.u.stage === s.key); if (g.length > 1) { const hi = g.reduce((m, x) => x.c > m.c ? x : m), lo = g.reduce((m, x) => x.c < m.c ? x : m); if (hi.c - lo.c >= 4 && hi.c >= lo.c * 2) { out.push({ ic: '', t: `Carga despareja en ${s.name}`, d: `${hi.u.name.split(' ')[0]} tiene ${hi.c} y ${lo.u.name.split(' ')[0]} tiene ${lo.c}. Equilibrar acelera el cierre.` }); break; } } }
+    if (venc.length) out.push({ ic: '', t: `${venc.length} compromisos vencidos`, d: 'Hay clientes esperando una respuesta. Ciérralos o reprograma la fecha.', btn: '<a class="btn sm" href="#/agenda">Ver agenda</a>' });
+    if (Pm.venc) out.push({ ic: '', t: `${Pm.venc} procesos en curso fuera de plazo`, d: 'Prioriza estos primero: son los que más bajan la eficiencia del área.', btn: '<a class="btn sm" href="#/mi">Ir a Mi día</a>' });
     return out.slice(0, 4);
   }
   /* ---- Mi día: la cola de trabajo de la persona ---- */
@@ -564,9 +564,9 @@
       .sort(SMART.has(k) ? (x, y) => urgencia(x) < urgencia(y) ? -1 : urgencia(x) > urgencia(y) ? 1 : (ord[x.d.alerta] ?? 3) - (ord[y.d.alerta] ?? 3) // Contratos: primero el desembolso más cercano
         : (x, y) => (ord[x.d.alerta] ?? 3) - (ord[y.d.alerta] ?? 3) || (y.d.diasTotal || 0) - (x.d.diasTotal || 0));
     const desTxt = (r) => { const e = desembolsoEsperado(r.o, null, r.d); if (!e.fecha) return '';
-      if (e.orig) return ` · <span class="cl-wait">⏰ pasó la fecha estimada de desembolso (${fdate(e.orig)})</span>`;
+      if (e.orig) return ` · <span class="cl-wait">pasó la fecha estimada de desembolso (${fdate(e.orig)})</span>`;
       const n = diff(pd(e.fecha), today());
-      return ` · <span class="${n <= 15 ? 'cl-wait' : ''}">⏰ desembolso ${n < 0 ? `vencido hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} días`} (${e.tipo.toLowerCase()})</span>`; };
+      return ` · <span class="${n <= 15 ? 'cl-wait' : ''}">desembolso ${n < 0 ? `vencido hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} días`} (${e.tipo.toLowerCase()})</span>`; };
     const ag = agenda(S.actor).filter(x => x.cat === 'vencido' || x.cat === 'hoy' || (x.bf && x.cat === 'semana'));
     const st = k !== JEFATURA && STAGE[k].ownerKey ? STAGE[k] : null;
     const pool = st ? all.filter(r => r.d.state[k] === 'actual' && r.d.owner[k] === 'Sin asignar') : [];
@@ -574,38 +574,38 @@
     const card = (r) => { const sk = k === JEFATURA ? r.d.etapa : k, items = r.d.check[sk] || [], i = items.findIndex(x => !x.done), it = items[i];
       const main = it && (it.choose || (it.set && can('a_pasos'))) ? `<button class="btn pri" data-act="step" data-op="${r.o.id}" data-s="${sk}" data-i="${i}">✓ ${esc(it.label)}</button>` : `<a class="btn pri" href="#/cliente/${r.o.id}">${it ? esc(it.label) : 'Abrir'} ›</a>`;
       return `<div class="card midia" style="--sc:${colVar(sk)}"><div class="u-top">${sbadge(sk)}${alertBadge(r.d.alerta)}</div><a href="#/cliente/${r.o.id}"><b>${esc(r.o.cliente)}</b></a><div class="small muted">${esc(r.o.proyecto || '')} ${esc(r.o.unidad || '')} · ${r.d.diasTotal ?? '—'} días${k === JEFATURA ? ' · ' + esc(r.d.responsable) : ''}${SMART.has(k) ? desTxt(r) : ''}</div>
-        <div class="m-act">${main}<button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="Llamada" title="Anotar llamada">📞</button><button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="WhatsApp" title="Anotar WhatsApp">💬</button></div></div>`; };
-    return `<div class="hero card"><div><h1>☀️ Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
+        <div class="m-act">${main}<button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="Llamada" title="Anotar llamada">Llamé</button><button class="btn" data-act="quickseg" data-op="${r.o.id}" data-t="WhatsApp" title="Anotar WhatsApp">WhatsApp</button></div></div>`; };
+    return `<div class="hero card"><div><h1>Mi día</h1><p class="muted">${esc(S.actor)} · ${k === JEFATURA ? 'Lo que necesita tu atención' : SMART.has(k) ? 'Tus expedientes, del desembolso más cercano al más lejano' : 'Tus expedientes, del más urgente al menos urgente'}</p></div>
       <div class="gauge mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" style="stroke:var(--gris-bg)"/><circle cx="50" cy="50" r="${R}" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="${pct / 100 * C} ${C}" transform="rotate(-90 50 50)" style="stroke:${pct >= 100 ? 'var(--f-verde)' : 'var(--accent)'}"/><text x="50" y="57" text-anchor="middle" class="g-big">${hoy}</text></svg><div><b>Acciones de hoy</b><span class="small muted">Meta: ${meta}</span></div></div></div>
     ${(() => { const L = laboresDe(S.actor, T0, T0 + 864e5), nc = new Set(L.map(a => a.op).filter(Boolean)).size, lg = L.filter(a => a.tipo === 'Logro').length;
-      return `<div class="card lab-mini"><div>✅ <b>Hoy llevas ${L.length} ${L.length === 1 ? 'acción' : 'acciones'}</b> en ${nc} ${nc === 1 ? 'cliente' : 'clientes'}${lg ? ` · 🏆 ${lg} ${lg === 1 ? 'logro' : 'logros'}` : ''}</div><a class="btn sm" href="#/labores">📋 Ver mi resumen del día</a></div>`; })()}
+      return `<div class="card lab-mini"><div><b>Hoy llevas ${L.length} ${L.length === 1 ? 'acción' : 'acciones'}</b> en ${nc} ${nc === 1 ? 'cliente' : 'clientes'}${lg ? ` · ${lg} ${lg === 1 ? 'logro' : 'logros'}` : ''}</div><a class="btn sm" href="#/labores">Ver mi resumen del día</a></div>`; })()}
     ${faltaHtml()}
-    ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : x.cat === 'hoy' ? 'Hoy · ' : '⏸️ Pronto · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div>${x.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${x.opId}">▶️ Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button>`}</div>`; }).join('')}</div></div>` : ''}
+    ${ag.length ? `<h2 class="sec">Compromisos para hoy <span class="badge rojo plain">${ag.length}</span></h2><div class="card"><div class="card-b">${ag.slice(0, 6).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? 'Venció ' : x.cat === 'hoy' ? 'Hoy · ' : 'Pronto · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota)}</div></div>${x.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${x.opId}">Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${x.id}">✓ Cumplido</button>`}</div>`; }).join('')}</div></div>` : ''}
     ${(() => { // jefatura: cierres firmados que esperan V°B° · responsable: sus cierres observados
       const ing = S.ops.filter(o => pendienteIngreso(o) && (isJefe() ? o.aprob.estado === 'pendiente' : o.aprob.por === S.actor));
-      const ingHtml = ing.length ? `<h2 class="sec">${isJefe() ? 'Clientes nuevos por aprobar' : 'Mis clientes ingresados'} <span class="badge amar plain">${ing.length}</span></h2><div class="card"><div class="card-b">${ing.map(o => `<div class="agrow"><div><a href="#/cliente/${o.id}"><b>${esc(o.cliente)}</b></a> <span class="small muted">${esc(o.proyecto || '')} ${esc(o.unidad || '')}</span><div class="small muted">${o.aprob.estado === 'observado' ? `↩️ Observado: ${esc(o.aprob.obs.motivo)}` : `${isJefe() ? `Ingresado por ${esc(o.aprob.nombre || o.aprob.por)} · ` : '⏳ Esperando V°B° · '}${fechaHora(o.aprob.ts)}`}</div></div>${isJefe() ? `<button class="btn sm pri" data-act="ing-ok" data-op="${o.id}">✅ V°B°</button> <a class="btn sm" href="#/cliente/${o.id}">Revisar</a>` : `<a class="btn sm" href="#/cliente/${o.id}">Abrir</a>`}</div>`).join('')}</div></div>` : '';
+      const ingHtml = ing.length ? `<h2 class="sec">${isJefe() ? 'Clientes nuevos por aprobar' : 'Mis clientes ingresados'} <span class="badge amar plain">${ing.length}</span></h2><div class="card"><div class="card-b">${ing.map(o => `<div class="agrow"><div><a href="#/cliente/${o.id}"><b>${esc(o.cliente)}</b></a> <span class="small muted">${esc(o.proyecto || '')} ${esc(o.unidad || '')}</span><div class="small muted">${o.aprob.estado === 'observado' ? `↩Observado: ${esc(o.aprob.obs.motivo)}` : `${isJefe() ? `Ingresado por ${esc(o.aprob.nombre || o.aprob.por)} · ` : 'Esperando V°B° · '}${fechaHora(o.aprob.ts)}`}</div></div>${isJefe() ? `<button class="btn sm pri" data-act="ing-ok" data-op="${o.id}">V°B°</button> <a class="btn sm" href="#/cliente/${o.id}">Revisar</a>` : `<a class="btn sm" href="#/cliente/${o.id}">Abrir</a>`}</div>`).join('')}</div></div>` : '';
       const vb = isJefe() ? pendientesVB() : [], obs = S.ops.flatMap(o => Object.entries(o.cierres || {}).filter(([, c]) => c.estado === 'observado' && c.firma.por === S.actor).map(([k, c]) => ({ o, k, c })));
       const row = (x, extra) => `<div class="agrow"><div><a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente)}</b></a> ${sbadge(x.k)}<div class="small muted">${extra}</div></div><a class="btn sm pri" href="#/cliente/${x.o.id}">Revisar ›</a></div>`;
-      return ingHtml + (vb.length ? `<h2 class="sec">Cierres por dar V°B° <span class="badge amar plain">${vb.length}</span></h2><div class="card"><div class="card-b">${vb.map(x => row(x, `✍️ Firmado por ${esc(x.c.firma.nombre || fullName(x.c.firma.por))} · ${fechaHora(x.c.firma.ts)}`)).join('')}</div></div>` : '')
-        + (obs.length ? `<h2 class="sec">Cierres observados por jefatura <span class="badge rojo plain">${obs.length}</span></h2><div class="card"><div class="card-b">${obs.map(x => row(x, `↩️ ${esc(x.c.obs.por)}: ${esc(x.c.obs.motivo)}`)).join('')}</div></div>` : '');
+      return ingHtml + (vb.length ? `<h2 class="sec">Cierres por dar V°B° <span class="badge amar plain">${vb.length}</span></h2><div class="card"><div class="card-b">${vb.map(x => row(x, `Firmado por ${esc(x.c.firma.nombre || fullName(x.c.firma.por))} · ${fechaHora(x.c.firma.ts)}`)).join('')}</div></div>` : '')
+        + (obs.length ? `<h2 class="sec">Cierres observados por jefatura <span class="badge rojo plain">${obs.length}</span></h2><div class="card"><div class="card-b">${obs.map(x => row(x, `↩${esc(x.c.obs.por)}: ${esc(x.c.obs.motivo)}`)).join('')}</div></div>` : '');
     })()}
     <h2 class="sec">Por atender <span class="muted small">(${mine.length})</span></h2>
-    ${mine.length ? `<div class="grid ucards">${mine.slice(0, 18).map(card).join('')}</div>${mine.length > 18 ? `<p class="small muted">Mostrando 18 de ${mine.length}. Ve el resto en <a href="#/${st ? 'etapa/' + k : 'clientes'}">${st ? 'tu etapa' : 'Clientes'}</a>.</p>` : ''}` : '<div class="card"><div class="empty">¡Todo al día! 🎉 No tienes expedientes pendientes.</div></div>'}
-    ${pool.length && can('a_tomar') ? `<h2 class="sec">Sin responsable en ${st.name} <span class="muted small">(${pool.length})</span></h2><div class="card"><div class="card-b">${pool.slice(0, 5).map(r => `<div class="agrow"><div><b>${esc(r.o.cliente)}</b><div class="small muted">${esc(r.d.siguiente)}</div></div><button class="btn sm pri" data-act="tomar" data-op="${r.o.id}" data-u="${esc(S.actor)}">Tomar</button></div>`).join('')}${pool.length > 5 ? `<p class="small muted">Y ${pool.length - 5} más. </p>` : ''}<button class="btn" data-act="autoassign">⚖️ Repartir todos entre el equipo</button></div></div>` : (k === JEFATURA && can('a_tomar') ? `<div style="margin-top:16px"><button class="btn" data-act="autoassign">⚖️ Repartir expedientes sin responsable</button></div>` : '')}`;
+    ${mine.length ? `<div class="grid ucards">${mine.slice(0, 18).map(card).join('')}</div>${mine.length > 18 ? `<p class="small muted">Mostrando 18 de ${mine.length}. Ve el resto en <a href="#/${st ? 'etapa/' + k : 'clientes'}">${st ? 'tu etapa' : 'Clientes'}</a>.</p>` : ''}` : '<div class="card"><div class="empty">¡Todo al día! No tienes expedientes pendientes.</div></div>'}
+    ${pool.length && can('a_tomar') ? `<h2 class="sec">Sin responsable en ${st.name} <span class="muted small">(${pool.length})</span></h2><div class="card"><div class="card-b">${pool.slice(0, 5).map(r => `<div class="agrow"><div><b>${esc(r.o.cliente)}</b><div class="small muted">${esc(r.d.siguiente)}</div></div><button class="btn sm pri" data-act="tomar" data-op="${r.o.id}" data-u="${esc(S.actor)}">Tomar</button></div>`).join('')}${pool.length > 5 ? `<p class="small muted">Y ${pool.length - 5} más. </p>` : ''}<button class="btn" data-act="autoassign">Repartir todos entre el equipo</button></div></div>` : (k === JEFATURA && can('a_tomar') ? `<div style="margin-top:16px"><button class="btn" data-act="autoassign">Repartir expedientes sin responsable</button></div>` : '')}`;
   }
   /* ---- Resumen de labores: lo que cada persona hizo en el día ---- */
-  const LOGRO = { cierre: '🏁 Culminó la etapa', ingreso: '✅ V°B° de ingreso', clausula: '📝 Cláusula adicional generada', carta_notarial: '✉️ Carta notarial generada', acta: '🏠 Acta de entrega', cargo: '📦 Cargo de entrega de documentos', constancia: '📄 Constancia de cierre', devolucion: '↩️ Devolución gestionada', minuta: '📄 Minuta cargada', evolta: '💳 Estado de cuenta Evolta cargado', cliente: '➕ Cliente nuevo' };
+  const LOGRO = { cierre: 'Culminó la etapa', ingreso: 'V°B° de ingreso', clausula: 'Cláusula adicional generada', carta_notarial: 'Carta notarial generada', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', constancia: 'Constancia de cierre', devolucion: '↩Devolución gestionada', minuta: 'Minuta cargada', evolta: 'Estado de cuenta Evolta cargado', cliente: '➕ Cliente nuevo' };
   const verOtrosLab = () => isJefe(); // cada asistente ve sus labores; la jefatura ve a todo el equipo
   function laboresDe(name, T0, T1) { // name vacío = todo el equipo
     const u = name && user(name), ns = name ? [name, ...((u && u.antes) || [])] : null, out = [];
     S.log.filter(l => l.ts >= T0 && l.ts < T1 && (!ns || ns.includes(l.usuario)) && !/^(permiso|usuario_|restauracion)/.test(l.campo)).forEach(l => {
-      const lab = FIELD_LABEL[l.campo] || l.campo, lg = LOGRO[l.campo] || (l.campo === 'cotejo_' || /^cotejo/.test(l.campo) ? '🔎 Cotejo realizado' : '');
+      const lab = FIELD_LABEL[l.campo] || l.campo, lg = LOGRO[l.campo] || (l.campo === 'cotejo_' || /^cotejo/.test(l.campo) ? 'Cotejo realizado' : '');
       const extra = String(l.despues ?? '').replace(/^(true|Word generado|Estado de cuenta cargado|Minuta cargada)\s*·?\s*/i, '');
       const txt = lg ? `${lg}${extra ? ' · ' + extra : ''}`
         : (l.despues === '' || l.despues == null) ? `Borró ${lab}` : (l.antes === '' || l.antes == null) ? `Registró ${lab}: ${fmtVal(l.campo, l.despues)}` : `Cambió ${lab}: ${fmtVal(l.campo, l.antes)} → ${fmtVal(l.campo, l.despues)}`;
       out.push({ ts: l.ts, op: l.opId, usuario: l.usuario, etapa: l.etapa, tipo: lg ? 'Logro' : 'Dato', txt });
     });
-    S.seguimientos.filter(x => x.ts >= T0 && x.ts < T1 && (!ns || ns.includes(x.usuario))).forEach(x => out.push({ ts: x.ts, op: x.opId, usuario: x.usuario, etapa: x.etapa, tipo: 'Seguimiento', txt: `${x.tipo === 'Llamada' ? '📞' : x.tipo === 'WhatsApp' ? '💬' : '🗒️'} ${x.tipo}: ${x.nota}${x.proxima ? ' — Próximo paso: ' + x.proxima : ''}` }));
+    S.seguimientos.filter(x => x.ts >= T0 && x.ts < T1 && (!ns || ns.includes(x.usuario))).forEach(x => out.push({ ts: x.ts, op: x.opId, usuario: x.usuario, etapa: x.etapa, tipo: 'Seguimiento', txt: `${x.tipo === 'Llamada' ? '' : x.tipo === 'WhatsApp' ? '' : ''} ${x.tipo}: ${x.nota}${x.proxima ? ' — Próximo paso: ' + x.proxima : ''}` }));
     return out.sort((a, b) => a.ts - b.ts);
   }
   const horaDe = (ts) => new Date(ts).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -628,23 +628,23 @@
       const logros = L.its.filter(a => a.tipo === 'Logro');
       const cliNom = (op) => { const o = getOp(op); return o ? `<a href="#/cliente/${o.id}"><b>${esc(o.cliente)}</b></a> <span class="small muted">${esc(o.proyecto || '')} ${esc(o.unidad || '')}</span>` : `<b>${esc(op || 'General')}</b>`; };
       const pend = L.quien ? agenda(L.quien).filter(x => x.cat === 'vencido' || x.cat === 'hoy') : [];
-      return `<div class="lab-frase card"><div>${frase}</div>${pct != null ? `<div class="lab-meta"><div class="small muted">Meta del día: ${L.meta} acciones</div><div class="lab-bar"><i style="width:${pct}%;background:${pct >= 100 ? 'var(--verde)' : pct >= 50 ? 'var(--accent)' : 'var(--amar)'}"></i></div><div class="small"><b>${pct}%</b>${pct >= 100 ? ' 🎉 ¡Meta cumplida!' : ''}</div></div>` : ''}</div>
+      return `<div class="lab-frase card"><div>${frase}</div>${pct != null ? `<div class="lab-meta"><div class="small muted">Meta del día: ${L.meta} acciones</div><div class="lab-bar"><i style="width:${pct}%;background:${pct >= 100 ? 'var(--verde)' : pct >= 50 ? 'var(--accent)' : 'var(--amar)'}"></i></div><div class="small"><b>${pct}%</b>${pct >= 100 ? ' ¡Meta cumplida!' : ''}</div></div>` : ''}</div>
         <div class="kpis ops-kpis">${tile(r.n, 'Acciones realizadas')}${tile(r.cli, 'Clientes atendidos')}${tile(r.logros, 'Logros (etapas culminadas y documentos)', r.logros ? 'txt-verde' : '')}${tile(r.seg, 'Seguimientos (llamadas, WhatsApp, notas)')}${tile(r.datos, 'Datos registrados o corregidos')}</div>
-        ${L.equipo.length ? `<div class="card tp-card"><div class="card-h"><h2>👥 Labores por colaborador</h2><span class="small muted">Haz clic en un nombre para ver su detalle</span></div><div class="ops-tw">${tbl(id + '-eq', [
+        ${L.equipo.length ? `<div class="card tp-card"><div class="card-h"><h2>Labores por colaborador</h2><span class="small muted">Haz clic en un nombre para ver su detalle</span></div><div class="ops-tw">${tbl(id + '-eq', [
           { h: 'Colaborador', f: x => `<a href="#" data-act="lab-u" data-u="${esc(x.u.name)}">${esc(x.u.name)}</a>`, s: x => x.u.name }, { h: 'Etapa', f: x => x.u.stage === JEFATURA ? 'Jefatura' : sbadge(x.u.stage), s: x => x.u.stage },
           { h: 'Acciones', cls: 'r', f: x => x.n ? `<b>${x.n}</b>` : '<span class="badge amar plain">Sin labores registradas</span>', s: x => x.n }, { h: 'Clientes', cls: 'r', f: x => x.cli, s: x => x.cli },
           { h: 'Logros', cls: 'r', f: x => x.logros ? `<span class="badge verde plain">${x.logros}</span>` : '0', s: x => x.logros }, { h: 'Seguimientos', cls: 'r', f: x => x.seg, s: x => x.seg },
           { h: 'Meta del día', cls: 'r', f: x => `${Math.min(100, Math.round(x.n / L.meta * 100))}%`, s: x => x.n }, { h: 'Horario', f: x => x.n ? `${horaDe(x.ini)} – ${horaDe(x.fin)}` : '—', s: x => x.ini }], L.equipo)}</div></div>` : ''}
-        ${logros.length ? `<h2 class="sec">🏆 Logros del día <span class="muted small">(${logros.length})</span></h2><div class="card"><div class="card-b lab-logros">${logros.map(a => `<div class="agrow"><div>${esc(a.txt)}<div class="small muted">${horaDe(a.ts)} · ${a.op ? (getOp(a.op) ? esc(getOp(a.op).cliente) : esc(a.op)) : ''}${L.quien ? '' : ' · ' + esc(a.usuario)}</div></div>${STAGE[a.etapa] ? sbadge(a.etapa) : ''}</div>`).join('')}</div></div>` : ''}
-        <h2 class="sec">🗂️ Qué se hizo en cada cliente <span class="muted small">(${L.porCli.length})</span></h2>
+        ${logros.length ? `<h2 class="sec">Logros del día <span class="muted small">(${logros.length})</span></h2><div class="card"><div class="card-b lab-logros">${logros.map(a => `<div class="agrow"><div>${esc(a.txt)}<div class="small muted">${horaDe(a.ts)} · ${a.op ? (getOp(a.op) ? esc(getOp(a.op).cliente) : esc(a.op)) : ''}${L.quien ? '' : ' · ' + esc(a.usuario)}</div></div>${STAGE[a.etapa] ? sbadge(a.etapa) : ''}</div>`).join('')}</div></div>` : ''}
+        <h2 class="sec">Qué se hizo en cada cliente <span class="muted small">(${L.porCli.length})</span></h2>
         ${L.porCli.length ? `<div class="lab-clis">${L.porCli.map(g => `<div class="card lab-cli"><div class="card-b"><div>${cliNom(g.op)} <span class="badge plain gris">${g.its.length} ${g.its.length === 1 ? 'acción' : 'acciones'}</span></div><ul class="lab-ul">${g.its.map(a => `<li class="${a.tipo === 'Logro' ? 'lg' : ''}"><span class="h">${horaDe(a.ts)}</span><span>${esc(a.txt)}${L.quien ? '' : ` <span class="small muted">· ${esc(a.usuario)}</span>`}</span></li>`).join('')}</ul></div></div>`).join('')}</div>`
           : `<div class="card"><div class="empty">Sin labores registradas ${hoy ? 'hoy' : 'ese día'}. Todo lo que se registre en el CRM (datos, pasos, seguimientos y documentos) aparece aquí con su hora.</div></div>`}
-        ${pend.length ? `<h2 class="sec">⏭️ Queda pendiente <span class="badge rojo plain">${pend.length}</span></h2><div class="card"><div class="card-b">${pend.slice(0, 8).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? '⚠️ Venció ' : 'Hoy · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota || '')}</div></div>${o ? `<a class="btn sm" href="#/cliente/${o.id}">Abrir ›</a>` : ''}</div>`; }).join('')}</div></div>` : ''}`;
+        ${pend.length ? `<h2 class="sec">Queda pendiente <span class="badge rojo plain">${pend.length}</span></h2><div class="card"><div class="card-b">${pend.slice(0, 8).map(x => { const o = getOp(x.opId); return `<div class="agrow"><div><b>${o ? esc(o.cliente) : esc(x.opId)}</b><div class="small muted">${x.cat === 'vencido' ? 'Venció ' : 'Hoy · '}${fdate(x.fCompromiso)} · ${esc(x.proxima || x.nota || '')}</div></div>${o ? `<a class="btn sm" href="#/cliente/${o.id}">Abrir ›</a>` : ''}</div>`; }).join('')}</div></div>` : ''}`;
     };
-    return `${pageHead('📋 Resumen de labores', otros ? 'Lo que hizo cada persona del equipo en el día: acciones, clientes atendidos y logros.' : 'Lo que hiciste en el día: acciones, clientes atendidos y logros. Sirve para tu reporte diario.', `<button class="btn" data-act="lab-excel">⬇️ Excel</button> <button class="btn pri" data-act="lab-pdf">🖨️ Informe del día (PDF)</button>`,
+    return `${pageHead('Resumen de labores', otros ? 'Lo que hizo cada persona del equipo en el día: acciones, clientes atendidos y logros.' : 'Lo que hiciste en el día: acciones, clientes atendidos y logros. Sirve para tu reporte diario.', `<button class="btn" data-act="lab-excel">Excel</button> <button class="btn pri" data-act="lab-pdf">Informe del día (PDF)</button>`,
       'Se arma solo con lo que registras en el CRM: cada dato, paso, seguimiento y documento queda con tu nombre y la hora. <b>Logro</b> = etapa culminada o documento generado (cláusula, carta, acta, cargo, constancia, devolución). La meta de acciones por día se cambia en Configurar.')}
     <div class="filters lab-f"><button class="btn sm" data-act="lab-dia" data-d="-1" title="Día anterior">‹</button><input type="date" value="${esc(F.dia || iso(today()))}" data-f="labores" data-k="dia" data-r="${id}"><button class="btn sm" data-act="lab-dia" data-d="1" title="Día siguiente">›</button> <button class="btn sm" data-act="lab-dia" data-d="0">Hoy</button>
-      ${otros ? `<select data-f="labores" data-k="u" data-r="${id}"><option value="">👥 Todo el equipo</option>${S.users.filter(u => !u.baja).map(u => `<option ${F.u === u.name ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>` : `<span class="small muted">${esc(S.actor)}</span>`}</div>
+      ${otros ? `<select data-f="labores" data-k="u" data-r="${id}"><option value="">Todo el equipo</option>${S.users.filter(u => !u.baja).map(u => `<option ${F.u === u.name ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select>` : `<span class="small muted">${esc(S.actor)}</span>`}</div>
     ${region(id, build)}`;
   }
   function laboresExcel() {
@@ -689,7 +689,7 @@
       (FIELDS[key] || []).forEach(f => {
         const llenos = base.filter(r => filled(r.o[f.k])).length, pct = base.length ? Math.round(llenos * 100 / base.length) : null, visible = !esc0 || esc0.includes(f.k);
         const nivel = pct == null ? 'nd' : pct >= 80 ? 'alto' : pct >= 40 ? 'medio' : pct > 0 ? 'bajo' : 'cero';
-        const sug = base.length < 10 ? 'Pocos casos' : !visible && pct >= 60 ? '⬆️ Subirlo a visibles' : visible && nivel === 'cero' ? '🗑️ Candidato a quitar' : visible && nivel === 'bajo' ? '⬇️ Candidato a "Más datos"' : !visible && nivel === 'cero' ? '🗑️ Candidato a quitar' : '—';
+        const sug = base.length < 10 ? 'Pocos casos' : !visible && pct >= 60 ? 'Subirlo a visibles' : visible && nivel === 'cero' ? 'Candidato a quitar' : visible && nivel === 'bajo' ? 'Candidato a "Más datos"' : !visible && nivel === 'cero' ? 'Candidato a quitar' : '—';
         out.push({ grupo: nombre, key, k: f.k, campo: f.l, base: base.length, llenos, pct, nivel, visible, ed: ed.get(f.k) || 0, ult: ult.get(f.k) || 0, sug });
       });
     });
@@ -702,16 +702,16 @@
       const nCasos = rows().length, vis = all.filter(x => x.visible).length, cand = all.filter(x => /candidato/.test(x.sug)).length, cero = all.filter(x => x.nivel === 'cero' && x.base >= 10).length;
       const tile = (n, l, c) => `<div class="kpi"><div class="n ${c || ''}">${n}</div><div class="small muted">${l}</div></div>`;
       const nivelB = (x) => ({ alto: `<span class="badge verde">${x.pct}%</span>`, medio: `<span class="badge amar">${x.pct}%</span>`, bajo: `<span class="badge rojo plain">${x.pct}%</span>`, cero: '<span class="badge rojo">0%</span>', nd: '<span class="muted">—</span>' })[x.nivel];
-      return `${nCasos < 30 ? `<div class="ev-falta">💡 Hoy hay <b>${nCasos}</b> clientes. Para decidir con seguridad conviene esperar a tener 30 o más y revisar este reporte otra vez en 2 o 3 semanas.</div>` : ''}
+      return `${nCasos < 30 ? `<div class="ev-falta">Hoy hay <b>${nCasos}</b> clientes. Para decidir con seguridad conviene esperar a tener 30 o más y revisar este reporte otra vez en 2 o 3 semanas.</div>` : ''}
         <div class="kpis ops-kpis">${tile(all.length, 'Campos en total')}${tile(vis, 'Visibles en la ficha')}${tile(all.length - vis, 'En "Más datos (opcional)"')}${tile(cand, 'Candidatos a simplificar', cand ? 'txt-amar' : '')}${tile(cero, 'Sin uso (con 10+ casos)', cero ? 'txt-rojo' : '')}</div>
-        <div class="card tp-card"><div class="card-h"><h2>📊 Uso de cada campo</h2><span class="small muted">% de clientes que lo tienen lleno, sobre los que ya llegaron a esa etapa</span></div><div class="ops-tw">${tbl(id + '-t', [
+        <div class="card tp-card"><div class="card-h"><h2>Uso de cada campo</h2><span class="small muted">% de clientes que lo tienen lleno, sobre los que ya llegaron a esa etapa</span></div><div class="ops-tw">${tbl(id + '-t', [
           { h: 'Etapa', f: x => esc(x.grupo), s: x => x.grupo }, { h: 'Campo', f: x => `<b>${esc(x.campo)}</b>`, s: x => x.campo },
           { h: 'En la ficha', f: x => x.visible ? 'Visible' : '<span class="muted">Más datos</span>', s: x => x.visible ? 1 : 0 },
           { h: '% lleno', cls: 'r nowrap', f: x => `${nivelB(x)} <span class="small muted">${x.base ? x.llenos + ' de ' + x.base : ''}</span>`, s: x => x.pct ?? -1 },
           { h: 'Editado (30 d)', cls: 'r', f: x => x.ed, s: x => x.ed },
           { h: 'Qué hacer', f: x => x.sug === '—' ? '<span class="muted">—</span>' : esc(x.sug), s: x => x.sug }], L, 'No hay campos con ese filtro.')}</div></div>`;
     };
-    return `${pageHead('🧮 Uso de campos', 'Qué casillas del CRM se llenan y cuáles no, para quitar pasos que no sirven.', `<button class="btn" data-act="campos-excel">⬇️ Excel</button>`,
+    return `${pageHead('Uso de campos', 'Qué casillas del CRM se llenan y cuáles no, para quitar pasos que no sirven.', `<button class="btn" data-act="campos-excel">Excel</button>`,
       '<b>% lleno</b> = clientes que tienen el dato, sobre los que ya llegaron a esa etapa. <b>Ediciones</b> = veces que se llenó o corrigió en los últimos 30 días. Un % bajo es normal en datos que solo aplican a algunos casos (bien futuro, carta fianza). Nada se borra al ocultarlo: pasa a "Más datos (opcional)". La decisión final es tuya.')}
       <div class="filters"><select data-f="campos" data-k="g" data-r="${id}"><option value="">Todas las etapas</option>${CAMPO_GRUPOS.map(([k, n]) => `<option value="${k}" ${F.g === k ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <select data-f="campos" data-k="sol" data-r="${id}"><option value="">Todos los campos</option><option value="1" ${F.sol ? 'selected' : ''}>Solo candidatos a simplificar</option></select></div>
@@ -996,7 +996,7 @@
     };
     inp.click();
   }
-  function vSinAcceso() { return `<div class="card"><div class="empty">🔒 Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
+  function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
   /* ---- Etapa ---- */
   const SCOLS = {
@@ -1031,16 +1031,16 @@
         { h: 'Siguiente paso', f: r => r.d.state[key] === 'culminada' ? '<span class="muted">—</span>' : esc((r.d.check[key].find(x => !x.done) || { label: st.accion }).label), },
         { h: 'Alerta', f: r => r.d.etapa === key ? alertBadge(r.d.alerta) : '<span class="muted">—</span>', s: r => r.d.alerta }];
       const chip = (v, l) => `<button class="chipb ${F.estado === v ? 'on' : ''}" data-act="chip" data-v="etapa-${key}" data-k="estado" data-val="${v}" data-r="${id}">${l}<b>${cnt[v]}</b></button>`;
-      return `<div class="chips" style="margin-bottom:12px">${chip('actual', 'En curso en esta etapa')}${key === 'for' && cnt.espera ? chip('espera', '⏸️ En espera · bien futuro') : ''}${chip('culminada', 'Culminadas')}${chip('porllegar', 'Por llegar')}${chip('todas', 'Todas')}</div>${tbl(id, cols, list)}`;
+      return `<div class="chips" style="margin-bottom:12px">${chip('actual', 'En curso en esta etapa')}${key === 'for' && cnt.espera ? chip('espera', 'En espera · bien futuro') : ''}${chip('culminada', 'Culminadas')}${chip('porllegar', 'Por llegar')}${chip('todas', 'Todas')}</div>${tbl(id, cols, list)}`;
     };
     return `<div class="crumb muted"><a href="#/resumen">Resumen</a> / Etapas</div>
-    ${pageHead(`<span style="color:${colVar(key)}">Etapa ${st.n}</span> · ${st.name}`, esc(st.desc), key === 'pos' ? `<a class="btn" href="${ACTAS_URL}" target="_blank" rel="noopener">📝 Generador de actas ↗</a>` : '', `${key === 'pos' ? 'Para un acta con los datos ya llenos, ábrela desde la ficha del cliente → 5 Postventa → "Generar acta de entrega". ' : ''}Cada fila es un cliente. <b>En curso</b> = está en esta etapa ahora; <b>Culminadas</b> = ya la cerró; <b>Por llegar</b> = aún no llega. La barra de avance muestra cuántos pasos de la etapa están hechos. Toca el nombre para abrir su ficha.`)}
+    ${pageHead(`<span style="color:${colVar(key)}">Etapa ${st.n}</span> · ${st.name}`, esc(st.desc), key === 'pos' ? `<a class="btn" href="${ACTAS_URL}" target="_blank" rel="noopener">Generador de actas ↗</a>` : '', `${key === 'pos' ? 'Para un acta con los datos ya llenos, ábrela desde la ficha del cliente → 5 Postventa → "Generar acta de entrega". ' : ''}Cada fila es un cliente. <b>En curso</b> = está en esta etapa ahora; <b>Culminadas</b> = ya la cerró; <b>Por llegar</b> = aún no llega. La barra de avance muestra cuántos pasos de la etapa están hechos. Toca el nombre para abrir su ficha.`)}
     <div class="filters">
       <input type="search" placeholder="Buscar cliente, DNI, proyecto, unidad…" value="${esc(F.q)}" data-f="etapa-${key}" data-k="q" data-r="${id}">
       <select data-f="etapa-${key}" data-k="resp" data-r="${id}"><option value="">Todos los responsables</option><option value="Sin asignar" ${F.resp === 'Sin asignar' ? 'selected' : ''}>Sin asignar</option>${owners.map(n => `<option ${F.resp === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
       <select data-f="etapa-${key}" data-k="proy" data-r="${id}"><option value="">Todos los proyectos</option>${uniq(o => o.proyecto).map(p => `<option ${F.proy === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>
     </div>
-    <details class="card info" style="margin-bottom:14px"><summary>👥 Quién trabaja aquí y qué se hace</summary><div class="card-b" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:260px"><h3>Quiénes trabajan esta etapa</h3><div style="margin-top:6px">${S.users.filter(u => u.stage === key).map(u => `<span class="badge plain" style="margin:0 6px 4px 0">${userLink(u.name)} · ${userStats(u).cartera} en cartera</span>`).join('') || '<span class="muted">Sin usuarios asignados</span>'}</div></div>
+    <details class="card info" style="margin-bottom:14px"><summary>Quién trabaja aquí y qué se hace</summary><div class="card-b" style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:260px"><h3>Quiénes trabajan esta etapa</h3><div style="margin-top:6px">${S.users.filter(u => u.stage === key).map(u => `<span class="badge plain" style="margin:0 6px 4px 0">${userLink(u.name)} · ${userStats(u).cartera} en cartera</span>`).join('') || '<span class="muted">Sin usuarios asignados</span>'}</div></div>
       <div style="flex:2;min-width:300px"><h3>Funciones de la etapa</h3><ul class="plain small" style="margin-top:6px">${st.funciones.map(f => `<li>${esc(f)}</li>`).join('')}</ul></div></div></details>
     ${region(id, build)}`;
   }
@@ -1117,12 +1117,12 @@
     const build = () => {
       const list = rows(true).filter(r => match(r, F.q) && (!F.etapa || r.d.etapa === F.etapa) && (!F.alerta || r.d.alerta === F.alerta) && (!F.proy || r.o.proyecto === F.proy) && (!F.banco || r.o.banco === F.banco) && (!F.sin || (r.d.etapa !== 'cerrado' && r.d.responsable === 'Sin asignar')));
       return `<p class="small muted" style="margin:0 0 8px">${list.length} de ${S.ops.length} clientes</p>` + tbl(id, [
-        { h: 'Cliente', f: r => opLink(r.o) + (pendienteIngreso(r.o) ? ` <span class="badge amar">${r.o.aprob.estado === 'observado' ? '↩️ Ingreso observado' : '⏳ Ingreso por aprobar'}</span>` : ''), s: r => r.o.cliente }, { h: 'Banco', f: r => esc(r.o.banco || '—'), s: r => r.o.banco }, { h: 'Precio', cls: 'r', f: r => money(r.o.precio), s: r => r.o.precio || 0 },
+        { h: 'Cliente', f: r => opLink(r.o) + (pendienteIngreso(r.o) ? ` <span class="badge amar">${r.o.aprob.estado === 'observado' ? '↩Ingreso observado' : 'Ingreso por aprobar'}</span>` : ''), s: r => r.o.cliente }, { h: 'Banco', f: r => esc(r.o.banco || '—'), s: r => r.o.banco }, { h: 'Precio', cls: 'r', f: r => money(r.o.precio), s: r => r.o.precio || 0 },
         { h: 'Recorrido', f: r => miniSteps(r), s: r => r.d.hechas }, { h: 'Etapa actual', f: r => r.d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(r.d.etapa), s: r => r.d.etapa },
         { h: 'Responsable', f: r => respCell(r.d.responsable), s: r => r.d.responsable }, { h: 'Siguiente paso', f: r => esc(r.d.siguiente) }, { h: 'Alerta', f: r => alertBadge(r.d.alerta), s: r => r.d.alerta }], list);
     };
     const sel = (k, label, opts) => `<select data-f="clientes" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Clientes', 'Seguimiento de cada cliente a lo largo de las 5 etapas.', `<button class="btn" data-act="evolta" title="Llena los datos del cliente con el estado de cuenta descargado de Evolta">📄 Cargar PDF Evolta</button> <button class="btn pri" data-act="newop">+ Nuevo cliente</button>`, 'Busca por nombre, DNI o proyecto. La barra de colores muestra por cuáles etapas ya pasó el cliente (verde = lista, color = etapa actual, gris = falta).')}
+    return `${pageHead('Clientes', 'Seguimiento de cada cliente a lo largo de las 5 etapas.', `<button class="btn" data-act="evolta" title="Llena los datos del cliente con el estado de cuenta descargado de Evolta">Cargar PDF Evolta</button> <button class="btn pri" data-act="newop">+ Nuevo cliente</button>`, 'Busca por nombre, DNI o proyecto. La barra de colores muestra por cuáles etapas ya pasó el cliente (verde = lista, color = etapa actual, gris = falta).')}
     <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, ID, proyecto…" value="${esc(F.q)}" data-f="clientes" data-k="q" data-r="${id}">
       ${sel('etapa', 'Todas las etapas', [...STAGES.map(s => [s.key, s.name]), ['cerrado', 'Cerrado']])}${sel('alerta', 'Todas las alertas', ['Inmediato', 'Por acumulación', 'Bajo control', 'Cerrado'].map(a => [a, ALERT_LABEL[a]]))}${sel('sin', 'Con o sin responsable', [['1', 'Solo sin responsable']])}
       ${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}</div>
@@ -1130,10 +1130,10 @@
   }
 
   /* ---- Ficha de cliente ---- */
-  // rótulo de un campo: obligatorio, estimado / no ubicado y el botón 📌
+  // rótulo de un campo: obligatorio, estimado / no ubicado y el botón 
   function rotuloExtras(op, f) {
     const v = op[f.k] ?? '', oblig = faltantes(op).out.find(x => x.k === f.k), nfI = infoDe(op, f.k);
-    const btn = f.t !== 'owner' && f.t !== 'textarea' && (nfI || ((f.t === 'date' || oblig) && v === '')) ? ` <button type="button" class="nf-btn" data-act="dato-nf" data-op="${op.id}" data-k="${f.k}" title="¿No encuentras este dato?">📌</button>` : '';
+    const btn = f.t !== 'owner' && f.t !== 'textarea' && (nfI || ((f.t === 'date' || oblig) && v === '')) ? ` <button type="button" class="nf-btn" data-act="dato-nf" data-op="${op.id}" data-k="${f.k}" title="¿No encuentras este dato?">No lo encuentro</button>` : '';
     const tag = nfI ? (nfI.tipo === 'estimada' ? ` <em class="est" title="Dato estimado · fuente: ${esc(nfI.fuente || '')} · ${esc(nfI.por || '')}">~ estimado</em>` : ` <em class="nu" title="${esc(nfI.nota || '')} · ${esc(nfI.por || '')}">no ubicado</em>`) : '';
     return `${oblig ? ` <em class="req" title="${esc(oblig.por)}">obligatorio</em>` : ''}${tag}${btn}`;
   }
@@ -1153,8 +1153,8 @@
     const pend = vis.filter(f => !lleno(f) || faltantes(o, d).out.some(x => x.k === f.k)), hecho = vis.filter(f => !pend.includes(f));
     const grid = (L) => `<div class="f-grid">${L.map(f => fieldInput(o, f, mark)).join('')}</div>`;
     const ocConDatos = oc.filter(lleno).length;
-    return `${pend.length ? `<p class="small" style="margin:2px 0 8px"><b>Falta llenar: ${pend.length}</b> <span class="muted">· solo se muestra lo pendiente</span></p>${grid(pend)}` : '<div class="guia ok">🎉 <b>No falta ningún dato en esta etapa.</b> Lo ya registrado está abajo por si necesitas corregirlo.</div>'}
-      ${hecho.length ? `<details class="fe-mas fe-ok"><summary>✅ Ya registrado <span class="muted small">· ${hecho.length} ${hecho.length === 1 ? 'dato' : 'datos'}, toca para ver o corregir</span></summary><div style="margin-top:8px">${grid(hecho)}</div></details>` : ''}
+    return `${pend.length ? `<p class="small" style="margin:2px 0 8px"><b>Falta llenar: ${pend.length}</b> <span class="muted">· solo se muestra lo pendiente</span></p>${grid(pend)}` : '<div class="guia ok"><b>No falta ningún dato en esta etapa.</b> Lo ya registrado está abajo por si necesitas corregirlo.</div>'}
+      ${hecho.length ? `<details class="fe-mas fe-ok"><summary>Ya registrado <span class="muted small">· ${hecho.length} ${hecho.length === 1 ? 'dato' : 'datos'}, toca para ver o corregir</span></summary><div style="margin-top:8px">${grid(hecho)}</div></details>` : ''}
       ${oc.length ? `<details class="fe-mas"><summary>➕ Más datos (opcional) <span class="muted small">· ${oc.length} campos${ocConDatos ? `, ${ocConDatos} con datos` : ''}</span></summary><p class="small muted" style="margin:6px 0 8px">Datos de apoyo que casi no se usan o que ya se editan en otro lado (recorrido de la cláusula, pestaña Notaría y Kardex, panel de bien futuro). No hace falta llenarlos para avanzar.</p>${grid(oc)}</details>` : ''}`;
   }
   function fieldInput(op, f, mark) {
@@ -1184,7 +1184,7 @@
   const headHtml = (o, d) => `<div class="t"><h1>${esc(o.cliente)}</h1>${d.etapa === 'cerrado' ? '<span class="badge verde">Cerrado</span>' : sbadge(d.etapa)}${alertBadge(d.alerta)}</div>
     <div class="meta"><span><b>ID</b>${o.id}${o.idProforma ? ` · <a href="https://v4.evolta.pe/Comercial/Proforma/DetalleProforma?idProforma=${encodeURIComponent(o.idProforma)}" target="_blank" rel="noopener" title="Abrir la ficha de este cliente en Evolta">Abrir en Evolta</a>` : ''}</span><span><b>DNI</b>${esc(o.dni || '—')}</span><span><b>Proyecto</b>${esc(o.proyecto || '—')} ${esc(o.unidad || '')}</span><span><b>Vendedor</b>${esc(o.vendedor || '—')}</span><span><b>Banco</b>${esc(o.banco || '—')}</span><span><b>Precio</b>${money(o.precio)}</span><span><b>Financia banco</b>${money(o.montoBanco)}</span><span><b>Días en proceso</b>${d.diasTotal ?? '—'}</span></div>
     <div class="next" ${d.etapa !== 'cerrado' ? `style="--sc:${colVar(d.etapa)}"` : ''}><div><span class="nx-l">Qué sigue</span><b>${esc(d.siguiente)}</b></div><div><span class="nx-l">Responsable</span><b>${respCell(d.responsable)}</b></div>${d.cuello !== 'N/A' ? `<div><span class="nx-l">Se traba en</span><b>${esc(CUELLO_LABEL[d.cuello] || d.cuello)}</b></div>` : ''}${d.etapa !== 'cerrado' ? `<a class="btn pri sm" data-act="gostage" data-s="${d.etapa}" href="#/cliente/${o.id}">Ir a la etapa ›</a>` : ''}</div>`;
-  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : st === 'espera' ? '⏸' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${s.key === 'fin' && o.fin_tipo === 'No aplica' ? 'No aplica' : st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : st === 'espera' ? 'En espera · bien futuro' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
+  const stepperHtml = (o, d) => STAGES.map(s => { const st = d.state[s.key]; return `<a class="step ${st}" style="--sc:${colVar(s.key)}" data-act="gostage" data-s="${s.key}" href="#/cliente/${o.id}"><span class="si">${st === 'culminada' ? '✓' : st === 'espera' ? 'II' : s.n}</span><div><div class="b">${s.name}</div><div class="c">${s.key === 'fin' && o.fin_tipo === 'No aplica' ? 'No aplica' : st === 'culminada' ? 'Listo' : st === 'actual' ? 'Aquí ahora' : st === 'espera' ? 'En espera · bien futuro' : 'Falta llegar'}</div><div class="a">${esc(d.owner[s.key])}</div></div></a>`; }).join('');
 
   function timelineItems(o) {
     const items = [];
@@ -1209,7 +1209,7 @@
     ['Cancelado / Pendiente', 'Cancelado = ya se pagó. Pendiente = falta pagar. Si la fecha programada ya pasó, se muestra como vencido.'],
     ['Pagado / Por pagar', 'Suma de lo que el cliente ya pagó y lo que todavía falta (incluye lo que pagará el banco).']];
   function evoltaHtml(o) {
-    const head = `<div class="ev-bar"><button class="btn sm" data-act="evolta" data-op="${o.id}">📄 ${o.evolta ? 'Actualizar con un PDF nuevo' : 'Cargar estado de cuenta (PDF Evolta)'}</button></div>`;
+    const head = `<div class="ev-bar"><button class="btn sm" data-act="evolta" data-op="${o.id}">${o.evolta ? 'Actualizar con un PDF nuevo' : 'Cargar estado de cuenta (PDF Evolta)'}</button></div>`;
     const e = o.evolta; if (!e) return head;
     const T = iso(today());
     const est = (c) => /CANCELAD/.test(c.estado) ? '<span class="badge verde">Cancelado</span>' : c.fProg && c.fProg < T ? '<span class="badge rojo">Vencido</span>' : `<span class="badge amar">${esc(c.estado ? c.estado[0] + c.estado.slice(1).toLowerCase() : 'Pendiente')}</span>`;
@@ -1217,7 +1217,7 @@
     // el cronograma es una foto de Evolta: si lo registrado a mano ya no coincide, se pide bajar el PDF actualizado
     const ini = (e.cronograma || []).filter(c => /inicial/i.test(c.concepto)), pdfFalta = ini.filter(c => !/CANCELAD/.test(c.estado)).reduce((t, c) => t + c.monto, 0);
     const crmFalta = num(o.cob_porRecibir), difiere = ini.length && crmFalta != null && crmFalta !== pdfFalta;
-    const aviso = difiere ? `<div class="ev-falta" style="margin-top:10px">⚠️ En el CRM figura <b>inicial por recibir ${money(crmFalta)}</b>, pero este estado de cuenta (del ${fdate(e.consulta) || '—'}) dice <b>${money(pdfFalta)}</b>. Verifica el pago en Evolta, descarga el PDF actualizado y cárgalo con el botón de arriba.</div>` : '';
+    const aviso = difiere ? `<div class="ev-falta" style="margin-top:10px">En el CRM figura <b>inicial por recibir ${money(crmFalta)}</b>, pero este estado de cuenta (del ${fdate(e.consulta) || '—'}) dice <b>${money(pdfFalta)}</b>. Verifica el pago en Evolta, descarga el PDF actualizado y cárgalo con el botón de arriba.</div>` : '';
     return `<div class="ev">${head}<div class="ev-h"><b>Estado de cuenta Evolta</b><span class="small muted">foto del ${fdate(e.consulta) || '—'} · cargado por ${esc(e.por || '—')} · no cambia al editar a mano</span></div>${aviso}
       <div class="kv">${kv('Forma de pago', esc([e.modalidad, e.entidad].filter(Boolean).join(' / ') || '—'))}${(e.formaPago || []).map(x => kv(esc(x.motivo), `${money(x.monto)} <span class="muted small">${esc(x.pct)}</span>`)).join('')}${kv('Pagado', money(e.pagado))}${kv('Por pagar', money(e.porPagar))}</div>
       <div class="ev-tw"><table class="ev-t"><thead><tr><th>Cronograma</th><th>Monto</th><th>Programada</th><th>Pagada</th><th>Estado</th></tr></thead><tbody>${(e.cronograma || []).map(c => `<tr><td>${esc(c.concepto)}</td><td>${money(c.monto)}</td><td>${fdate(c.fProg) || '—'}</td><td>${fdate(c.fPago) || '—'}</td><td>${est(c)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Sin cronograma</td></tr>'}</tbody></table></div>
@@ -1252,7 +1252,7 @@
     ['HubSpot y Zoho (tickets y Blueprint)', 'Miden el tiempo hasta el cierre por responsable y por etapa del proceso, y permiten contar solo el horario laboral: así se calcula cada tramo, en días hábiles.']];
   function prodExplicaHtml(abierto) {
     const P = S.params;
-    return `<details class="card tp-card prod-exp" ${abierto ? 'open' : ''}><summary class="card-h"><h2>📘 Cómo medimos la productividad</h2><span class="small muted">Eficacia × Eficiencia = Productividad · metas ${P.metaEficacia} % × ${P.metaEficiencia} % = ${metaProd()} %</span></summary><div class="card-b">
+    return `<details class="card tp-card prod-exp" ${abierto ? 'open' : ''}><summary class="card-h"><h2>Cómo medimos la productividad</h2><span class="small muted">Eficacia × Eficiencia = Productividad · metas ${P.metaEficacia} % × ${P.metaEficiencia} % = ${metaProd()} %</span></summary><div class="card-b">
       <div class="prod-f">${PROD_DEF.map((d, i) => `${i === 1 ? '<b class="op">×</b>' : i === 2 ? '<b class="op">=</b>' : ''}<div class="pf"><b>${d.k}</b><em>${d.q}</em><span>${d.f}</span><small>Ej.: ${d.ej}</small><small class="m">Meta: ${d.meta ? P[d.meta] : metaProd()} %</small></div>`).join('')}</div>
       <p class="small" style="margin:10px 0 4px"><b>Semáforo:</b> <span class="badge verde">verde</span> cumple la meta · <span class="badge amar">amarillo</span> le falta poco (75 % de la meta o más) · <span class="badge rojo">rojo</span> está lejos de la meta. Las metas de eficacia y eficiencia se cambian en Configurar.</p>
       <p class="small muted" style="margin:10px 0 4px"><b>Referencias</b></p><ul class="small prod-ref">${PROD_REF.map(([a, b]) => `<li><b>${a}:</b> ${b}</li>`).join('')}</ul></div></details>`;
@@ -1400,7 +1400,7 @@
     const sel = (k, label, opts) => `<select data-tpf="${k}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const P = S.params, mf = (k, l) => `<label class="f">${l}<input type="number" min="0" value="${P[k] ?? ''}" data-pk="${k}"></label>`;
     return `${pageHead('Tiempos y productividad', 'Eficacia, eficiencia y productividad de cada banco, ejecutivo, notaría, abogado y del equipo interno, tramo por tramo.',
-      `<button class="btn" data-act="tp-excel">⬇️ Excel</button> <button class="btn" data-act="tp-pdf" title="Varias páginas con todas las tablas">🖨️ Informe detallado</button> <button class="btn pri" data-act="tp-resumen" title="Una página, visual, para presentar">📄 Resumen ejecutivo</button>`,
+      `<button class="btn" data-act="tp-excel">Excel</button> <button class="btn" data-act="tp-pdf" title="Varias páginas con todas las tablas">Informe detallado</button> <button class="btn pri" data-act="tp-resumen" title="Una página, visual, para presentar">Resumen ejecutivo</button>`,
       `Cada tramo se mide con dos fechas de la ficha del cliente, en <b>${U}</b>${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, y se le resta lo que se esperó al cliente. <b>Mediana</b> = el caso del medio (no la distorsiona un caso extremo). <b>% en meta</b> = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. Con menos de ${MIN_CASOS} casos terminados verás "pocos casos". Hay dos informes: el <b>Resumen ejecutivo</b> (una página, para presentar) y el <b>Informe detallado</b> (todas las tablas). Ambos se guardan con "Guardar como PDF" en la ventana de impresión y respetan los filtros.`)}
       <div class="filters">
         <label class="small">Terminados desde <input type="month" data-tpf="desde" value="${esc(F.desde)}"></label><label class="small">hasta <input type="month" data-tpf="hasta" value="${esc(F.hasta)}"></label>
@@ -1410,24 +1410,24 @@
       <div class="kpis ops-kpis">${['cob', 'ban', 'not', 'abo', 'rl'].map(kpi).join('')}</div>
       ${prodExplicaHtml(false)}
       ${cicloCard(base)}
-      <details class="card tp-card tp-metas"><summary class="card-h"><h2>🎯 Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Cláusula comercial ${P.metaClCom} · Cláusula banco ${P.metaClBan} · Desembolso → notaría ${P.metaDnot} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
+      <details class="card tp-card tp-metas"><summary class="card-h"><h2>Metas y forma de contar</h2><span class="small muted">Cobranza ${P.metaCob} · Cláusula comercial ${P.metaClCom} · Cláusula banco ${P.metaClBan} · Desembolso → notaría ${P.metaDnot} · Banco ${P.metaBan} · Notaría ${P.metaNot} · Abogado ${P.metaAbo} · Firma RL ${P.metaRl} · Desembolso ${P.metaDes} · Validación ${P.metaVal} (${U})</span></summary>
         <div class="card-b f-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${mf('metaCob', 'Cobranza de la inicial')}${mf('metaClCom', 'Comercial: firma de la cláusula')}${mf('metaClBan', 'Banco: cláusula → desembolso')}${mf('metaDnot', 'Desembolso → file en notaría')}${mf('metaBan', 'Banco → notaría')}${mf('metaNot', 'Notaría → firma del cliente')}${mf('metaAbo', 'Abogado → firma del cliente')}${mf('metaRl', 'Firma cliente → firma RL')}${mf('metaDes', 'Firma RL → desembolso')}${mf('metaVal', 'Validación legal (interno)')}
           <label class="f">Contar en<select data-pk="diasHabiles"><option value="1" ${+P.diasHabiles ? 'selected' : ''}>Días hábiles (sin sábados, domingos ni feriados)</option><option value="0" ${+P.diasHabiles ? '' : 'selected'}>Días calendario</option></select></label>
           <label class="f" style="grid-column:1/-1">Feriados o días no laborables adicionales <input type="text" data-pt="feriadosExtra" value="${esc(P.feriadosExtra || '')}" placeholder="Ej.: 02/01/2026, 26/12/2026"><span class="small">Los feriados nacionales del Perú (incluidos Jueves y Viernes Santo) ya se descuentan solos.</span></label></div></details>
-      ${(() => { const C = cartasPorVencer(base); return C.length ? `<div class="ev-falta tp-avisos" style="background:var(--rojo-bg);color:var(--rojo)"><b>📄 Cartas de aprobación por vencer (${C.length}):</b> ${C.slice(0, 8).map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> ${x.dias < 0 ? `venció hace ${-x.dias} d` : x.dias === 0 ? 'vence hoy' : `vence en ${x.dias} d`}`).join(' · ')}${C.length > 8 ? ` · y ${C.length - 8} más` : ''}</div>` : ''; })()}
+      ${(() => { const C = cartasPorVencer(base); return C.length ? `<div class="ev-falta tp-avisos" style="background:var(--rojo-bg);color:var(--rojo)"><b>Cartas de aprobación por vencer (${C.length}):</b> ${C.slice(0, 8).map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> ${x.dias < 0 ? `venció hace ${-x.dias} d` : x.dias === 0 ? 'vence hoy' : `vence en ${x.dias} d`}`).join(' · ')}${C.length > 8 ? ` · y ${C.length - 8} más` : ''}</div>` : ''; })()}
       ${falt.length || probl.length ? `<div class="ev-falta tp-avisos">${falt.length ? `<b>Faltan datos para medir:</b> ${falt.join(' · ')}.` : ''}${probl.length ? `${falt.length ? '<br>' : ''}<b>Fechas a revisar (${probl.length}):</b> ${probl.slice(0, 8).map(p => `<a href="#/cliente/${p.o.id}">${esc(p.o.cliente || p.o.id)}</a> — ${esc(p.txt)}`).join(' · ')}${probl.length > 8 ? ` · y ${probl.length - 8} más (ver Excel)` : ''}` : ''}</div>` : ''}
-      ${card('💵 Cobranza de la inicial', 'Desde el inicio de la cobranza hasta que se recibe toda la inicial', tabla('tp-cob', 'cob', ['Asistente de cobranza'], false, 'Aún no hay clientes con fecha de inicio de cobranza.'))}
-      ${card('🏦 Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
-      ${card('🏛️ Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
-      ${card('⚖️ Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
-      ${card('📝 Cláusula: firma de los clientes (comercial)', 'Desde que se envía la cláusula a comercial hasta que la devuelve firmada por el cliente', tabla('tp-clc', 'clc', ['Ejecutivo de ventas'], false, 'Aún no hay cláusulas con fecha de envío a comercial.'))}
-      ${card('🏦 Cláusula en el banco → desembolso', 'Desde que se envía la cláusula al banco hasta el desembolso', tabla('tp-clb', 'clb', ['Banco'], false, 'Aún no hay cláusulas con fecha de envío al banco.'))}
-      ${card('📂 Desembolso → file en notaría', 'Desde el desembolso hasta que el file de desembolso ingresa a notaría', tabla('tp-dnot', 'dnot', ['Notaría'], false, 'Aún no hay desembolsos con fecha.'))}
-      ${card('👥 Equipo interno', 'Validación legal y firma del representante legal: lo que depende de nosotros', `<div class="ops-tw">${tbl('tp-val', colsDe(['Asistente legal']), tpGrupos('val', base), 'Sin casos con fecha de asignación y validación.')}</div><div class="ops-tw">${tbl('tp-rl', colsDe(['Empresa (firma RL)']), tpGrupos('rl', base), 'Sin casos con firma del cliente.')}</div>`)}
-      ${card('💰 Desembolso', 'Desde la firma del representante legal hasta el desembolso del banco', tabla('tp-des', 'des', ['Banco'], false, 'Sin casos con firma del representante legal.'))}
-      ${card('🔎 Motivos de demora', 'Dónde se pierde el tiempo: las primeras filas explican la mayoría de los retrasos', mot.length ? `<div class="ops-tw"><table><thead><tr><th>Motivo</th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th><th class="r">Fuera de meta</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}<div class="tp-bar"><i style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td><td class="r">${m.fuera}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Aún no hay motivos de demora registrados. Se elige en la ficha del cliente → Contratos → "Motivo principal de demora".</div>')}
-      ${card('📈 Tendencia de los últimos 6 meses', `Mediana en ${U} y % en meta de los casos terminados cada mes`, `<div class="ops-tw"><table><thead><tr><th>Tramo</th>${T.meses.map(m => `<th class="r">${mesTxt(m)}</th>`).join('')}</tr></thead><tbody>${T.filas.map(f => `<tr><td>${esc(f.l)}</td>${f.cel.map(c => `<td class="r">${c.n ? `<b>${c.med}</b> <span class="small muted">· ${c.ok}% · ${c.n}</span>` : '<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`)}
-      ${card('⏳ Casos abiertos más críticos', 'Los 20 más pasados de su meta (o más cerca de vencer)', `<div class="ops-tw">${tbl('tp-cur', colsCurso, curso, 'No hay casos abiertos en estos tramos.')}</div>`)}`;
+      ${card('Cobranza de la inicial', 'Desde el inicio de la cobranza hasta que se recibe toda la inicial', tabla('tp-cob', 'cob', ['Asistente de cobranza'], false, 'Aún no hay clientes con fecha de inicio de cobranza.'))}
+      ${card('Ejecutivos de banco', 'Desde que el ejecutivo recibe el caso hasta que llega a notaría', tabla('tp-ban', 'ban', ['Banco', 'Ejecutivo / asesor'], true, 'Aún no hay clientes con la fecha en que el ejecutivo de banco recibe el caso.'))}
+      ${card('Notarías', 'Desde que llega a notaría hasta que firma el cliente', tabla('tp-not', 'not', ['Notaría'], true, 'Aún no hay clientes con la fecha en que llegó a notaría.'))}
+      ${card('Abogados de notaría', 'Desde que se asigna el abogado hasta que firma el cliente', tabla('tp-abo', 'abo', ['Notaría', 'Abogado / doctor'], true, 'Aún no hay clientes con la fecha de asignación del abogado.'))}
+      ${card('Cláusula: firma de los clientes (comercial)', 'Desde que se envía la cláusula a comercial hasta que la devuelve firmada por el cliente', tabla('tp-clc', 'clc', ['Ejecutivo de ventas'], false, 'Aún no hay cláusulas con fecha de envío a comercial.'))}
+      ${card('Cláusula en el banco → desembolso', 'Desde que se envía la cláusula al banco hasta el desembolso', tabla('tp-clb', 'clb', ['Banco'], false, 'Aún no hay cláusulas con fecha de envío al banco.'))}
+      ${card('Desembolso → file en notaría', 'Desde el desembolso hasta que el file de desembolso ingresa a notaría', tabla('tp-dnot', 'dnot', ['Notaría'], false, 'Aún no hay desembolsos con fecha.'))}
+      ${card('Equipo interno', 'Validación legal y firma del representante legal: lo que depende de nosotros', `<div class="ops-tw">${tbl('tp-val', colsDe(['Asistente legal']), tpGrupos('val', base), 'Sin casos con fecha de asignación y validación.')}</div><div class="ops-tw">${tbl('tp-rl', colsDe(['Empresa (firma RL)']), tpGrupos('rl', base), 'Sin casos con firma del cliente.')}</div>`)}
+      ${card('Desembolso', 'Desde la firma del representante legal hasta el desembolso del banco', tabla('tp-des', 'des', ['Banco'], false, 'Sin casos con firma del representante legal.'))}
+      ${card('Motivos de demora', 'Dónde se pierde el tiempo: las primeras filas explican la mayoría de los retrasos', mot.length ? `<div class="ops-tw"><table><thead><tr><th>Motivo</th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th><th class="r">Fuera de meta</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}<div class="tp-bar"><i style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td><td class="r">${m.fuera}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Aún no hay motivos de demora registrados. Se elige en la ficha del cliente → Contratos → "Motivo principal de demora".</div>')}
+      ${card('Tendencia de los últimos 6 meses', `Mediana en ${U} y % en meta de los casos terminados cada mes`, `<div class="ops-tw"><table><thead><tr><th>Tramo</th>${T.meses.map(m => `<th class="r">${mesTxt(m)}</th>`).join('')}</tr></thead><tbody>${T.filas.map(f => `<tr><td>${esc(f.l)}</td>${f.cel.map(c => `<td class="r">${c.n ? `<b>${c.med}</b> <span class="small muted">· ${c.ok}% · ${c.n}</span>` : '<span class="muted">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`)}
+      ${card('Casos abiertos más críticos', 'Los 20 más pasados de su meta (o más cerca de vencer)', `<div class="ops-tw">${tbl('tp-cur', colsCurso, curso, 'No hay casos abiertos en estos tramos.')}</div>`)}`;
   }
   /* ---- Excel: resumen, cada tabla, motivos, tendencia, detalle por cliente y fechas a revisar ---- */
   function tpExcel() {
@@ -1478,12 +1478,12 @@
     const venc = tr.filter(x => x.k !== 'abo').reduce((t, x) => t + x.s.vencidos, 0), mot = tpMotivos(base), CG = cargaDatos(), sobre = CG.filas.filter(f => f.estado === 'alta');
     const largo = C.suma ? [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0] : null;
     const alertas = [
-      (() => { const C = cartasPorVencer(base); return C.length ? ['📄', `<b>${C.length} carta${C.length > 1 ? 's' : ''} de aprobación</b> vence${C.length > 1 ? 'n' : ''} en 15 días o menos sin desembolso.`] : null; })(),
-      venc ? ['🔴', `<b>${venc} casos abiertos</b> superaron su meta de tiempo.`] : ['🟢', 'No hay casos abiertos fuera de meta.'],
-      mot.length ? ['🔎', `Principal causa de demora: <b>${esc(mot[0].motivo)}</b> (${mot[0].pct}%).`] : null,
-      largo && largo.med ? ['⏱️', `Tramo más largo del ciclo: <b>${esc(largo.de)} → ${esc(largo.a)}</b> (${Math.round(largo.med * 100 / C.suma)}%).`] : null,
-      (() => { const Q = calidadDatos(); return Q.pct == null ? null : [Q.pct >= 95 ? '🏅' : '📝', `Datos completos del área: <b>${Q.pct}%</b>${Q.pct < 95 ? ` · faltan ${Q.req - Q.ok} datos obligatorios` : ''}.`]; })(),
-      sobre.length ? ['⚖️', `${sobre.length === 1 ? 'Una persona' : sobre.length + ' personas'} con sobrecarga: <b>${sobre.map(f => esc(f.name)).join(', ')}</b>.`] : ['⚖️', 'Carga del equipo pareja.']].filter(Boolean);
+      (() => { const C = cartasPorVencer(base); return C.length ? ['', `<b>${C.length} carta${C.length > 1 ? 's' : ''} de aprobación</b> vence${C.length > 1 ? 'n' : ''} en 15 días o menos sin desembolso.`] : null; })(),
+      venc ? ['', `<b>${venc} casos abiertos</b> superaron su meta de tiempo.`] : ['', 'No hay casos abiertos fuera de meta.'],
+      mot.length ? ['', `Principal causa de demora: <b>${esc(mot[0].motivo)}</b> (${mot[0].pct}%).`] : null,
+      largo && largo.med ? ['', `Tramo más largo del ciclo: <b>${esc(largo.de)} → ${esc(largo.a)}</b> (${Math.round(largo.med * 100 / C.suma)}%).`] : null,
+      (() => { const Q = calidadDatos(); return Q.pct == null ? null : [Q.pct >= 95 ? '' : '', `Datos completos del área: <b>${Q.pct}%</b>${Q.pct < 95 ? ` · faltan ${Q.req - Q.ok} datos obligatorios` : ''}.`]; })(),
+      sobre.length ? ['', `${sobre.length === 1 ? 'Una persona' : sobre.length + ' personas'} con sobrecarga: <b>${sobre.map(f => esc(f.name)).join(', ')}</b>.`] : ['', 'Carga del equipo pareja.']].filter(Boolean);
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Resumen ejecutivo · Contratos y Cobranzas · ${fdate(iso(today()))}</title><style>
       @page{size:A4 portrait;margin:10mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       body{font:11px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#17302d;margin:0;padding:16px;background:#fff}
@@ -1518,7 +1518,7 @@
         <div class="bx"><h2>Productividad por tramo <span class="m" style="text-transform:none;letter-spacing:0;font-weight:400">· la línea punteada es la meta (${mP}%) · días = mediana</span></h2>${barras}</div>
         <div class="bx"><h2>Ciclo completo de la venta (mediana en ${U})</h2>${ciclo}</div>
         <div class="two">
-          <div class="bx"><h2>Destacados y a mejorar</h2>${lideres.length ? `<div class="ld">${lideres.map(x => `<div><span class="t">${x.l}</span><span>⭐ ${nom(x.mej)}</span><span class="pill" style="background:${col(x.mej.s.productividad, mP)}">${x.mej.s.productividad}%</span></div>${x.peor && x.peor !== x.mej ? `<div><span class="t"></span><span>↗ ${nom(x.peor)}</span><span class="pill" style="background:${col(x.peor.s.productividad, mP)}">${x.peor.s.productividad}%</span></div>` : ''}`).join('')}</div>` : '<p class="m">Faltan casos terminados para comparar (mínimo 3 por cada uno).</p>'}</div>
+          <div class="bx"><h2>Destacados y a mejorar</h2>${lideres.length ? `<div class="ld">${lideres.map(x => `<div><span class="t">${x.l}</span><span>${nom(x.mej)}</span><span class="pill" style="background:${col(x.mej.s.productividad, mP)}">${x.mej.s.productividad}%</span></div>${x.peor && x.peor !== x.mej ? `<div><span class="t"></span><span>↗ ${nom(x.peor)}</span><span class="pill" style="background:${col(x.peor.s.productividad, mP)}">${x.peor.s.productividad}%</span></div>` : ''}`).join('')}</div>` : '<p class="m">Faltan casos terminados para comparar (mínimo 3 por cada uno).</p>'}</div>
           <div class="bx"><h2>Puntos de atención</h2><ul class="al">${alertas.map(([i, t]) => `<li><span>${i}</span><span>${t}</span></li>`).join('')}</ul></div></div>
         <div class="ft"><div><b>Área de Contratos y Cobranzas · Grupo MG</b><br>Productividad = Eficacia × Eficiencia (ISO 9000:2015; Gutiérrez Pulido). Metas: eficacia ${mE}%, eficiencia ${mI}%, productividad ${mP}%. Tiempos en ${U}.<br>Generado desde el CRM por ${esc(S.actor || '')}. El detalle completo está en el Informe detallado.</div>
           <div class="sig"><div>Jefatura del Área de Contratos y Cobranzas</div></div></div>
@@ -1579,7 +1579,7 @@
       ${sec('Resumen por tramo', `<table><thead><tr><th>Tramo</th><th class="r">Meta</th><th class="r">Terminados</th><th class="r">Mediana</th><th class="r">Eficacia</th><th class="r">Eficiencia</th><th class="r">Productividad</th><th class="r">En curso</th><th class="r">Vencidos</th><th class="r">% sin obs.</th></tr></thead><tbody>${res.map(({ k, s }) => `<tr><td>${esc(TRAMOS[k].l)}</td><td class="r">${s.meta ?? '—'}</td><td class="r">${s.hechos}</td><td class="r">${s.mediana ?? '—'}</td><td class="r">${pctTxt(s.eficacia, mE)}</td><td class="r">${pctTxt(s.eficiencia, mI)}</td><td class="r"><b>${pctTxt(s.productividad, mP)}</b></td><td class="r">${s.curso}</td><td class="r">${s.vencidos}</td><td class="r">${s.sinObs == null ? '—' : s.sinObs + '%'}</td></tr>`).join('')}</tbody></table>`)}
       ${mot.length ? sec('Motivos de demora', `<table><thead><tr><th>Motivo</th><th style="width:35%"></th><th class="r">Casos</th><th class="r">%</th><th class="r">% acumulado</th></tr></thead><tbody>${mot.map(m => `<tr><td>${esc(m.motivo)}</td><td><div class="bar"><i class="r" style="width:${m.pct}%"></i></div></td><td class="r">${m.n}</td><td class="r">${m.pct}%</td><td class="r">${m.acum}%</td></tr>`).join('')}</tbody></table>`) : ''}
       ${sec('Tendencia de los últimos 6 meses (mediana · % en meta)', `<table><thead><tr><th>Tramo</th>${T.meses.map(m => `<th class="r">${mesTxt(m)}</th>`).join('')}</tr></thead><tbody>${T.filas.map(f => `<tr><td>${esc(f.l)}</td>${f.cel.map(c => `<td class="r">${c.n ? `${c.med} · ${c.ok}%` : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table>`)}
-      ${sec('Casos abiertos fuera de meta', curso.length ? `<table><thead><tr><th>Cliente</th><th>Tramo</th><th>Quién lo tiene</th><th>Desde</th><th class="r">Días / meta</th><th>Motivo</th></tr></thead><tbody>${curso.map(x => `<tr><td>${esc(x.o.cliente || x.o.id)} <span class="m">${esc(x.o.proyecto || '')} ${esc(x.o.unidad || '')}</span></td><td>${esc(TRAMOS[x.k].l)}</td><td>${esc(TRAMOS[x.k].quien(x.o).filter(Boolean).reverse().join(' · ') || '—')}</td><td>${fdate(x.t.ini)}</td><td class="r"><b>${x.t.dias}</b> / ${x.t.meta}</td><td>${esc(x.o.con_motivoDemora || '—')}</td></tr>`).join('')}</tbody></table>` : '<p class="m">No hay casos abiertos fuera de meta. 👏</p>')}
+      ${sec('Casos abiertos fuera de meta', curso.length ? `<table><thead><tr><th>Cliente</th><th>Tramo</th><th>Quién lo tiene</th><th>Desde</th><th class="r">Días / meta</th><th>Motivo</th></tr></thead><tbody>${curso.map(x => `<tr><td>${esc(x.o.cliente || x.o.id)} <span class="m">${esc(x.o.proyecto || '')} ${esc(x.o.unidad || '')}</span></td><td>${esc(TRAMOS[x.k].l)}</td><td>${esc(TRAMOS[x.k].quien(x.o).filter(Boolean).reverse().join(' · ') || '—')}</td><td>${fdate(x.t.ini)}</td><td class="r"><b>${x.t.dias}</b> / ${x.t.meta}</td><td>${esc(x.o.con_motivoDemora || '—')}</td></tr>`).join('')}</tbody></table>` : '<p class="m">No hay casos abiertos fuera de meta. </p>')}
       ${sec('Cómo medimos la productividad', `<table><thead><tr><th>Indicador</th><th>Pregunta</th><th>Cálculo</th><th>Ejemplo</th><th class="r">Meta</th></tr></thead><tbody>${PROD_DEF.map(d => `<tr><td><b>${d.k}</b></td><td>${d.q}</td><td>${d.f}</td><td>${d.ej}</td><td class="r">${d.meta ? P[d.meta] : mP}%</td></tr>`).join('')}</tbody></table><p class="m" style="margin:6px 0 2px"><b>Referencias:</b></p><ul>${PROD_REF.map(([a, b]) => `<li><b>${a}:</b> ${b}</li>`).join('')}</ul>`)}
       <footer><b>Cómo se mide:</b> cada tramo va de una fecha a otra de la ficha del cliente, en ${U}${+P.diasHabiles ? ' (lunes a viernes, sin feriados)' : ''}, descontando los días que se esperó al cliente. Mediana = caso del medio; % en meta = casos terminados dentro de la meta. Los casos abiertos se cuentan hasta hoy. "Pocos casos" = menos de ${MIN_CASOS} terminados. Generado por ${esc(S.actor || '')} desde el CRM de Contratos y Cobranzas.</footer>
       </body></html>`;
@@ -1622,27 +1622,27 @@
     return { filas, req, ok, pct: req ? Math.round(ok * 100 / req) : null };
   }
   const pctDatosBadge = (p) => p == null ? '<span class="muted">—</span>' : `<span class="badge ${p >= 95 ? 'verde' : p >= 80 ? 'amar' : 'rojo'}">${p}%</span>`;
-  const medalla = (p) => p && p.req && p.pct === 100 ? '<span class="medal" title="Todos sus datos obligatorios están completos">🏅 Datos al día</span>' : '';
+  const medalla = (p) => p && p.req && p.pct === 100 ? '<span class="medal" title="Todos sus datos obligatorios están completos">Datos al día</span>' : '';
   // Mi día: lo que le falta completar a quien está trabajando
   function faltaHtml() {
     const Q = calidadDatos(), yo = Q.filas.find(f => f.name === S.actor);
     if (isJefe()) {
       const CR = comprobantesRepetidos();
-      const crHtml = CR.length ? `<h2 class="sec">⚠️ Comprobantes de pago repetidos <span class="badge rojo plain">${CR.length}</span></h2><div class="card"><div class="card-b">${CR.slice(0, 8).map(L => `<div class="agrow"><div><b>Operación N° ${esc(L[0].p.operacion)}</b> · ${money(L[0].p.monto)} <span class="small muted">${esc(L[0].p.entidad || '')}</span><div class="small">${L.map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> (${esc(x.p.fecha || '')})`).join(' · ')}</div></div></div>`).join('')}</div></div>` : '';
+      const crHtml = CR.length ? `<h2 class="sec">Comprobantes de pago repetidos <span class="badge rojo plain">${CR.length}</span></h2><div class="card"><div class="card-b">${CR.slice(0, 8).map(L => `<div class="agrow"><div><b>Operación N° ${esc(L[0].p.operacion)}</b> · ${money(L[0].p.monto)} <span class="small muted">${esc(L[0].p.entidad || '')}</span><div class="small">${L.map(x => `<a href="#/cliente/${x.o.id}">${esc(x.o.cliente)}</a> (${esc(x.p.fecha || '')})`).join(' · ')}</div></div></div>`).join('')}</div></div>` : '';
       const NU = noUbicados();
-      const nuHtml = NU.length ? `<h2 class="sec">📌 Datos que el equipo no encontró <span class="badge amar plain">${NU.length}</span></h2><div class="card"><div class="card-b">${NU.slice(0, 10).map(x => `<div class="agrow"><div><a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente)}</b></a> · ${esc(x.l)}<div class="small muted">${esc(x.v.por || '')}: "${esc(x.v.nota || '')}"</div></div><button class="btn sm" data-act="completar" data-op="${x.o.id}" data-k="${x.k}">Decidir ›</button></div>`).join('')}</div></div>` : '';
+      const nuHtml = NU.length ? `<h2 class="sec">Datos que el equipo no encontró <span class="badge amar plain">${NU.length}</span></h2><div class="card"><div class="card-b">${NU.slice(0, 10).map(x => `<div class="agrow"><div><a href="#/cliente/${x.o.id}"><b>${esc(x.o.cliente)}</b></a> · ${esc(x.l)}<div class="small muted">${esc(x.v.por || '')}: "${esc(x.v.nota || '')}"</div></div><button class="btn sm" data-act="completar" data-op="${x.o.id}" data-k="${x.k}">Decidir ›</button></div>`).join('')}</div></div>` : '';
       const pend = Q.filas.filter(f => f.items.length);
-      return `<h2 class="sec">📝 Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">🏅 Todo el equipo tiene sus datos al día.</div>'}</div></div>` + nuHtml + crHtml;
+      return `<h2 class="sec">Datos completos del equipo ${pctDatosBadge(Q.pct)}</h2><div class="card"><div class="card-b">${pend.length ? pend.slice(0, 8).map(f => `<div class="agrow"><div><b>${esc(f.name)}</b> ${pctDatosBadge(f.pct)}<div class="small muted">Le faltan ${f.items.length} dato${f.items.length > 1 ? 's' : ''}: ${esc([...new Set(f.items.map(x => x.l))].slice(0, 3).join(', '))}${f.items.length > 3 ? '…' : ''}</div></div>${f.name !== 'Sin asignar' ? `<a class="btn sm" href="#/usuarios">Ver equipo ›</a>` : ''}</div>`).join('') : '<div class="empty">Todo el equipo tiene sus datos al día.</div>'}</div></div>` + nuHtml + crHtml;
     }
     if (!yo || !yo.req) return '';
     const porCli = new Map(); yo.items.forEach(x => { if (!porCli.has(x.o.id)) porCli.set(x.o.id, { o: x.o, L: [] }); porCli.get(x.o.id).L.push(x); });
     const L = [...porCli.values()];
-    return `<h2 class="sec">📝 Te falta completar ${pctDatosBadge(yo.pct)} ${medalla(yo)} <button type="button" class="btn sm am-btn" data-act="ayuda-datos">💡 ¿No tienes un dato?</button></h2><div class="card"><div class="card-b">${L.length ? L.slice(0, 8).map(c => `<div class="agrow"><div><a href="#/cliente/${c.o.id}"><b>${esc(c.o.cliente)}</b></a> <span class="small muted">${esc(c.o.proyecto || '')} ${esc(c.o.unidad || '')}</span><div class="small">${c.L.map(x => `<span class="falta-chip" title="${esc(x.por)}">${esc(x.l)}</span>`).join(' ')}</div></div><button class="btn sm pri" data-act="completar" data-op="${c.o.id}" data-k="${c.L[0].k}">Completar ›</button></div>`).join('') + (L.length > 8 ? `<p class="small muted" style="margin:6px 0 0">Y ${L.length - 8} clientes más.</p>` : '') : '<div class="empty">🏅 ¡Tienes todos tus datos completos! Sigue así.</div>'}</div></div>`;
+    return `<h2 class="sec">Te falta completar ${pctDatosBadge(yo.pct)} ${medalla(yo)} <button type="button" class="btn sm am-btn" data-act="ayuda-datos">¿No tienes un dato?</button></h2><div class="card"><div class="card-b">${L.length ? L.slice(0, 8).map(c => `<div class="agrow"><div><a href="#/cliente/${c.o.id}"><b>${esc(c.o.cliente)}</b></a> <span class="small muted">${esc(c.o.proyecto || '')} ${esc(c.o.unidad || '')}</span><div class="small">${c.L.map(x => `<span class="falta-chip" title="${esc(x.por)}">${esc(x.l)}</span>`).join(' ')}</div></div><button class="btn sm pri" data-act="completar" data-op="${c.o.id}" data-k="${c.L[0].k}">Completar ›</button></div>`).join('') + (L.length > 8 ? `<p class="small muted" style="margin:6px 0 0">Y ${L.length - 8} clientes más.</p>` : '') : '<div class="empty">¡Tienes todos tus datos completos! Sigue así.</div>'}</div></div>`;
   }
   // Equipo: % de datos completos de cada persona
   function equipoDatosHtml() {
     const Q = calidadDatos(); if (!Q.req) return '';
-    return `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>📝 Datos completos</h2><span class="small muted">Área: ${pctDatosBadge(Q.pct)} · ${Q.ok} de ${Q.req} datos obligatorios</span></div><div class="ops-tw">${tbl('rg-datos', [
+    return `<div class="card" style="margin-bottom:16px"><div class="card-h"><h2>Datos completos</h2><span class="small muted">Área: ${pctDatosBadge(Q.pct)} · ${Q.ok} de ${Q.req} datos obligatorios</span></div><div class="ops-tw">${tbl('rg-datos', [
       { h: 'Persona', s: f => f.name, f: f => f.name === 'Sin asignar' ? '<i class="muted">Sin responsable</i>' : `<b>${esc(f.name)}</b> ${medalla(f)}` },
       { h: 'Datos completos', s: f => f.pct ?? -1, f: f => f.pct == null ? '<span class="muted">Sin datos obligatorios aún</span>' : `<div class="dc-bar"><i style="width:${f.pct}%;background:var(--${f.pct >= 95 ? 'verde' : f.pct >= 80 ? 'amar' : 'rojo'})"></i></div>${pctDatosBadge(f.pct)} <span class="small muted">${f.ok} de ${f.req}</span>` },
       { h: 'Faltan', cls: 'r', s: f => f.items.length, f: f => f.items.length ? `<b>${f.items.length}</b>` : '<span class="muted">0</span>' },
@@ -1656,7 +1656,7 @@
     const sub = S.ops.map(o => { const a = antes.get(o.id), d = D.get(o.id); return a && d && idx(d.etapa) > idx(a.etapa) ? { o, d, F: faltantes(o, d).out } : null; }).filter(x => x && x.F.length)[0];
     if (!sub) return;
     const { o, d, F } = sub;
-    modal({ title: '⚠️ Faltan datos obligatorios', ok: 'Completar ahora', cancel: 'Después',
+    modal({ title: 'Faltan datos obligatorios', ok: 'Completar ahora', cancel: 'Después',
       body: `<p style="margin-top:0"><b>${esc(o.cliente)}</b> pasó a <b>${d.etapa === 'cerrado' ? 'Cerrado' : STAGE[d.etapa].name}</b>, pero le faltan estos datos:</p><ul>${F.map(x => `<li><b>${esc(x.l)}</b> <span class="small muted">· ${esc(x.por)}${x.quien && x.quien !== 'Sin asignar' ? ' · le toca a ' + esc(x.quien) : ''}</span></li>`).join('')}</ul><p class="small muted">Sin estos datos el caso no se puede medir en Tiempos y productividad.</p>`,
       onOk: () => { setTimeout(() => irAlDato(o.id, F[0].k), 50); } });
   }
@@ -1668,7 +1668,7 @@
     if (location.hash !== '#/cliente/' + id) { location.hash = '#/cliente/' + id; setTimeout(go, 250); } else go();
   }
 
-  /* ---- 📌 "No lo encuentro": dato aproximado (estimado) o no ubicado, con ayuda memoria de dónde buscar ---- */
+  /* ---- "No lo encuentro": dato aproximado (estimado) o no ubicado, con ayuda memoria de dónde buscar ---- */
   const DONDE = {
     fRecibeBanco: 'Correo enviado al ejecutivo de banco con el expediente (bandeja Enviados) o el WhatsApp con el banco.',
     ejecBanco: 'Carta de aprobación del banco o la firma del correo del banco.', banco: 'Carta de aprobación del banco o el estado de cuenta de Evolta.',
@@ -1683,7 +1683,7 @@
     fin_fDesembolso: 'Constancia o correo del banco, estado de cuenta de Evolta, o pregúntale a Finanzas.', con_fIngresoNotariaDesemb: 'Cargo de entrega del file a la notaría.',
     con_motivoDemora: 'Piensa en qué detuvo el caso más tiempo: un documento del cliente, el banco, la notaría, una firma…'
   };
-  FIELD_LABEL.dato_marca = '📌 Dato';
+  FIELD_LABEL.dato_marca = 'Dato';
   const FUENTES = ['Correo', 'Estado de cuenta de Evolta', 'Minuta / kardex / notaría', 'WhatsApp o llamada', 'Lo indicó la jefatura', 'Otro'];
   const infoDe = (o, k) => (o && o.fechaInfo && o.fechaInfo[k]) || null;
   function setInfo(id, k, v) {
@@ -1697,17 +1697,17 @@
   function ayudaDatos() {
     const filas = [['Fechas de pago, inicio o fin de la cobranza', 'Estado de cuenta de Evolta'], ['Envíos al banco, a comercial o a notaría', 'Tus correos enviados (busca por nombre o DNI)'],
       ['Firmas del cliente o del representante', 'Minuta firmada, kardex o la notaría'], ['Notaría, abogado y su fecha', 'Correo o WhatsApp de la notaría'], ['Desembolso', 'Constancia del banco, Evolta o Finanzas'], ['Banco y ejecutivo', 'Carta de aprobación del banco']];
-    modal({ title: '💡 ¿No tienes un dato? Ayuda memoria', ok: 'Entendido', cancel: '', body: `<ol class="am-pasos"><li><b>Búscalo</b> donde suele estar:</li></ol>
+    modal({ title: '¿No tienes un dato? Ayuda memoria', ok: 'Entendido', cancel: '', body: `<ol class="am-pasos"><li><b>Búscalo</b> donde suele estar:</li></ol>
       <table class="am-t">${filas.map(([a, b]) => `<tr><td>${a}</td><td><b>${b}</b></td></tr>`).join('')}</table>
-      <ol class="am-pasos" start="2"><li><b>¿Tienes un dato aproximado?</b> Toca <b>📌</b> junto al campo → <b>"Tengo un dato aproximado"</b>, ponlo y elige de dónde salió. Queda marcado como <em class="est">~ estimado</em>.</li>
-        <li><b>¿No hay ninguna pista?</b> Toca <b>📌</b> → <b>"No lo encuentro"</b> y escribe dónde buscaste. Ya no te cuenta como vacío y le llega a la jefatura para que decida.</li></ol>
+      <ol class="am-pasos" start="2"><li><b>¿Tienes un dato aproximado?</b> Toca <b>No lo encuentro</b> junto al campo → <b>"Tengo un dato aproximado"</b>, ponlo y elige de dónde salió. Queda marcado como <em class="est">~ estimado</em>.</li>
+        <li><b>¿No hay ninguna pista?</b> Toca <b>No lo encuentro</b> → <b>"No lo encuentro"</b> y escribe dónde buscaste. Ya no te cuenta como vacío y le llega a la jefatura para que decida.</li></ol>
       <p class="ev-falta" style="margin:10px 0 0">✋ Nunca inventes un dato. Es mejor marcarlo como estimado o "no lo encuentro": así los reportes siguen siendo confiables.</p>` });
   }
   function datoNoEncontrado(id, k) {
     const o = getOp(id), f = Object.values(FIELDS).flat().find(x => x.k === k); if (!o || !f) return;
     const I = infoDe(o, k), v = o[k] ?? '';
     const inp = f.t === 'date' ? `<input type="date" id="nf-val" value="${esc(v)}">` : f.t === 'select' ? `<select id="nf-val"><option value=""></option>${f.o.map(x => `<option ${v === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : `<input id="nf-val" value="${esc(v)}" placeholder="Escribe lo que sepas">`;
-    modal({ title: `📌 No encuentro: ${f.l}`, ok: 'Guardar', body: `<p class="am-donde">💡 <b>Dónde buscarlo:</b> ${esc(DONDE[k] || 'Tus correos, el estado de cuenta de Evolta o pregúntale a quien lo sepa (comercial, banco o notaría).')}</p>
+    modal({ title: `No encuentro: ${f.l}`, ok: 'Guardar', body: `<p class="am-donde"><b>Dónde buscarlo:</b> ${esc(DONDE[k] || 'Tus correos, el estado de cuenta de Evolta o pregúntale a quien lo sepa (comercial, banco o notaría).')}</p>
       <label class="nf-op"><input type="radio" name="nf" value="estimada" ${!I || I.tipo === 'estimada' ? 'checked' : ''}> <b>Tengo un dato aproximado</b></label>
       <div class="nf-box form"><label>${f.t === 'date' ? 'Fecha aproximada' : 'Dato'}${inp}</label><label>¿De dónde sale?<select id="nf-fuente">${FUENTES.map(x => `<option ${I && I.fuente === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>
       <label class="nf-op"><input type="radio" name="nf" value="noUbicada" ${I && I.tipo === 'noUbicada' ? 'checked' : ''}> <b>No lo encuentro</b> <span class="small muted">(le llega a la jefatura para que decida)</span></label>
@@ -1740,7 +1740,7 @@
     const ult = F.map((f, i) => f ? i : -1).filter(i => i >= 0).pop();
     if (ult == null || ult < 0) return '';
     const base = F[0], fin = F[5], total = base && fin && fin >= base ? diasEntre(pd(base), pd(fin)) : null, lleva = base && !fin ? diasEntre(pd(base), today()) : null;
-    return `<div class="card ciclo"><div class="card-h"><h2>🔁 Ciclo de la venta</h2><span class="small muted">${total != null ? `Venta → desembolso: <b>${total} ${U}</b>` : lleva != null ? `Lleva <b>${lleva} ${U}</b> desde la venta, sin desembolso aún` : ''}</span></div>
+    return `<div class="card ciclo"><div class="card-h"><h2>Ciclo de la venta</h2><span class="small muted">${total != null ? `Venta → desembolso: <b>${total} ${U}</b>` : lleva != null ? `Lleva <b>${lleva} ${U}</b> desde la venta, sin desembolso aún` : ''}</span></div>
       <div class="ciclo-tl">${CICLO.map((h, i) => `<div class="ch ${F[i] ? 'ok' : ''}"><i style="--cc:${CICLO_COL[Math.min(i, CICLO_COL.length - 1)]}"></i><b>${esc(h.l)}</b><span>${F[i] ? fdate(F[i]) : 'pendiente'}</span></div>${i < CICLO.length - 1 ? `<div class="cs">${T[i].dias != null ? `<em>${T[i].dias} d</em>` : F[i] && !F[i + 1] && i === ult ? `<em class="cur">${diasEntre(pd(F[i]), today())} d…</em>` : '<em class="na">—</em>'}</div>` : ''}`).join('')}</div></div>`;
   }
   function cicloResumen(base) {
@@ -1751,11 +1751,11 @@
   }
   function cicloCard(base) {
     const C = cicloResumen(base), U = unidadDias(); if (!C.segs.some(s => s.n)) return '';
-    return `<div class="card tp-card"><div class="card-h"><h2>🔁 Ciclo completo de la venta</h2><span class="small muted">Mediana de cada tramo, de la venta a la inscripción (${U})</span></div><div class="card-b">
+    return `<div class="card tp-card"><div class="card-h"><h2>Ciclo completo de la venta</h2><span class="small muted">Mediana de cada tramo, de la venta a la inscripción (${U})</span></div><div class="card-b">
       <div class="ciclo-kp"><div><b>${C.desemb.med ?? '—'}</b><span>${U} de la venta al desembolso <small>(${C.desemb.n} casos)</small></span></div><div><b>${C.insc.med ?? '—'}</b><span>${U} de la venta a la inscripción <small>(${C.insc.n} casos)</small></span></div><div><b>${C.suma}</b><span>${U} sumando la mediana de cada tramo</span></div></div>
       <div class="ciclo-bar">${C.segs.filter(s => s.med).map(s => `<i style="flex:${s.med};background:${CICLO_COL[s.i]}" title="${esc(s.de)} → ${esc(s.a)}: ${s.med} ${U}">${s.med}</i>`).join('')}</div>
       <table class="ciclo-t"><thead><tr><th></th><th>Tramo</th><th class="r">Mediana</th><th class="r">% del ciclo</th><th class="r">Casos</th></tr></thead><tbody>${C.segs.map(s => `<tr><td><span class="sw" style="background:${CICLO_COL[s.i]}"></span></td><td>${esc(s.de)} → ${esc(s.a)}</td><td class="r"><b>${s.med ?? '—'}</b></td><td class="r">${s.med && C.suma ? Math.round(s.med * 100 / C.suma) + '%' : '—'}</td><td class="r">${s.n}</td></tr>`).join('')}</tbody></table>
-      ${C.suma ? (() => { const m = [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0]; return `<p class="small" style="margin:8px 0 0">💡 El tramo más largo es <b>${esc(m.de)} → ${esc(m.a)}</b>: ${Math.round(m.med * 100 / C.suma)}% del ciclo. Ahí está la mayor oportunidad de acortar el tiempo total.</p>`; })() : ''}</div></div>`;
+      ${C.suma ? (() => { const m = [...C.segs].sort((a, b) => (b.med || 0) - (a.med || 0))[0]; return `<p class="small" style="margin:8px 0 0">El tramo más largo es <b>${esc(m.de)} → ${esc(m.a)}</b>: ${Math.round(m.med * 100 / C.suma)}% del ciclo. Ahí está la mayor oportunidad de acortar el tiempo total.</p>`; })() : ''}</div></div>`;
   }
   /* ---- Carga del equipo: cuántos casos abiertos tiene cada persona (interna y externa) frente al promedio ---- */
   function cargaDatos() {
@@ -1786,19 +1786,19 @@
     const colsExt = (heads) => [...heads.map((h, i) => ({ h, s: g => g.ks[i] || '', f: g => g.ks[i] ? esc(g.ks[i]) : '<span class="muted">(sin registrar)</span>' })),
       { h: 'Casos abiertos', cls: 'r', s: g => g.s.curso, f: g => `<b>${g.s.curso}</b>` }, { h: 'Vencidos', cls: 'r', s: g => g.s.vencidos, f: g => g.s.vencidos ? `<span class="badge rojo">${g.s.vencidos}</span>` : '<span class="muted">0</span>' },
       { h: 'Por vencer', cls: 'r', s: g => g.s.porVencer, f: g => g.s.porVencer ? `<span class="badge amar">${g.s.porVencer}</span>` : '<span class="muted">0</span>' }, { h: 'El más antiguo', cls: 'r', s: g => g.s.viejo, f: g => `${g.s.viejo} ${U}` }];
-    return `${pageHead('Carga del equipo', 'Cuántos casos abiertos tiene cada persona, comparado con el promedio de su etapa, y cuántos tienen el banco y la notaría.', `<button class="btn" data-act="carga-excel">⬇️ Excel</button>`,
+    return `${pageHead('Carga del equipo', 'Cuántos casos abiertos tiene cada persona, comparado con el promedio de su etapa, y cuántos tienen el banco y la notaría.', `<button class="btn" data-act="carga-excel">Excel</button>`,
       `<b>Sobrecargado</b> = tiene más de ${C.tope} casos por encima del promedio de su etapa; <b>Con capacidad</b> = tiene ${C.tope} o más por debajo (el margen es el "tope de carga" de Configurar). La barra muestra en rojo los casos urgentes, en amarillo los que se acumulan y en verde los que están bajo control; la línea es el promedio de la etapa.`)}
       <div class="kpis ops-kpis">${kpi(C.abiertos.length, 'Casos abiertos')}${kpi(sinAsig, 'Sin responsable asignado', sinAsig ? 'txt-amar' : '')}${kpi(altas.length, 'Personas sobrecargadas', altas.length ? 'txt-rojo' : '')}${kpi(C.ban.reduce((t, g) => t + g.s.curso, 0), 'Casos en el banco')}${kpi(C.not.reduce((t, g) => t + g.s.curso, 0), 'Casos en notaría')}</div>
-      ${altas.length ? `<div class="ev-falta tp-avisos">💡 <b>Sugerencia:</b> ${altas.map(f => { const lib = C.filas.filter(x => x.etapa === f.etapa && x.estado === 'baja')[0]; return `${esc(f.name)} tiene ${f.n} casos (promedio ${f.prom.toFixed(0)})${lib ? `; ${esc(lib.name)} tiene capacidad (${lib.n})` : ''}`; }).join(' · ')}. Puedes repartir con <b>Tomar y repartir</b>.</div>` : ''}
+      ${altas.length ? `<div class="ev-falta tp-avisos"><b>Sugerencia:</b> ${altas.map(f => { const lib = C.filas.filter(x => x.etapa === f.etapa && x.estado === 'baja')[0]; return `${esc(f.name)} tiene ${f.n} casos (promedio ${f.prom.toFixed(0)})${lib ? `; ${esc(lib.name)} tiene capacidad (${lib.n})` : ''}`; }).join(' · ')}. Puedes repartir con <b>Tomar y repartir</b>.</div>` : ''}
       ${(() => { const Dn = dineroAsistentes(); if (!Dn.filas.length) return '';
         return `<div class="card tp-card"><div class="card-h"><h2>Dinero por cobrar y cobrado, por asistente</h2><span class="small muted">${Dn.hay ? `${Dn.nCargas} cargas de Evolta · última: ${fdate(Dn.ultFecha)}` : 'Aún no hay cargas de Evolta'}</span></div><div class="ops-tw">${tbl('cg-din', [
           { h: 'Asistente de Cobranzas', f: x => esc(x.n), s: x => x.n }, { h: 'Casos con saldo', cls: 'r', f: x => x.casos, s: x => x.casos }, { h: 'Por cobrar', cls: 'r', f: x => `<b>${money(x.cartera)}</b>`, s: x => x.cartera },
           { h: 'Cobrado en la última carga', cls: 'r', f: x => Dn.hay ? money(x.ultima) : '—', s: x => x.ultima }, { h: 'Cobrado en las últimas 4 cargas', cls: 'r', f: x => Dn.hay ? money(x.cuatro) : '—', s: x => x.cuatro },
           { h: '% cobrado', cls: 'r', f: x => x.pct == null ? '—' : x.pct + ' %', s: x => x.pct ?? -1 }], Dn.filas)}</div>
           <p class="small muted" style="margin:8px 16px 12px"><b>Cobrado</b> = cuota inicial que bajó + desembolsos y bonos nuevos que Evolta informó entre una carga y la siguiente, atribuidos al asistente de Cobranzas del cliente. <b>% cobrado</b> = cobrado ÷ (cobrado + por cobrar). Se llena con la actualización semanal desde Evolta.</p></div>`; })()}
-      <div class="card tp-card"><div class="card-h"><h2>👥 Equipo interno</h2><span class="small muted">Responsable actual de cada caso abierto</span></div><div class="ops-tw">${tbl('cg-int', cols, C.filas, 'No hay casos abiertos.')}</div></div>
-      <div class="card tp-card"><div class="card-h"><h2>🏦 Ejecutivos de banco</h2><span class="small muted">Casos que hoy están en el banco (aún no llegan a notaría)</span></div><div class="ops-tw">${tbl('cg-ban', colsExt(['Banco', 'Ejecutivo / asesor']), C.ban, 'No hay casos en el banco con fecha de recepción.')}</div></div>
-      <div class="card tp-card"><div class="card-h"><h2>⚖️ Notarías y abogados</h2><span class="small muted">Casos asignados a un abogado que aún no firma el cliente</span></div><div class="ops-tw">${tbl('cg-not', colsExt(['Notaría', 'Abogado / doctor']), C.not, 'No hay casos en notaría con abogado asignado.')}</div></div>`;
+      <div class="card tp-card"><div class="card-h"><h2>Equipo interno</h2><span class="small muted">Responsable actual de cada caso abierto</span></div><div class="ops-tw">${tbl('cg-int', cols, C.filas, 'No hay casos abiertos.')}</div></div>
+      <div class="card tp-card"><div class="card-h"><h2>Ejecutivos de banco</h2><span class="small muted">Casos que hoy están en el banco (aún no llegan a notaría)</span></div><div class="ops-tw">${tbl('cg-ban', colsExt(['Banco', 'Ejecutivo / asesor']), C.ban, 'No hay casos en el banco con fecha de recepción.')}</div></div>
+      <div class="card tp-card"><div class="card-h"><h2>Notarías y abogados</h2><span class="small muted">Casos asignados a un abogado que aún no firma el cliente</span></div><div class="ops-tw">${tbl('cg-not', colsExt(['Notaría', 'Abogado / doctor']), C.not, 'No hay casos en notaría con abogado asignado.')}</div></div>`;
   }
   // dinero por cobrar y cobrado, por asistente de Cobranzas (las cargas semanales de Evolta dejan el historial)
   function dineroAsistentes() {
@@ -1898,14 +1898,14 @@
     const sf = list.filter(r => r.esp.tipo === 'Recibido sin fecha'), ret = list.filter(r => r.esp.tipo === 'Estimado (retrasado)');
     if (!P.length && !sf.length) return '';
     const sig = (n) => { const d = new Date(today()); d.setMonth(d.getMonth() + n); return iso(d).slice(0, 7); }, totMes = (m) => (P.find(x => x.mes === m) || { total: 0 }).total;
-    return `<details class="card proy"><summary class="card-h"><h2>📅 Proyección de ingresos</h2><span class="small">Este mes: <b>${money(totMes(hoy))}</b> · ${mesTxt(sig(1))}: <b>${money(totMes(sig(1)))}</b> · ${mesTxt(sig(2))}: <b>${money(totMes(sig(2)))}</b></span><span class="small muted">ver detalle ▾</span></summary>
+    return `<details class="card proy"><summary class="card-h"><h2>Proyección de ingresos</h2><span class="small">Este mes: <b>${money(totMes(hoy))}</b> · ${mesTxt(sig(1))}: <b>${money(totMes(sig(1)))}</b> · ${mesTxt(sig(2))}: <b>${money(totMes(sig(2)))}</b></span><span class="small muted">ver detalle ▾</span></summary>
       <div class="card-b"><div class="ev-tw"><table class="ev-t"><thead><tr><th>Mes</th><th class="r">Operaciones</th><th class="r">Recibido (real)</th><th class="r">Programado</th><th class="r">Estimado</th><th class="r">Total del mes</th><th></th></tr></thead><tbody>
       ${P.map(x => `<tr class="${x.mes === hoy ? 'proy-hoy' : ''}" data-act="proy-mes" data-mes="${x.mes}" title="Ver las operaciones de este mes"><td><b>${mesTxt(x.mes)}</b>${x.mes === hoy ? ' <span class="badge plain">este mes</span>' : x.mes < hoy && (x.prog || x.est) ? ' <span class="badge rojo plain">atrasado</span>' : ''}</td><td class="r">${x.n}</td><td class="r">${x.real ? money(x.real) : '—'}</td><td class="r">${x.prog ? money(x.prog) : '—'}</td><td class="r">${x.est ? money(x.est) : '—'}</td><td class="r"><b>${money(x.total)}</b></td>
         <td style="min-width:120px"><div class="proy-bar"><span style="width:${x.real / max * 100}%;background:var(--f-verde)"></span><span style="width:${x.prog / max * 100}%;background:var(--accent)"></span><span style="width:${x.est / max * 100}%;background:var(--f-gris)"></span></div></td></tr>`).join('')}
       </tbody></table></div>
-      ${sf.length ? `<div class="ev-falta" style="margin-top:10px">📌 <b>${sf.length} operaciones ya pasaron Finanzas</b> (${money(sf.reduce((t, r) => t + aRecibir(r.o), 0))}): se cuentan como recibidas, pero no tienen la <b>fecha de desembolso</b> registrada, por eso no aparecen en ningún mes. Regístrala en Finanzas para que sumen en su mes real.</div>` : ''}
-      ${ret.length ? `<p class="small" style="margin:8px 0 0">⏰ ${ret.length} operaciones ya superaron los ${tip.dias} días estimados sin desembolso: se proyectan en el mes actual.</p>` : ''}
-      <p class="small muted">🟢 Real: ya desembolsado · 🔵 Programado: fecha de la cláusula adicional o del cronograma de Evolta · ⚪ Estimado: fecha de ingreso + ${tip.dias} días (${tip.fuente}). Montos: financiamiento + bono. Toca un mes para ver sus operaciones.</p></div></details>`;
+      ${sf.length ? `<div class="ev-falta" style="margin-top:10px"><b>${sf.length} operaciones ya pasaron Finanzas</b> (${money(sf.reduce((t, r) => t + aRecibir(r.o), 0))}): se cuentan como recibidas, pero no tienen la <b>fecha de desembolso</b> registrada, por eso no aparecen en ningún mes. Regístrala en Finanzas para que sumen en su mes real.</div>` : ''}
+      ${ret.length ? `<p class="small" style="margin:8px 0 0">${ret.length} operaciones ya superaron los ${tip.dias} días estimados sin desembolso: se proyectan en el mes actual.</p>` : ''}
+      <p class="small muted">Real: ya desembolsado · Programado: fecha de la cláusula adicional o del cronograma de Evolta · Estimado: fecha de ingreso + ${tip.dias} días (${tip.fuente}). Montos: financiamiento + bono. Toca un mes para ver sus operaciones.</p></div></details>`;
   }
   function opsRows(todosLosMeses) {
     const F = opsFilter(), ep = empresaProy(), tip = diasTipicos();
@@ -1939,7 +1939,7 @@
     const sel = (k, label, opts, noAll) => `<select data-f="operaciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
     const tip = diasTipicos();
-    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
+    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
       ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
           // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
           const proys = uniq(o => o.proyecto).filter(p => !F.emp || S.ops.some(o => o.proyecto === p && (empresaDe(o) || ep[o.proyecto]) === F.emp));
@@ -2022,14 +2022,14 @@
         if (c.h === 'Estado') return `<span class="badge ${r.st.c}">${esc(v)}</span>`;
         if (c.h === 'Renovaciones') return v ? `<span title="${esc(vencimientos(r.o).map(fdate).join(' → '))}">${v} · ${vencimientos(r.o).slice(1).map(fdate).join(', ')}</span>` : '<span class="muted">—</span>';
         return !filled(v) ? '<span class="muted">—</span>' : c.t === 'n' ? money(v) : c.t === 'd' ? fdate(v) : c.h === 'Cliente' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>` : esc(v); } })),
-        { h: '', cls: 'nowrap', f: r => r.st.k === 'dev' ? '' : `<button class="btn sm" data-act="cf-renovar" data-op="${r.o.id}">🔄 Renovar</button> <button class="btn sm" data-act="cf-devolver" data-op="${r.o.id}">↩️ Devuelta</button>` }];
+        { h: '', cls: 'nowrap', f: r => r.st.k === 'dev' ? '' : `<button class="btn sm" data-act="cf-renovar" data-op="${r.o.id}">Renovar</button> <button class="btn sm" data-act="cf-devolver" data-op="${r.o.id}">↩Devuelta</button>` }];
       const pager = `<div class="pager"><span class="small muted">${all.length ? `${(F.page - 1) * size + 1}–${Math.min(F.page * size, all.length)} de ${all.length}` : '0 cartas'}</span><button class="btn sm" data-act="cf-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="cf-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
       return `<div class="kpis ops-kpis">${kpi(vivas.length, `Cartas vigentes · ${sum(vivas)}`, '')}${kpi(cnt('venc').length, 'Vencidas: renovar o devolver ya', 'venc', 'txt-rojo')}${kpi(cnt('pronto').length, `Vencen en ${DIAS_AVISO_CF} días o menos`, 'pronto', 'txt-amar')}${kpi(cnt('dev').length, `Devueltas · ${sum(cnt('dev'))}`, 'dev')}</div>
         ${pager}<div class="ops-tw full cf-tw">${tbl(id + '-t', cols, page, 'No hay cartas fianza con estos filtros.')}</div>${all.length > size ? pager : ''}`;
     };
     const sel = (k, label, opts, noAll) => `<select data-f="cartas" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const base = S.ops.filter(esCarta), ep = empresaProy();
-    return `${pageHead('Cartas fianza', 'Seguimiento de cada carta: vencimiento, renovaciones y devolución. Lo más urgente aparece primero.', `<button class="btn pri" data-act="export-cf">⬇️ Exportar a Excel</button>`, 'Se listan los clientes con carta fianza (Finanzas). <b>Renovar</b> registra el nuevo vencimiento y guarda el anterior en el historial. <b>Devuelta</b> la marca como devuelta con su fecha y deja de alertar. Toca un recuadro de arriba para filtrar. Los datos de la carta (banco, monto, N°) se llenan en la ficha → Finanzas → Carta Fianza, o cotejando con Evolta.')}
+    return `${pageHead('Cartas fianza', 'Seguimiento de cada carta: vencimiento, renovaciones y devolución. Lo más urgente aparece primero.', `<button class="btn pri" data-act="export-cf">Exportar a Excel</button>`, 'Se listan los clientes con carta fianza (Finanzas). <b>Renovar</b> registra el nuevo vencimiento y guarda el anterior en el historial. <b>Devuelta</b> la marca como devuelta con su fecha y deja de alertar. Toca un recuadro de arriba para filtrar. Los datos de la carta (banco, monto, N°) se llenan en la ficha → Finanzas → Carta Fianza, o cotejando con Evolta.')}
       <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="cartas" data-k="q" data-r="${id}">
         ${sel('emp', 'Todas las empresas', [...new Set(base.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort().map(e => [e, e]))}
         ${sel('proy', 'Todos los proyectos', [...new Set(base.map(o => o.proyecto).filter(Boolean))].sort().map(p => [p, p]))}
@@ -2039,7 +2039,7 @@
       ${region(id, build)}`;
   }
   function cfRenovar(o) {
-    modal({ title: `${o.fin_fVenc ? 'Renovar' : 'Registrar vencimiento de'} carta fianza · ${o.cliente}`, ok: o.fin_fVenc ? '🔄 Registrar renovación' : 'Guardar vencimiento', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b> · vence <b>${fdate(o.fin_fVenc) || 'sin fecha'}</b>${(o.cfRenov || []).length ? ` · renovada ${o.cfRenov.length} vez(es)` : ''}</p>
+    modal({ title: `${o.fin_fVenc ? 'Renovar' : 'Registrar vencimiento de'} carta fianza · ${o.cliente}`, ok: o.fin_fVenc ? 'Registrar renovación' : 'Guardar vencimiento', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b> · vence <b>${fdate(o.fin_fVenc) || 'sin fecha'}</b>${(o.cfRenov || []).length ? ` · renovada ${o.cfRenov.length} vez(es)` : ''}</p>
       <div class="form"><label>${o.fin_fVenc ? 'Nuevo vencimiento' : 'Fecha de vencimiento'}<input type="date" id="cf-nv"></label><label>N° de carta (si cambió con la renovación)<input id="cf-nc" value="${esc(o.fin_nCarta || '')}"></label></div>`,
       onOk: (dlg) => { const nv = dlg.querySelector('#cf-nv').value, nc = dlg.querySelector('#cf-nc').value.trim(); if (!nv) { toast('Elige el nuevo vencimiento'); return false; }
         if (o.fin_fVenc && nv <= o.fin_fVenc) { toast('El nuevo vencimiento debe ser posterior al actual'); return false; }
@@ -2051,7 +2051,7 @@
         toast(`Renovada hasta el ${fdate(nv)}`); render(true); } });
   }
   function cfDevolver(o) {
-    modal({ title: `Carta fianza devuelta · ${o.cliente}`, ok: '↩️ Marcar como devuelta', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b>. Al marcarla como devuelta deja de generar alertas de vencimiento.</p><div class="form"><label>Fecha de devolución<input type="date" id="cf-fd" value="${iso(today())}"></label></div>`,
+    modal({ title: `Carta fianza devuelta · ${o.cliente}`, ok: '↩Marcar como devuelta', body: `<p class="small" style="margin-top:0">Carta <b>${esc(o.fin_nCarta || '—')}</b>. Al marcarla como devuelta deja de generar alertas de vencimiento.</p><div class="form"><label>Fecha de devolución<input type="date" id="cf-fd" value="${iso(today())}"></label></div>`,
       onOk: (dlg) => { const fd = dlg.querySelector('#cf-fd').value; if (!fd) { toast('Elige la fecha'); return false; }
         setField(o.id, 'fin_fDevolucion', fd); setField(o.id, 'fin_cfEstado', 'Devuelta'); toast('Carta marcada como devuelta'); render(true); } });
   }
@@ -2097,16 +2097,16 @@
       const cols = INS_COLS.map(c => ({ h: c.h, cls: c.t === 'i' ? 'r' : '', s: r => c.v(r) ?? '', f: r => { const v = c.v(r);
         if (c.h === 'Estado') return ed ? `<select class="ins-sel b-${INS_BADGE[r.grp]}" data-ins="${r.o.id}">${CRM.ESTADOS_INS.map(e => `<option ${e === v ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>` : `<span class="badge ${INS_BADGE[r.grp]}">${esc(v)}</span>`;
         if (c.h === 'Bien futuro') { if (!v) return '<span class="muted">—</span>'; if (r.d.state.for !== 'espera') return `<span class="small muted">${esc(v)}</span>`; const n = r.o.for_bfReapertura ? diff(pd(r.o.for_bfReapertura), today()) : null;
-          return `<span class="badge bf">⏸️ ${r.o.for_bfReapertura ? fdate(r.o.for_bfReapertura) : 'Sin fecha'}</span> <span class="small ${n != null && n <= 7 ? 'txt-amar' : 'muted'}">${n == null ? '' : n < 0 ? `pasó hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} d`}</span>${ed ? ` <button class="btn sm" data-act="bf-reabrir" data-op="${r.o.id}">▶️ Reabrir</button>` : ''}<div class="small muted">${esc(r.o.for_bfMotivo || '')}</div>`; }
+          return `<span class="badge bf">${r.o.for_bfReapertura ? fdate(r.o.for_bfReapertura) : 'Sin fecha'}</span> <span class="small ${n != null && n <= 7 ? 'txt-amar' : 'muted'}">${n == null ? '' : n < 0 ? `pasó hace ${-n} d` : n === 0 ? 'hoy' : `en ${n} d`}</span>${ed ? ` <button class="btn sm" data-act="bf-reabrir" data-op="${r.o.id}">Reabrir</button>` : ''}<div class="small muted">${esc(r.o.for_bfMotivo || '')}</div>`; }
         if (c.h === 'Días en trámite') return v == null ? '<span class="muted">—</span>' : `<span class="${v > sla ? 'txt-rojo' : v >= sla - (S.params.anticipo || 2) ? 'txt-amar' : ''}"><b>${v}</b> / ${sla}</span>`;
         return !filled(v) ? '<span class="muted">—</span>' : c.t === 'd' ? fdate(v) : c.h === 'Comprador' ? `<a href="#/cliente/${r.o.id}"><b>${esc(v)}</b></a>` : esc(v); } }));
       const pager = `<div class="pager"><span class="small muted">${all.length ? `${(F.page - 1) * size + 1}–${Math.min(F.page * size, all.length)} de ${all.length}` : '0 inscripciones'}</span><button class="btn sm" data-act="ins-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="ins-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
-      return `<div class="kpis ops-kpis">${kpi(all.length, 'En formalización', '')}${kpi(n('obs'), 'Observadas / sin respuesta', 'obs', 'txt-rojo')}${kpi(n('cal'), 'En calificación SUNARP', 'cal')}${kpi(n('not'), 'En notaría', 'not', 'txt-amar')}${kpi(n('pend'), 'Pendientes de iniciar', 'pend')}${n('bf') || F.grp === 'bf' ? kpi(n('bf'), '⏸️ Bien futuro (en espera)', 'bf', 'txt-bf') : ''}${kpi(n('ok'), 'Inscritas', 'ok')}</div>${F.grp === 'bf' ? bfResumen(all.filter(r => r.grp === 'bf')) : ''}
+      return `<div class="kpis ops-kpis">${kpi(all.length, 'En formalización', '')}${kpi(n('obs'), 'Observadas / sin respuesta', 'obs', 'txt-rojo')}${kpi(n('cal'), 'En calificación SUNARP', 'cal')}${kpi(n('not'), 'En notaría', 'not', 'txt-amar')}${kpi(n('pend'), 'Pendientes de iniciar', 'pend')}${n('bf') || F.grp === 'bf' ? kpi(n('bf'), 'Bien futuro (en espera)', 'bf', 'txt-bf') : ''}${kpi(n('ok'), 'Inscritas', 'ok')}</div>${F.grp === 'bf' ? bfResumen(all.filter(r => r.grp === 'bf')) : ''}
         ${pager}<div class="ops-tw full ins-tw">${tbl(id + '-t', cols, page, 'No hay expedientes con estos filtros.')}</div>${all.length > size ? pager : ''}`;
     };
     const base = rows().filter(enFormalizacion).map(r => r.o), ep = empresaProy(), opts = (fn) => [...new Set(base.map(fn).filter(Boolean))].sort().map(x => [x, x]);
     const sel = (k, label, o, noAll) => `<select data-f="inscripciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${o.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Inscripciones', 'Avance de la formalización de cada cliente: notaría, kardex, código, título y estado de la inscripción.', `<button class="btn pri" data-act="export-ins">⬇️ Exportar a Excel</button>`, `Se listan los clientes que están en Formalización o ya pasaron por ella. Cambia el <b>Estado</b> directo en la tabla: al marcar "Inscrito" se registra la fecha de inscripción. "Días en trámite" cuenta desde el ingreso a notaría (plazo: ${sla} días). Código, título y observación se editan en la ficha → Formalización. Los datos del banco y la notaría vienen de Contratos (Notaría y Kardex/Banco).`)}
+    return `${pageHead('Inscripciones', 'Avance de la formalización de cada cliente: notaría, kardex, código, título y estado de la inscripción.', `<button class="btn pri" data-act="export-ins">Exportar a Excel</button>`, `Se listan los clientes que están en Formalización o ya pasaron por ella. Cambia el <b>Estado</b> directo en la tabla: al marcar "Inscrito" se registra la fecha de inscripción. "Días en trámite" cuenta desde el ingreso a notaría (plazo: ${sla} días). Código, título y observación se editan en la ficha → Formalización. Los datos del banco y la notaría vienen de Contratos (Notaría y Kardex/Banco).`)}
       <div class="filters"><input type="search" placeholder="Buscar comprador, DNI, dpto…" value="${esc(F.q)}" data-f="inscripciones" data-k="q" data-r="${id}">
         ${sel('emp', 'Todas las empresas', opts(o => empresaDe(o) || ep[o.proyecto]))}${sel('proy', 'Todos los proyectos', opts(o => o.proyecto))}
         ${sel('bco', 'Todos los bancos', opts(o => o.banco))}${sel('not', 'Todas las notarías', opts(o => o.con_notaria))}
@@ -2162,15 +2162,15 @@
   function stickerBar(o, d, k) {
     if (d.state[k] !== 'culminada') return '';
     if (k === 'fin' && o.fin_tipo === 'No aplica') return '<span class="small muted">Este cliente no requiere Finanzas: Contratos indicó que no aplica carta fianza ni minuta de levantamiento.</span>';
-    const c = cierre(o, k), firma = c && c.firma ? `✍️ Firmado por <b>${esc(c.firma.nombre || fullName(c.firma.por))}</b> · ${fechaHora(c.firma.ts)}` : '';
+    const c = cierre(o, k), firma = c && c.firma ? `Firmado por <b>${esc(c.firma.nombre || fullName(c.firma.por))}</b> · ${fechaHora(c.firma.ts)}` : '';
     let html;
-    if (!c || c.estado === 'observado') html = `${c && c.obs ? `<div class="ev-falta">↩️ <b>Observado por ${esc(c.obs.por)}</b> (${fechaHora(c.obs.ts)}): ${esc(c.obs.motivo)}</div>` : ''}
-      ${canFirmar(o, d, k) ? `<button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">✍️ Firmar culminación de la etapa</button> <span class="small muted">La jefatura la revisará y dará su V°B°.</span>` : '<span class="small muted">Esperando que el responsable firme la culminación.</span>'}
-      ${CIERRE_ESTRICTO.has(k) && d.check[k].some(x => !x.done) ? `<span class="small txt-amar">⚠️ Faltan ${d.check[k].filter(x => !x.done).length} punto(s) para que el proceso esté saneado: no se podrá firmar hasta completarlos.</span>` : ''}`;
-    else if (c.estado === 'pendiente') html = `<div class="small">${firma}</div><div class="small cl-wait">⏳ Derivado a jefatura · esperando V°B°</div>
-      ${isJefe() ? `<button class="btn sm pri" data-act="cierre-vb" data-op="${o.id}" data-s="${k}">✅ Dar V°B°</button> <button class="btn sm" data-act="cierre-obs" data-op="${o.id}" data-s="${k}">↩️ Observar</button>` : ''}`;
-    else html = `<div class="small">${firma}</div><div class="small nkb-ok">✅ V°B° de <b>${esc(c.vb.nombre || fullName(c.vb.por))}</b> · ${fechaHora(c.vb.ts)}</div>
-      <button class="btn sm" data-act="sticker" data-op="${o.id}" data-s="${k}">🏷️ Descargar constancia (PDF)</button> <span class="small muted">código ${esc(c.codigo)}</span>`;
+    if (!c || c.estado === 'observado') html = `${c && c.obs ? `<div class="ev-falta">↩<b>Observado por ${esc(c.obs.por)}</b> (${fechaHora(c.obs.ts)}): ${esc(c.obs.motivo)}</div>` : ''}
+      ${canFirmar(o, d, k) ? `<button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">Firmar culminación de la etapa</button> <span class="small muted">La jefatura la revisará y dará su V°B°.</span>` : '<span class="small muted">Esperando que el responsable firme la culminación.</span>'}
+      ${CIERRE_ESTRICTO.has(k) && d.check[k].some(x => !x.done) ? `<span class="small txt-amar">Faltan ${d.check[k].filter(x => !x.done).length} punto(s) para que el proceso esté saneado: no se podrá firmar hasta completarlos.</span>` : ''}`;
+    else if (c.estado === 'pendiente') html = `<div class="small">${firma}</div><div class="small cl-wait">Derivado a jefatura · esperando V°B°</div>
+      ${isJefe() ? `<button class="btn sm pri" data-act="cierre-vb" data-op="${o.id}" data-s="${k}">Dar V°B°</button> <button class="btn sm" data-act="cierre-obs" data-op="${o.id}" data-s="${k}">↩Observar</button>` : ''}`;
+    else html = `<div class="small">${firma}</div><div class="small nkb-ok">V°B° de <b>${esc(c.vb.nombre || fullName(c.vb.por))}</b> · ${fechaHora(c.vb.ts)}</div>
+      <button class="btn sm" data-act="sticker" data-op="${o.id}" data-s="${k}">Descargar constancia (PDF)</button> <span class="small muted">código ${esc(c.codigo)}</span>`;
     return `<div class="cierre"><b>Cierre de la etapa</b>${html}</div>`;
   }
   // Finanzas y Formalización solo se cierran con el proceso saneado: ningún punto pendiente
@@ -2183,7 +2183,7 @@
         <p class="small muted">${k === 'for' ? 'La copia simple que emite SUNARP debe estar cargada en digital en el CRM Evolta y su N° de título registrado en la ficha (Formalización → Editar datos a mano).' : 'La carta fianza debe estar cotejada con Evolta y al día: renovada si venció, o marcada como devuelta (pantalla Cartas fianza).'}</p>` });
     }
     if (!(user(S.actor) || {}).full) toast('Consejo: pide al administrador que registre tu nombre completo en Equipo para que salga en la constancia');
-    if (!await ask(`Firmarás como ${fullName(S.actor)} que culminaste la etapa ${STAGE[k].name} de ${o.cliente}.${pend ? ` Quedan ${pend} punto(s) sin marcar: la constancia saldrá "con observaciones".` : ''} Se registrará tu nombre, fecha y hora y se derivará a jefatura para su V°B°.`, '✍️ Firmar')) return;
+    if (!await ask(`Firmarás como ${fullName(S.actor)} que culminaste la etapa ${STAGE[k].name} de ${o.cliente}.${pend ? ` Quedan ${pend} punto(s) sin marcar: la constancia saldrá "con observaciones".` : ''} Se registrará tu nombre, fecha y hora y se derivará a jefatura para su V°B°.`, 'Firmar')) return;
     setCierre(o, k, { estado: 'pendiente', firma: { por: S.actor, nombre: fullName(S.actor), ts: Date.now() } }, `Firma de culminación (${STAGE[k].name})`);
     toast('Firmado. Derivado a jefatura para V°B°'); render(true);
   }
@@ -2191,14 +2191,14 @@
     const c = cierre(o, k); if (!c || c.estado !== 'pendiente' || !isJefe()) return;
     const falta = D.get(o.id).check[k].filter(x => !x.done);
     if (CIERRE_ESTRICTO.has(k) && falta.length) return toast(`No se puede dar V°B°: falta ${falta.map(x => x.label).join(' · ')}. Obsérvalo para que lo complete.`);
-    if (!await ask(`Darás tu V°B° al cierre de ${STAGE[k].name} de ${o.cliente}, firmado por ${c.firma.por} el ${fechaHora(c.firma.ts)}. Se registrará tu nombre, fecha y hora.`, '✅ Dar V°B°')) return;
+    if (!await ask(`Darás tu V°B° al cierre de ${STAGE[k].name} de ${o.cliente}, firmado por ${c.firma.por} el ${fechaHora(c.firma.ts)}. Se registrará tu nombre, fecha y hora.`, 'Dar V°B°')) return;
     const ts = Date.now();
     setCierre(o, k, { ...c, estado: 'aprobado', vb: { por: S.actor, nombre: fullName(S.actor), ts }, codigo: `${o.id}-${k.toUpperCase()}-${CONSTANCIA.codigo([o.id, k, c.firma.ts, ts, S.actor])}` }, `V°B° de jefatura (${STAGE[k].name})`);
     toast('V°B° registrado. Ya se puede descargar la constancia'); render(true);
   }
   function cierreObs(o, k) {
     const c = cierre(o, k); if (!c || !isJefe()) return;
-    modal({ title: `Observar cierre · ${STAGE[k].name}`, ok: '↩️ Devolver con observación', body: `<div class="form"><label>¿Qué debe corregir ${esc(c.firma.por)}?<textarea id="obs-m" placeholder="Ej.: Falta cotejar la carta fianza con Evolta"></textarea></label></div>`,
+    modal({ title: `Observar cierre · ${STAGE[k].name}`, ok: '↩Devolver con observación', body: `<div class="form"><label>¿Qué debe corregir ${esc(c.firma.por)}?<textarea id="obs-m" placeholder="Ej.: Falta cotejar la carta fianza con Evolta"></textarea></label></div>`,
       onOk: (dlg) => { const m = dlg.querySelector('#obs-m').value.trim(); if (!m) { toast('Escribe la observación'); return false; }
         setCierre(o, k, { ...c, estado: 'observado', obs: { por: S.actor, ts: Date.now(), motivo: m } }, `Cierre observado (${STAGE[k].name}): ${m}`); toast('Devuelto al responsable'); render(true); } });
     setTimeout(() => { const t = $('#obs-m'); t && t.focus(); }, 60);
@@ -2228,15 +2228,15 @@
   function tabStatus(o, tk) {
     const F = TAB_F(tk), faltan = F.filter(f => !filled(o[f.k])).length, c = o[tk + 'Check'], lbl = (ks) => ks.map(k => (F.find(f => f.k === k) || {}).l).join(', ');
     const cot = c ? `Último cotejo con Evolta: ${new Date(c.ts).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(c.por || '')}` : 'Aún no se ha cotejado con Evolta.';
-    const det = c && c.pendientes ? [c.faltaEvolta.length && `<div>📝 <b>Completar en Evolta:</b> ${esc(lbl(c.faltaEvolta))}</div>`, c.faltaAmbos.length && `<div>❗ <b>Falta en ambos:</b> ${esc(lbl(c.faltaAmbos))}</div>`, (c.faltaCrm || []).length && `<div>⬅️ <b>Está en Evolta, falta en el CRM:</b> ${esc(lbl(c.faltaCrm))}</div>`, c.difieren.length && `<div>≠ <b>Distinto en Evolta:</b> ${esc(lbl(c.difieren))}</div>`].filter(Boolean).join('') : '';
+    const det = c && c.pendientes ? [c.faltaEvolta.length && `<div><b>Completar en Evolta:</b> ${esc(lbl(c.faltaEvolta))}</div>`, c.faltaAmbos.length && `<div><b>Falta en ambos:</b> ${esc(lbl(c.faltaAmbos))}</div>`, (c.faltaCrm || []).length && `<div><b>Está en Evolta, falta en el CRM:</b> ${esc(lbl(c.faltaCrm))}</div>`, c.difieren.length && `<div>≠ <b>Distinto en Evolta:</b> ${esc(lbl(c.difieren))}</div>`].filter(Boolean).join('') : '';
     const ok = CRM.tabOk(o, tk);
-    return `<div id="st-${tk}" class="${ok ? 'small nkb-ok' : 'ev-falta'}">${ok ? '✅ Completo y cotejado con Evolta.' : `${faltan ? `<b>${faltan} campo${faltan > 1 ? 's' : ''} por completar en el CRM.</b> ` : ''}${cot}`}${ok ? ' ' + cot : ''}${det}</div>`;
+    return `<div id="st-${tk}" class="${ok ? 'small nkb-ok' : 'ev-falta'}">${ok ? 'Completo y cotejado con Evolta.' : `${faltan ? `<b>${faltan} campo${faltan > 1 ? 's' : ''} por completar en el CRM.</b> ` : ''}${cot}`}${ok ? ' ' + cot : ''}${det}</div>`;
   }
   function tabHtml(o, tk) {
     const T = CRM.EV_TABS[tk], G = T.groups;
     const card = (gs) => `<div class="nkb-card ${T.wide ? 'nkb-row' : ''}">${gs.map(g => `<div class="nkb-t">${g.t}</div>${g.f.map(f => fieldInput(o, { k: f.k, l: f.l, t: f.t || 'text', list: { ejecBanco: 'ejecBanco', con_notaria: 'notaria', con_abogado: 'abogado' }[f.k] }, 'siempre')).join('')}`).join('')}</div>`;
-    return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm pri" data-act="evtab" data-tab="${tk}" data-op="${o.id}">📋 Pegar captura de Evolta</button></div>
-      ${tabStatus(o, tk)}<details class="fe-mas"><summary>🔎 Ver o corregir los datos de esta pestaña <span class="muted small">· ${TAB_F(tk).filter(f => !filled(o[f.k])).length} por completar</span></summary><div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></details></div>`;
+    return `<div class="nkb"><div class="nkb-h"><b>${T.ic} ${T.t}</b><span class="small muted">mismos campos que la pestaña de Evolta</span><button class="btn sm pri" data-act="evtab" data-tab="${tk}" data-op="${o.id}">Pegar captura de Evolta</button></div>
+      ${tabStatus(o, tk)}<details class="fe-mas"><summary>Ver o corregir los datos de esta pestaña <span class="muted small">· ${TAB_F(tk).filter(f => !filled(o[f.k])).length} por completar</span></summary><div class="nkb-grid" style="--cols:${T.cols.length}">${T.cols.map(c => card(c.map(i => G[i]))).join('')}</div></details></div>`;
   }
   function openTab(op, tk) {
     let ev = null;
@@ -2245,7 +2245,7 @@
       body: `<ol class="small" style="margin:0 0 10px;padding-left:18px"><li>En Evolta abre la venta y entra a la pestaña <b>${T.t}</b>.</li>
         <li>Toma una captura (<b>Windows + Shift + S</b>) y pégala abajo con <b>Ctrl + V</b>. También puedes seleccionar el texto de la pestaña, copiarlo y pegarlo.</li></ol>
         <div class="nkb-paste" contenteditable="true" tabindex="0" data-ph="Haz clic aquí y pega (Ctrl + V)"></div>
-        <p class="small" style="margin:8px 0"><label class="btn sm">🖼️ Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p>${tk === 'nkb' ? `<div class="nkb-abo"><b class="small">Además (no viene en la captura)</b><div class="f-grid"><label class="f">Abogado / doctor a cargo en notaría<input id="nkb-abo" list="dl-abogado" value="${esc(op.con_abogado || '')}" autocomplete="off"></label><label class="f">Fecha de asignación del abogado<input type="date" id="nkb-fab" value="${esc(op.con_fAsignaAbogado || (op.con_abogado ? '' : iso(today())))}"></label></div></div>` : ''}<div id="nkb-res"></div>`,
+        <p class="small" style="margin:8px 0"><label class="btn sm">Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p>${tk === 'nkb' ? `<div class="nkb-abo"><b class="small">Además (no viene en la captura)</b><div class="f-grid"><label class="f">Abogado / doctor a cargo en notaría<input id="nkb-abo" list="dl-abogado" value="${esc(op.con_abogado || '')}" autocomplete="off"></label><label class="f">Fecha de asignación del abogado<input type="date" id="nkb-fab" value="${esc(op.con_fAsignaAbogado || (op.con_abogado ? '' : iso(today())))}"></label></div></div>` : ''}<div id="nkb-res"></div>`,
       onOk: () => {
         if (!ev) { toast('Primero pega la captura o el texto de Evolta'); return false; }
         $$('#nkb-res [data-nk]').forEach(c => { if (c.checked) setField(op.id, c.dataset.nk, ev[c.dataset.nk]); });
@@ -2275,7 +2275,7 @@
       const todos = F.map(f => ({ f, a: nkbNorm(f, ev[f.k]), b: nkbNorm(f, op[f.k]) })), tipo = (x) => !x.a && !x.b ? 'amb' : !x.a ? 'evo' : !x.b ? 'copiar' : x.a !== x.b ? 'dist' : 'ok';
       const cnt = (t) => todos.filter(x => tipo(x) === t).length, tabla = (L) => `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Campo</th><th>Nuestro CRM</th><th>Evolta (captura)</th><th>Estado</th><th></th></tr></thead><tbody>${L.map(x => row(x.f)).join('')}</tbody></table></div>`;
       const atn = todos.filter(x => ['dist', 'amb', 'evo'].includes(tipo(x))), cop = todos.filter(x => tipo(x) === 'copiar'), oks = todos.filter(x => tipo(x) === 'ok');
-      res.innerHTML = `<div class="ev-res-sum"><b>📥 ${cop.length}</b> datos se copian al CRM · <b>✅ ${oks.length}</b> ya coinciden · <b>${atn.length ? '⚠️' : '👍'} ${atn.length}</b> para revisar</div>
+      res.innerHTML = `<div class="ev-res-sum"><b>${cop.length}</b> datos se copian al CRM · <b>${oks.length}</b> ya coinciden · <b>${atn.length ? '' : ''} ${atn.length}</b> para revisar</div>
         ${atn.length ? `<p class="small" style="margin:8px 0 4px"><b>Revisa estos:</b></p>${tabla(atn)}` : ''}
         ${cop.length ? `<details class="fe-mas"><summary>Ver los ${cop.length} datos que se copiarán</summary>${tabla(cop)}</details>` : ''}
         ${oks.length ? `<details class="fe-mas"><summary>Ver los ${oks.length} datos que ya coinciden</summary>${tabla(oks)}</details>` : ''}        <p class="small muted">Lee la captura con atención: si algún dato salió mal leído, corrígelo luego a mano en la ficha.</p>`;
@@ -2287,10 +2287,10 @@
     box.addEventListener('paste', (e) => {
       e.preventDefault();
       const img = [...(e.clipboardData.items || [])].find(i => i.type.startsWith('image/'));
-      if (img) { box.textContent = '🖼️ Captura pegada'; return fromImage(img.getAsFile()); }
+      if (img) { box.textContent = 'Captura pegada'; return fromImage(img.getAsFile()); }
       const t = e.clipboardData.getData('text/plain'); box.textContent = t.slice(0, 400); show(t);
     });
-    dlg.querySelector('#nkb-img').onchange = (e) => { const f = e.target.files[0]; if (f) { box.textContent = '🖼️ ' + f.name; fromImage(f); } };
+    dlg.querySelector('#nkb-img').onchange = (e) => { const f = e.target.files[0]; if (f) { box.textContent = '' + f.name; fromImage(f); } };
     setTimeout(() => box.focus(), 60);
   }
 
@@ -2299,15 +2299,15 @@
   const bfDias = (f) => f ? diff(pd(f), today()) : null;
   function bfBar(o, d) {
     if (d.state.for === 'espera') { const n = bfDias(o.for_bfReapertura);
-      return `<div class="bf-box"><span class="bf-ic">🏗️</span><div class="bf-tx"><b>Bien futuro: aún no se puede inscribir.</b><br>Motivo: <b>${esc(o.for_bfMotivo || 'sin motivo')}</b>. Reapertura estimada: <b>${o.for_bfReapertura ? fdate(o.for_bfReapertura) : 'sin fecha'}</b>${n == null ? '' : n < 0 ? ` (pasó hace ${-n} días)` : n === 0 ? ' (hoy)' : ` (en ${n} días)`}.${o.for_bfDesde ? ` En espera desde el ${fdate(o.for_bfDesde)}` : ''}${o.for_bfPor ? ` · lo registró ${esc(o.for_bfPor)}` : ''}.<br><span class="small muted">El plazo está detenido: no cuenta como fuera de plazo ni baja la productividad.</span></div>
-        ${can('a_edit') ? `<div class="bf-acc"><button class="btn sm bf-btn" data-act="bf-reabrir" data-op="${o.id}">▶️ Reabrir ahora</button><button class="btn sm" data-act="bf-editar" data-op="${o.id}">✏️ Cambiar fecha o motivo</button></div>` : ''}</div>`; }
+      return `<div class="bf-box"><span class="bf-ic"></span><div class="bf-tx"><b>Bien futuro: aún no se puede inscribir.</b><br>Motivo: <b>${esc(o.for_bfMotivo || 'sin motivo')}</b>. Reapertura estimada: <b>${o.for_bfReapertura ? fdate(o.for_bfReapertura) : 'sin fecha'}</b>${n == null ? '' : n < 0 ? ` (pasó hace ${-n} días)` : n === 0 ? ' (hoy)' : ` (en ${n} días)`}.${o.for_bfDesde ? ` En espera desde el ${fdate(o.for_bfDesde)}` : ''}${o.for_bfPor ? ` · lo registró ${esc(o.for_bfPor)}` : ''}.<br><span class="small muted">El plazo está detenido: no cuenta como fuera de plazo ni baja la productividad.</span></div>
+        ${can('a_edit') ? `<div class="bf-acc"><button class="btn sm bf-btn" data-act="bf-reabrir" data-op="${o.id}">Reabrir ahora</button><button class="btn sm" data-act="bf-editar" data-op="${o.id}">Cambiar fecha o motivo</button></div>` : ''}</div>`; }
     if (d.state.for !== 'actual' || !can('a_edit')) return o.for_bfReabierto ? `<p class="small muted" style="margin:6px 0">Bien futuro reabierto el ${fdate(o.for_bfReabierto)}: el plazo notarial se cuenta desde esa fecha.</p>` : '';
-    return `<div class="ev-bar"><button class="btn sm bf-btn" data-act="bf-pausar" data-op="${o.id}">⏸️ Bien futuro: pasar a espera</button> <span class="small muted">Para ventas que aún no se pueden inscribir.${o.for_bfReabierto ? ` Reabierto el ${fdate(o.for_bfReabierto)}.` : ''}</span></div>`;
+    return `<div class="ev-bar"><button class="btn sm bf-btn" data-act="bf-pausar" data-op="${o.id}">Bien futuro: pasar a espera</button> <span class="small muted">Para ventas que aún no se pueden inscribir.${o.for_bfReabierto ? ` Reabierto el ${fdate(o.for_bfReabierto)}.` : ''}</span></div>`;
   }
   function bfDialogo(o, editar) {
     const otros = editar ? [] : rows(true).filter(r => r.o.id !== o.id && r.o.proyecto && r.o.proyecto === o.proyecto && r.d.state.for === 'actual');
     const fx = o.for_bfReapertura || '', mot = o.for_bfMotivo || CRM.BF_MOTIVOS[0];
-    modal({ title: editar ? '✏️ Bien futuro · cambiar fecha o motivo' : '⏸️ Pasar a espera · Bien futuro', ok: editar ? 'Guardar' : 'Pasar a espera',
+    modal({ title: editar ? 'Bien futuro · cambiar fecha o motivo' : 'Pasar a espera · Bien futuro', ok: editar ? 'Guardar' : 'Pasar a espera',
       body: `<div class="form"><label>Motivo<select id="bf-m">${CRM.BF_MOTIVOS.map(m => `<option ${m === mot ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
         <label>Fecha estimada de reapertura<input type="date" id="bf-f" value="${esc(fx)}" min="${iso(today())}"></label>
         ${otros.length ? `<label class="bf-chk"><input type="checkbox" id="bf-todos"><span>Aplicar también a las <b>${otros.length} ventas más</b> del proyecto ${esc(o.proyecto)} que están en Formalización</span></label>` : ''}
@@ -2316,12 +2316,12 @@
         const f = $('#bf-f').value, m = $('#bf-m').value; if (!f) { toast('Indica la fecha estimada de reapertura'); return false; }
         const lista = [o, ...(($('#bf-todos') || {}).checked ? otros.map(r => r.o) : [])];
         lista.forEach(x => applyMany(x.id, { for_bfEstado: 'En espera', for_bfMotivo: m, for_bfReapertura: f, for_bfDesde: x.for_bfEstado === 'En espera' && x.for_bfDesde ? x.for_bfDesde : iso(today()), for_bfPor: x.for_bfEstado === 'En espera' && x.for_bfPor ? x.for_bfPor : fullName(S.actor) }));
-        toast(editar ? '✓ Bien futuro actualizado' : `⏸️ ${lista.length === 1 ? 'Venta en espera' : lista.length + ' ventas en espera'} hasta el ${fdate(f)}`); rerenderOp(o.id);
+        toast(editar ? '✓ Bien futuro actualizado' : `${lista.length === 1 ? 'Venta en espera' : lista.length + ' ventas en espera'} hasta el ${fdate(f)}`); rerenderOp(o.id);
       } });
   }
   async function bfReabrir(o) {
-    if (!await ask(`¿Reabrir la formalización de ${o.cliente}? Vuelve a "En curso" y el plazo notarial se cuenta desde hoy.`, '▶️ Reabrir')) return;
-    applyMany(o.id, { for_bfEstado: '', for_bfReabierto: iso(today()) }); toast('▶️ Formalización reabierta'); rerenderOp(o.id);
+    if (!await ask(`¿Reabrir la formalización de ${o.cliente}? Vuelve a "En curso" y el plazo notarial se cuenta desde hoy.`, 'Reabrir')) return;
+    applyMany(o.id, { for_bfEstado: '', for_bfReabierto: iso(today()) }); toast('Formalización reabierta'); rerenderOp(o.id);
   }
   function bfResumen(L) {
     if (!L.length) return '';
@@ -2336,7 +2336,7 @@
   const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
   const actaLocal = () => { try { return JSON.parse(localStorage.getItem('crm-mg-acta') || '{}'); } catch (e) { return {}; } };
   const partes = (f) => { const [y, m, d] = f.split('-'); return { d: String(+d), m: MESES_L[+m - 1], y }; };
-  const actaBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="acta" data-op="${o.id}">📝 Generar acta de entrega</button>${o.acta ? ` <span class="small muted">Última: ${fechaHora(o.acta.ts)} · ${esc(o.acta.por)}</span>` : ''}</div>`;
+  const actaBar = (o) => `<div class="ev-bar"><button class="btn sm" data-act="acta" data-op="${o.id}">Generar acta de entrega</button>${o.acta ? ` <span class="small muted">Última: ${fechaHora(o.acta.ts)} · ${esc(o.acta.por)}</span>` : ''}</div>`;
   function openActa(o) {
     modal({ title: `Acta de entrega · ${o.cliente}`, ok: 'Cerrar', cancel: '', wide: true, onOk: () => render(true),
       body: `<p class="small muted" style="margin-top:0">El generador ya tiene los datos del cliente. <b>Revisa lo resaltado en amarillo</b> (falta o hay que confirmar) y toca "Generar y descargar Acta (Word)". <a href="${ACTAS_URL}" target="_blank" rel="noopener">Abrir en otra pestaña ↗</a></p>
@@ -2390,30 +2390,30 @@
   function clRecorridoHtml(o) {
     const t = (k) => { const x = tramo(o, k); return x.dias == null ? '<span class="muted">—</span>' : `${semDot(x.sem)} <b>${x.dias}</b> / ${x.meta} d${x.enCurso ? ' <span class="muted">en curso</span>' : ''}`; };
     const porConf = o.con_clFechasOk && o.con_clFechasOk !== 'Sí';
-    return `<details class="cl-rec" ${o.con_clEnvComercial || o.clausula ? 'open' : ''}><summary><b>📝 Recorrido de la cláusula</b>${porConf ? ' <span class="badge amar">Fechas por confirmar</span>' : ''}</summary>
-      <p class="small muted" style="margin:6px 0 0">💡 Pon la fecha de cada paso el mismo día que ocurre. El CRM calcula solos los días y avisa si se pasa de la meta.</p>
+    return `<details class="cl-rec" ${o.con_clEnvComercial || o.clausula ? 'open' : ''}><summary><b>Recorrido de la cláusula</b>${porConf ? ' <span class="badge amar">Fechas por confirmar</span>' : ''}</summary>
+      <p class="small muted" style="margin:6px 0 0">Pon la fecha de cada paso el mismo día que ocurre. El CRM calcula solos los días y avisa si se pasa de la meta.</p>
       <div class="cl-rec-t small"><span>Comercial (firma del cliente): ${t('clc')}</span><span>Banco → desembolso: ${t('clb')}</span><span>Desembolso → notaría: ${t('dnot')}</span></div>
       <div class="f-grid">${CL_PASOS.map(([k, l]) => fieldInput(o, { ...campoDe(k), l })).join('')}${fieldInput(o, campoDe('con_clObsBanco'))}${fieldInput(o, campoDe('con_clFechasOk'))}${fieldInput(o, campoDe('con_clObs'))}</div></details>`;
   }
-  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">📝 Generar cláusula adicional${o.minuta || (o.clausula && o.clausula.manual) ? '' : ' (subir minuta PDF o Word)'}</button>${o.minuta ? '' : ` <button class="btn sm" data-act="clausula-manual" data-op="${o.id}" title="Para contratos de bien terminado o si no tienes la minuta">✍️ Sin minuta: llenar a mano</button>`}${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
+  const clauseBar = (o) => `<div id="clrec-${o.id}">${clRecorridoHtml(o)}</div><div class="ev-bar"><button class="btn sm" data-act="clausula" data-op="${o.id}">Generar cláusula adicional${o.minuta || (o.clausula && o.clausula.manual) ? '' : ' (subir minuta PDF o Word)'}</button>${o.minuta ? '' : ` <button class="btn sm" data-act="clausula-manual" data-op="${o.id}" title="Para contratos de bien terminado o si no tienes la minuta">Sin minuta: llenar a mano</button>`}${o.clausula && o.clausula.generada ? ` <span class="small muted">Última: ${new Date(o.clausula.generada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(o.clausula.por || '')}</span>` : ''}</div>`;
   /* ---- Carta notarial de resolución (cláusula sexta): datos de la minuta + revisión + Word con el formato del área ---- */
   const CN_K = 'crm-mg-carta-firma';
-  const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">⚖️ Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
+  const cartaBar = (o) => `<div class="ev-bar"><button class="btn sm cn-btn" data-act="carta" data-op="${o.id}">Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button>${o.carta ? ` <span class="small muted">Última: ${fechaHora(o.carta.ts)} · ${esc(o.carta.por)}</span>` : ''}</div>`;
   function openCarta(op) {
     const m = op.minuta || {}; let fir = {}; try { fir = JSON.parse(localStorage.getItem(CN_K) || '{}'); } catch (e) { }
     const d = CARTA.borrador(m, { hoy: iso(today()), firma: fir.firma || (m.vendedora && m.vendedora.rep) || '', cargo: fir.cargo || 'Gerente General', dirProyecto: dirEnProy(op.proyecto) || m.dirLote || '' });
     if (!d.empresa) d.empresa = empresaDe(op) || empEnProy(op.proyecto) || '';
     const uno = d.compradores.length === 1, dirOficial = !!dirEnProy(op.proyecto);
-    const fila = (c, i) => `<div class="cn-g3"><label>Apellidos, Nombres<input id="cn-n${i}" value="${esc(c.nombre)}" class="${c.aviso ? 'cn-warn' : ''}"></label><label>Documento<select id="cn-d${i}"><option ${c.doc !== 'CE' ? 'selected' : ''}>DNI</option><option ${c.doc === 'CE' ? 'selected' : ''}>CE</option></select></label><label>N°<input id="cn-x${i}" value="${esc(c.num)}" inputmode="numeric"></label></div>${c.aviso ? '<p class="cn-src">⚠️ En la minuta el nombre venía pegado (falta un espacio): corrígelo.</p>' : ''}`;
+    const fila = (c, i) => `<div class="cn-g3"><label>Apellidos, Nombres<input id="cn-n${i}" value="${esc(c.nombre)}" class="${c.aviso ? 'cn-warn' : ''}"></label><label>Documento<select id="cn-d${i}"><option ${c.doc !== 'CE' ? 'selected' : ''}>DNI</option><option ${c.doc === 'CE' ? 'selected' : ''}>CE</option></select></label><label>N°<input id="cn-x${i}" value="${esc(c.num)}" inputmode="numeric"></label></div>${c.aviso ? '<p class="cn-src">En la minuta el nombre venía pegado (falta un espacio): corrígelo.</p>' : ''}`;
     const sec = (t, b) => `<div class="cn-sec"><h4>${t}</h4>${b}</div>`;
-    modal({ title: `⚖️ Carta notarial de resolución · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true,
+    modal({ title: `Carta notarial de resolución · ${op.cliente}`, ok: 'Descargar Word', wide: true,
       body: `<div class="form cn-form">
-        <div class="${d.deMinuta ? 'cn-ok' : 'cn-note'}">${d.deMinuta ? `✅ Datos tomados de la minuta${d.fechaContrato ? ` del <b>${fdate(d.fechaContrato)}</b>` : ''}${m.cargado ? ` (cargada el ${fdate(iso(new Date(m.cargado)))})` : ''}. Revisa lo resaltado en amarillo.` : '⚠️ Esta minuta se cargó antes de esta mejora: las causales usan el <b>texto estándar</b>. Para usar el texto exacto de su minuta, toca “Cargar otra minuta”.'}
+        <div class="${d.deMinuta ? 'cn-ok' : 'cn-note'}">${d.deMinuta ? `Datos tomados de la minuta${d.fechaContrato ? ` del <b>${fdate(d.fechaContrato)}</b>` : ''}${m.cargado ? ` (cargada el ${fdate(iso(new Date(m.cargado)))})` : ''}. Revisa lo resaltado en amarillo.` : 'Esta minuta se cargó antes de esta mejora: las causales usan el <b>texto estándar</b>. Para usar el texto exacto de su minuta, toca “Cargar otra minuta”.'}
           <button type="button" class="btn sm" data-act="carta-otra" data-op="${op.id}" style="margin-left:8px">Cargar otra minuta</button></div>
         ${sec('1. Destinatarios', d.compradores.map(fila).join('') + (uno ? `<label style="max-width:160px;margin-top:8px">Trato<select id="cn-trato"><option>Sr.:</option><option>Sra.:</option></select></label>` : '') + `<label style="margin-top:8px">Dirección de notificación · de la minuta; cámbiala si el cliente se mudó<textarea id="cn-dir" rows="2">${esc(d.direccion)}</textarea></label>`)}
         ${sec('2. Contrato', `<div class="cn-g2"><label>Fecha de suscripción<input type="date" id="cn-fc" value="${esc(d.fechaContrato)}"></label><label>Inmueble(s)<input id="cn-in" value="${esc(d.inmueble)}"></label>
           <label>Edificio (nombre)<input id="cn-ed" value="${esc(d.edificio)}"></label><label>Empresa (membrete)<input id="cn-em" value="${esc(d.empresa)}"></label></div>
-          <label style="margin-top:8px">Dirección oficial del proyecto ${dirOficial ? '<span class="cn-src">· <b>de Configurar</b></span>' : '<span class="cn-src">· ⚠️ viene del lote de la minuta: corrígela (se guarda para el proyecto)</span>'}<input id="cn-dp" value="${esc(d.dirProyecto)}" class="${dirOficial ? '' : 'cn-warn'}"></label>`)}
+          <label style="margin-top:8px">Dirección oficial del proyecto ${dirOficial ? '<span class="cn-src">· <b>de Configurar</b></span>' : '<span class="cn-src">· viene del lote de la minuta: corrígela (se guarda para el proyecto)</span>'}<input id="cn-dp" value="${esc(d.dirProyecto)}" class="${dirOficial ? '' : 'cn-warn'}"></label>`)}
         ${sec('3. Causales incumplidas <span class="cn-src">(texto de su minuta, cláusula 6.1: marca una o más)</span>', d.literales.map((l, i) => `<label class="cn-cau"><input type="checkbox" data-cnl="${i}"><b>${'ABCD'[i]})</b><span>${esc(l)}</span></label>`).join(''))}
         ${sec('4. Carta', `<div class="cn-g2"><label>Fecha de la carta<input type="date" id="cn-f" value="${esc(d.fecha)}"></label><label>Ciudad<input id="cn-ci" value="Lima"></label>
           <label>Firma (nombre)<input id="cn-fi" value="${esc(d.firma)}"></label><label>Cargo<input id="cn-ca" value="${esc(d.cargo)}"></label></div>
@@ -2480,9 +2480,9 @@
     const pagosEv = op.evolta && (op.evolta.pagos || []).length;
     const faltas = clauseFaltas(D);
     const opc = (key, titulo, cuerpo, extra = '') => `<h3 class="cl-h"><label><input type="checkbox" name="${key}.incluir" ${D[key].incluir ? 'checked' : ''}> ${titulo}</label>${extra}</h3>${D[key].incluir ? cuerpo : ''}`;
-    return `<div class="cl"><p class="small muted" style="margin-top:0">${D.manual ? '✍️ Cláusula llenada a mano con los datos de la ficha (sin minuta).' : 'Datos tomados de la minuta (Anexo I).'} Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">📄 ${D.manual ? 'Cargar la minuta' : 'Cargar otra minuta'}</button></p>
+    return `<div class="cl"><p class="small muted" style="margin-top:0">${D.manual ? 'Cláusula llenada a mano con los datos de la ficha (sin minuta).' : 'Datos tomados de la minuta (Anexo I).'} Corrige lo necesario: los cambios aquí solo afectan a la cláusula. <button type="button" class="btn sm" data-cl="otra">${D.manual ? 'Cargar la minuta' : 'Cargar otra minuta'}</button></p>
       <div class="cl-guia"><b>1.</b> Revisa la empresa y el tipo de contrato · <b>2.</b> Revisa compradores · <b>3.</b> Arma la forma de pago eligiendo el <b>tipo</b> de cada pago (el texto se escribe solo, igual a las cláusulas firmadas) · <b>4.</b> Marca lo demás que se aclara · <b>5.</b> Descarga el Word.</div>
-      ${faltas.length ? `<div class="ev-falta">⚠️ Para descargar falta: ${faltas.map(esc).join(' · ')}</div>` : '<div class="guia ok">✅ Todo listo para descargar el Word.</div>'}
+      ${faltas.length ? `<div class="ev-falta">Para descargar falta: ${faltas.map(esc).join(' · ')}</div>` : '<div class="guia ok">Todo listo para descargar el Word.</div>'}
       <h3>Empresa y tipo de contrato</h3><div class="f-grid"><label class="f">Empresa vendedora<select data-emp>${L.EMPRESAS.map((e, k) => `<option value="${k}" ${k === iEmp ? 'selected' : ''}>${e.razon}</option>`).join('')}<option value="-1" ${iEmp < 0 ? 'selected' : ''}>Otra (escribir abajo)</option></select></label>
         <label class="f w2">Tipo de contrato<select name="tipo"><option value="futuro" ${!B ? 'selected' : ''}>Bien futuro (en planos) · Anexo I, punto VI · MG Proyecto 22, 23, 24</option><option value="inmueble" ${B ? 'selected' : ''}>Bien inmueble (terminado) · Cláusula Cuarta · MG Vida, MG Villa</option></select></label></div>
       <p class="small muted" style="margin:4px 0 0">Al elegir la empresa se llenan solos el RUC, la partida, el domicilio y el representante. El tipo de contrato cambia la redacción (el de bien terminado va en MAYÚSCULAS, con cheque no negociable y cuenta Crediobra).</p>
@@ -2499,10 +2499,10 @@
       <h3 class="cl-h"><label><input type="checkbox" name="pago.incluir" ${D.pago.incluir ? 'checked' : ''}> Forma de pago</label> ${B ? `<span class="small muted">Cláusula</span> <input name="pago.clausula" value="${esc(D.pago.clausula || 'Cuarta')}" class="cl-num" style="width:80px">` : `<span class="small muted">punto</span> <input name="pago.num" value="${esc(D.pago.num)}" class="cl-num"> <span class="small muted">del Anexo I</span>`}</h3>
       ${D.pago.incluir ? `<div class="f-grid cl-cred">${inp('credito.banco', D.credito.banco, 'Banco del crédito hipotecario', { regen: true, ph: 'Ej.: BANCO BBVA' })}${inp('credito.bbpBanco', D.credito.bbpBanco, 'Banco del Bono BBP (si aplica)', { regen: true, ph: 'Si está vacío, se usa el banco del crédito' })}${B ? inp('credito.promotor', D.credito.promotor, 'Banco promotor (el cheque sale a nombre de la empresa / este banco)', { regen: true, ph: 'Ej.: BANCO DE CREDITO DEL PERU' }) + inp('credito.cuenta', D.credito.cuenta, 'Cuenta Crediobra N.º', { regen: true }) : ''}</div>
         ${B ? '<p class="small muted" style="margin:2px 0 6px">El banco promotor y la cuenta Crediobra se recuerdan por proyecto para la próxima cláusula.</p>' : ''}
-        ${!D.pago.items.length ? '<div class="ev-falta">⚠️ No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">💳 Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}
-        <p class="small"><button type="button" class="btn sm" data-cl="rehacer">🔄 Rehacer los textos con el modelo</button> <span class="muted">Escribe de nuevo cada pago según su tipo. Si cambiaste un texto a mano y quieres conservarlo, elige "Texto libre".</span></p>
+        ${!D.pago.items.length ? '<div class="ev-falta">No se encontró la forma de pago en la minuta. Agrégala con <b>+ Agregar punto de pago</b> o usa los pagos registrados en Evolta.</div>' : ''}${pagosEv ? `<p class="small"><button type="button" class="btn sm" data-cl="evolta">Usar los pagos registrados en Evolta (${op.evolta.pagos.length})</button> <span class="muted">reemplaza los pagos de la cuota inicial</span></p>` : ''}
+        <p class="small"><button type="button" class="btn sm" data-cl="rehacer">Rehacer los textos con el modelo</button> <span class="muted">Escribe de nuevo cada pago según su tipo. Si cambiaste un texto a mano y quieres conservarlo, elige "Texto libre".</span></p>
         ${items}<p><button type="button" class="btn sm" data-cl="add-item">+ Agregar punto de pago</button></p>
-        <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' ⚠️ no coincide' : ' ✓'}` : ''}</div>` : ''}
+        <div class="${D.minutaPrecio && total !== D.minutaPrecio ? 'ev-falta' : 'small muted'}">Total: <b>${money(total)}</b>${D.minutaPrecio ? ` · precio en la minuta: ${money(D.minutaPrecio)}${total !== D.minutaPrecio ? ' no coincide' : ' ✓'}` : ''}</div>` : ''}
       ${!B ? opc('entrega', 'Fecha de entrega', `<div class="f-grid">${inp('entrega.fecha', D.entrega.fecha, 'Nueva fecha de entrega', { type: 'date' })}</div>`, ` <span class="small muted">punto</span> <input name="entrega.num" value="${esc(D.entrega.num)}" class="cl-num">`) : ''}
       ${opc('reserva', 'Dejar sin efecto la Reserva de Propiedad', '<p class="small muted" style="margin:0">Se agrega: “Dejar sin efecto la Reserva de Propiedad indicada en la Cláusula … de EL CONTRATO. Dejando expresa constancia que la transferencia del inmueble opera desde la suscripción EL CONTRATO”.</p>', ` <span class="small muted">Cláusula</span> <input name="reserva.clausula" value="${esc(D.reserva.clausula || 'Quinta')}" class="cl-num" style="width:80px">`)}
       ${opc('poder', 'Incluir poder irrevocable <span class="small muted">(los modelos actuales no lo llevan)</span>', `<div class="f-grid">${inp('poder.banco', D.poder.banco, 'Banco que otorga el crédito', { w2: true })}</div>`)}
@@ -2525,7 +2525,7 @@
       CLAUSULA.normalizar(D);
       if (D.manual || D.tipo === 'inmueble') CLAUSULA.rehacerTextos(D); // sin minuta o bien terminado: textos del modelo
     }
-    modal({ title: `Cláusula adicional · ${op.cliente}`, ok: '⬇️ Descargar Word', wide: true, body: clauseForm(D, op),
+    modal({ title: `Cláusula adicional · ${op.cliente}`, ok: 'Descargar Word', wide: true, body: clauseForm(D, op),
       onCancel: () => { if (box.isConnected) clauseCollect(box, D); keepClause(op, D); },
       onOk: (dlg) => {
         clauseCollect(box, D);
@@ -2598,18 +2598,18 @@
     S.log.push({ ts: Date.now(), usuario: S.actor, opId: o.id, etapa: 'gen', campo: 'ingreso', antes: '', despues: txt }); commit();
   }
   const ingresoBar = (o) => !pendienteIngreso(o) ? '' : o.aprob.estado === 'observado'
-    ? `<div class="ev-falta ing-bar">↩️ <b>Ingreso observado</b> por ${esc(o.aprob.obs.por)} (${fechaHora(o.aprob.obs.ts)}): ${esc(o.aprob.obs.motivo)}<div style="margin-top:6px">Corrige los datos y vuelve a enviarlo. ${o.aprob.por === S.actor || isJefe() ? `<button class="btn sm pri" data-act="ing-reenviar" data-op="${o.id}">📤 Reenviar para aprobación</button>` : ''}</div></div>`
-    : `<div class="ev-falta ing-bar">⏳ <b>Cliente ingresado por ${esc(o.aprob.nombre || o.aprob.por)}</b> (${fechaHora(o.aprob.ts)}). Espera el V°B° de la administración: hasta entonces no aparece en las etapas, resúmenes ni reparto. Puedes ir completando sus datos.
-      ${isJefe() ? `<div style="margin-top:6px"><button class="btn sm pri" data-act="ing-ok" data-op="${o.id}">✅ Dar V°B° al ingreso</button> <button class="btn sm" data-act="ing-obs" data-op="${o.id}">↩️ Observar</button></div>` : ''}</div>`;
+    ? `<div class="ev-falta ing-bar">↩<b>Ingreso observado</b> por ${esc(o.aprob.obs.por)} (${fechaHora(o.aprob.obs.ts)}): ${esc(o.aprob.obs.motivo)}<div style="margin-top:6px">Corrige los datos y vuelve a enviarlo. ${o.aprob.por === S.actor || isJefe() ? `<button class="btn sm pri" data-act="ing-reenviar" data-op="${o.id}">Reenviar para aprobación</button>` : ''}</div></div>`
+    : `<div class="ev-falta ing-bar"><b>Cliente ingresado por ${esc(o.aprob.nombre || o.aprob.por)}</b> (${fechaHora(o.aprob.ts)}). Espera el V°B° de la administración: hasta entonces no aparece en las etapas, resúmenes ni reparto. Puedes ir completando sus datos.
+      ${isJefe() ? `<div style="margin-top:6px"><button class="btn sm pri" data-act="ing-ok" data-op="${o.id}">Dar V°B° al ingreso</button> <button class="btn sm" data-act="ing-obs" data-op="${o.id}">↩Observar</button></div>` : ''}</div>`;
   async function ingresoOk(o) {
-    if (!await ask(`Darás tu V°B° al ingreso de ${o.cliente} (${o.proyecto || '—'} ${o.unidad || ''}), registrado por ${o.aprob.nombre || o.aprob.por}. Desde ahora seguirá su proceso normal en las etapas.`, '✅ Dar V°B°')) return;
+    if (!await ask(`Darás tu V°B° al ingreso de ${o.cliente} (${o.proyecto || '—'} ${o.unidad || ''}), registrado por ${o.aprob.nombre || o.aprob.por}. Desde ahora seguirá su proceso normal en las etapas.`, 'Dar V°B°')) return;
     setAprob(o, { ...o.aprob, estado: 'aprobado', vb: { por: S.actor, nombre: fullName(S.actor), ts: Date.now() } }, 'Ingreso aprobado');
     let msg = 'Ingreso aprobado';
     if (S.params.autoAsignar) { const plan = planAssign(new Set([o.id])).filter(p => SMART.has(p.stage)); applyPlan(plan); if (plan.length) msg += ` · asignado a ${plan[0].who} (${plan[0].por})`; } // si entra directo a Contratos, se reparte como cualquier otro
     toast(msg); render(true);
   }
   function ingresoObs(o) {
-    modal({ title: `Observar ingreso · ${o.cliente}`, ok: '↩️ Devolver con observación', body: `<div class="form"><label>¿Qué debe corregir o confirmar ${esc(o.aprob.nombre || o.aprob.por)}?<textarea id="ing-m" placeholder="Ej.: Confirmar el precio con el estado de cuenta de Evolta"></textarea></label></div>`,
+    modal({ title: `Observar ingreso · ${o.cliente}`, ok: '↩Devolver con observación', body: `<div class="form"><label>¿Qué debe corregir o confirmar ${esc(o.aprob.nombre || o.aprob.por)}?<textarea id="ing-m" placeholder="Ej.: Confirmar el precio con el estado de cuenta de Evolta"></textarea></label></div>`,
       onOk: (dlg) => { const m = dlg.querySelector('#ing-m').value.trim(); if (!m) { toast('Escribe la observación'); return false; }
         setAprob(o, { ...o.aprob, estado: 'observado', obs: { por: S.actor, ts: Date.now(), motivo: m } }, 'Ingreso observado: ' + m); toast('Devuelto con observación'); render(true); } });
   }
@@ -2642,7 +2642,7 @@
       ${rows.length ? `<p class="small muted">Desmarca lo que no quieras cambiar:</p><div class="ev-tw"><table class="ev-t"><thead><tr><th></th><th>Campo</th>${op ? '<th>Ahora</th>' : ''}<th>Del PDF</th></tr></thead><tbody>${rows.map(x => `<tr><td><input type="checkbox" data-evk="${x.k}" checked></td><td>${esc(lbl(x.k))}</td>${op ? `<td class="muted">${esc(fmtVal(x.k, x.cur))}</td>` : ''}<td><b>${esc(fmtVal(x.k, x.nuevo))}</b></td></tr>`).join('')}</tbody></table></div>` : '<p class="small muted">Los datos del PDF ya coinciden con el CRM.</p>'}
       <p class="small">Además se guardan el cronograma (${info.cronograma.length} cuotas), los pagos registrados (${info.pagos.length}) y lo pagado / por pagar.</p>
       ${(() => { const rep = info.pagos.map(p => ({ p, otros: S.ops.filter(x => (!op || x.id !== op.id) && ((x.evolta || {}).pagos || []).some(q => compKey(q) && compKey(q) === compKey(p))) })).filter(x => x.otros.length);
-        return rep.length ? `<div class="ev-falta" style="background:var(--rojo-bg);color:var(--rojo)"><b>⚠️ Comprobante de pago repetido:</b> ${rep.map(x => `operación N° ${esc(x.p.operacion)} por ${money(x.p.monto)} (${esc(x.p.fecha || '')}) ya figura en ${x.otros.map(o => `<b>${esc(o.cliente)}</b> (${o.id})`).join(', ')}`).join(' · ')}. Revísalo antes de continuar.</div>` : ''; })()}
+        return rep.length ? `<div class="ev-falta" style="background:var(--rojo-bg);color:var(--rojo)"><b>Comprobante de pago repetido:</b> ${rep.map(x => `operación N° ${esc(x.p.operacion)} por ${money(x.p.monto)} (${esc(x.p.fecha || '')}) ya figura en ${x.otros.map(o => `<b>${esc(o.cliente)}</b> (${o.id})`).join(', ')}`).join(' · ')}. Revísalo antes de continuar.</div>` : ''; })()}
       ${faltan.length ? `<div class="ev-falta"><b>Quedarán por completar a mano:</b> ${faltan.map(esc).join(' · ')}</div>` : ''}`;
     modal({ title: 'Cargar estado de cuenta Evolta', ok: op ? 'Actualizar' : 'Crear cliente', body, onOk: (dlg) => {
       const pick = keys.filter(k => { const c = dlg.querySelector(`[data-evk="${k}"]`); return !c || c.checked; });
@@ -2670,13 +2670,13 @@
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d, o)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
-        <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">📦 Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>✏️ Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}${camposFicha(o, s.key, d, s.key === 'cob')}</details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">💾 Guardar</button><span class="small muted">Tranquila/o: cada dato también se guarda solo al salir del campo. Este botón te confirma y te dice cuánto te falta.</span></div></div></details>`).join('')}
+        <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}${camposFicha(o, s.key, d, s.key === 'cob')}</details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">Guardar</button><span class="small muted">Tranquila/o: cada dato también se guarda solo al salir del campo. Este botón te confirma y te dice cuánto te falta.</span></div></div></details>`).join('')}
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr">${camposFicha(o, 'gen', d, true)}</div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
       <div class="qs">${['Llamada', 'WhatsApp', 'Nota'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div>
       <details class="qs-more"><summary>Más tipos de gestión</summary><div class="qs">${['Correo', 'Reunión', 'Trámite'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div></details>
-      <details class="more"><summary>✍️ Escribir con más detalle</summary><form class="form" id="seg-form" data-op="${o.id}">
+      <details class="more"><summary>Escribir con más detalle</summary><form class="form" id="seg-form" data-op="${o.id}">
         <div class="row2"><label>Tipo<select name="tipo">${['Llamada', 'WhatsApp', 'Correo', 'Reunión', 'Trámite', 'Nota'].map(t => `<option>${t}</option>`).join('')}</select></label>
         <label>Etapa<select name="etapa">${STAGES.map(s => `<option value="${s.key}" ${d.etapa === s.key ? 'selected' : ''}>${s.name}</option>`).join('')}</select></label></div>
         <label>¿Qué pasó?<textarea name="nota" required placeholder="Ej.: Se llamó al cliente, confirmó firma el viernes…"></textarea></label>
@@ -2688,26 +2688,26 @@
   // qué le falta a la etapa para llegar al 100%, con el botón que lleva a cada cosa
   function guiaHtml(o, d, k) {
     if (!d || !d.state || d.state[k] === 'porllegar') return '';
-    if (k === 'fin' && o.fin_tipo === 'No aplica') return '<div class="guia ok">✅ <b>No requiere Finanzas</b> · Contratos indicó que no aplica carta fianza ni minuta. Si cambia, edita "Carta fianza / minuta de levantamiento".</div>';
+    if (k === 'fin' && o.fin_tipo === 'No aplica') return '<div class="guia ok"><b>No requiere Finanzas</b> · Contratos indicó que no aplica carta fianza ni minuta. Si cambia, edita "Carta fianza / minuta de levantamiento".</div>';
     const items = d.check[k] || [], pend = items.map((c, i) => ({ c, i })).filter(x => !x.c.done);
     const setKeys = new Set(pend.flatMap(x => Object.keys(x.c.set || {})));
     const obl = faltantes(o, d).out.filter(x => (k === 'con' ? x.k.startsWith('con_') : k === 'cob' ? !x.k.startsWith('con_') : false) && !setKeys.has(x.k));
     const c = typeof cierre === 'function' ? cierre(o, k) : null, culm = d.state[k] === 'culminada';
     const firma = culm && !pend.length && (!c || c.estado === 'observado') ? (canFirmar(o, d, k) ? 'firmar' : 'esperaFirma') : culm && c && c.estado === 'pendiente' ? 'vb' : '';
     const totalPasos = items.length + obl.length, pct = totalPasos ? Math.round((totalPasos - pend.length - obl.length) * 100 / totalPasos) : (d.progress[k] ?? 0), nombre = STAGE[k].name;
-    if (!pend.length && !obl.length && !firma) return `<div class="guia ok">✅ <b>${nombre} al 100%</b>${c && c.estado === 'aprobado' ? ' · con V°B° de jefatura' : ''}</div>`;
+    if (!pend.length && !obl.length && !firma) return `<div class="guia ok"><b>${nombre} al 100%</b>${c && c.estado === 'aprobado' ? ' · con V°B° de jefatura' : ''}</div>`;
     const li = [...pend.map(x => `<li><span>${esc(x.c.label)}</span><button class="btn sm" data-act="step" data-op="${o.id}" data-s="${k}" data-i="${x.i}">${stepLabel(x.c) || 'Ver'} ›</button></li>`),
       ...obl.map(x => `<li><span>${esc(x.l)} <em class="req" title="${esc(x.por)}">obligatorio</em></span><button class="btn sm" data-act="completar" data-op="${o.id}" data-k="${x.k}">Completar ›</button></li>`),
-      firma === 'firmar' ? `<li><span><b>Firmar la culminación de la etapa</b> (la jefatura dará su V°B°)</span><button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">✍️ Firmar</button></li>` : '',
+      firma === 'firmar' ? `<li><span><b>Firmar la culminación de la etapa</b> (la jefatura dará su V°B°)</span><button class="btn sm pri" data-act="cierre-firmar" data-op="${o.id}" data-s="${k}">Firmar</button></li>` : '',
       firma === 'esperaFirma' ? '<li><span>Falta que el responsable firme la culminación de la etapa</span></li>' : '',
-      firma === 'vb' ? '<li><span>⏳ Firmado: falta el V°B° de la jefatura</span></li>' : ''].filter(Boolean);
-    return `<div class="guia"><div class="guia-h"><b>🎯 Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span><button type="button" class="btn sm am-btn" data-act="ayuda-datos">💡 ¿No tienes un dato?</button> <span class="guia-pct">${pct}%</span></span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
+      firma === 'vb' ? '<li><span>Firmado: falta el V°B° de la jefatura</span></li>' : ''].filter(Boolean);
+    return `<div class="guia"><div class="guia-h"><b>Para llegar al 100% de ${nombre} falta${li.length > 1 ? 'n' : ''} ${li.length} paso${li.length > 1 ? 's' : ''}:</b><span><button type="button" class="btn sm am-btn" data-act="ayuda-datos">¿No tienes un dato?</button> <span class="guia-pct">${pct}%</span></span></div><div class="guia-bar"><i style="width:${pct}%"></i></div><ol>${li.join('')}</ol></div>`;
   }
   function guardarFicha(id) {
     const a = document.activeElement; if (a && a.dataset && a.dataset.fk) a.dispatchEvent(new Event('change', { bubbles: true }));
     setTimeout(() => { save(); const o = getOp(id), d = D.get(id); if (!o || !d) return toast('✓ Guardado');
       const k = d.etapa === 'cerrado' ? null : d.etapa, falta = k ? (guiaHtml(o, d, k).match(/<li>/g) || []).length : 0;
-      toast(k ? `✓ Guardado · ${STAGE[k].name} al ${d.progress[k] ?? 0}%${falta ? ` · te falta${falta > 1 ? 'n' : ''} ${falta} paso${falta > 1 ? 's' : ''} (mira la lista 🎯)` : ' · ¡completo!'}` : '✓ Guardado'); }, 120);
+      toast(k ? `✓ Guardado · ${STAGE[k].name} al ${d.progress[k] ?? 0}%${falta ? ` · te falta${falta > 1 ? 'n' : ''} ${falta} paso${falta > 1 ? 's' : ''} (mira la lista )` : ' · ¡completo!'}` : '✓ Guardado'); }, 120);
   }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
@@ -2736,7 +2736,7 @@
       if (!items.length) return `<div class="tw"><div class="empty">No hay seguimientos con fecha de compromiso pendientes.<br>Se crean desde la ficha de cada cliente.</div></div>`;
       return groups.map(([k, l, c]) => { const g = items.filter(i => i.cat === k); if (!g.length) return ''; return `<h2 style="margin:18px 0 8px">${l} <span class="badge ${c} plain">${g.length}</span></h2>` + tbl(id + '-' + k, [
         { h: 'Compromiso', f: i => fdate(i.fCompromiso) }, { h: 'Cliente', f: i => { const o = getOp(i.opId); return o ? opLink(o) : esc(i.opId); } }, { h: 'Etapa', f: i => STAGE[i.etapa] ? sbadge(i.etapa) : '' },
-        { h: 'Responsable', f: i => userLink(i.usuario) }, { h: 'Pendiente', f: i => `${esc(i.proxima || i.nota)}` }, { h: '', cls: 'r', f: i => i.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${i.opId}">▶️ Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${i.id}">Marcar cumplido</button>` }], g); }).join('');
+        { h: 'Responsable', f: i => userLink(i.usuario) }, { h: 'Pendiente', f: i => `${esc(i.proxima || i.nota)}` }, { h: '', cls: 'r', f: i => i.bf ? `<button class="btn sm" data-act="bf-reabrir" data-op="${i.opId}">Reabrir</button>` : `<button class="btn sm" data-act="seg-done" data-id="${i.id}">Marcar cumplido</button>` }], g); }).join('');
     };
     return `${pageHead('Agenda de seguimiento', 'Compromisos pendientes con clientes, por responsable.', '', 'Se llena cuando registras un seguimiento con <b>fecha compromiso</b>. Rojo = ya venció. Toca "Marcar cumplido" cuando lo resuelvas.')}
     <div class="filters"><select data-f="agenda" data-k="u" data-r="${id}"><option value="">Todo el equipo</option>${S.users.map(u => `<option ${F.u === u.name ? 'selected' : ''}>${esc(u.name)}</option>`).join('')}</select></div>${region(id, build)}`;
@@ -2749,13 +2749,13 @@
     ${isAdmin() ? permsPanel() : ''}
     <div class="grid two" style="margin-top:14px">
       <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}${pf('minInactivo', 'Cerrar sesión tras minutos sin uso', 'Seguridad: avisa 1 minuto antes. 0 = nunca')}</div></div>
-      <div class="card"><div class="card-h"><h2>🏢 Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
+      <div class="card"><div class="card-h"><h2>Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
         <div class="f-grid" style="grid-template-columns:1fr 1.6fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input list="dl-empresa" data-emp="${esc(p)}" value="${esc(empEnProy(p))}" placeholder="Ej.: MG PROYECTO 22 S.A.C." ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
-      <div class="card"><div class="card-h"><h2>📍 Dirección oficial de cada proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Se usa en la carta notarial. Escríbela como debe salir en la carta (la dirección municipal, no la del lote que trae la minuta).</p>
+      <div class="card"><div class="card-h"><h2>Dirección oficial de cada proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Se usa en la carta notarial. Escríbela como debe salir en la carta (la dirección municipal, no la del lote que trae la minuta).</p>
         <div class="f-grid" style="grid-template-columns:1fr 2.4fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input data-pdir="${esc(p)}" value="${esc(dirEnProy(p))}" placeholder="Ej.: Av. La Paz N° 839, Distrito de San Miguel, Provincia y Departamento de Lima" ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Datos</h2></div><div class="card-b" style="display:grid;gap:10px">
         <div><button class="btn pri" data-act="export-xlsx">Exportar a Excel (por etapa y por usuario)</button></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button class="btn pri" data-act="respaldo-completo">🛡️ Descargar respaldo completo</button><button class="btn" data-act="respaldo-drive">☁️ Guardar en Google Drive</button><label class="btn">♻️ Restaurar desde respaldo<input type="file" accept=".json,application/json" id="restaurar-file" hidden></label> <span class="small muted">${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} · ${esc(S.params.ultimoRespaldo.por || '')}` : 'Aún no hay respaldo'} · se recomienda cada quincena (días 1 y 16)</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button class="btn pri" data-act="respaldo-completo">Descargar respaldo completo</button><button class="btn" data-act="respaldo-drive">Guardar en Google Drive</button><label class="btn">Restaurar desde respaldo<input type="file" accept=".json,application/json" id="restaurar-file" hidden></label> <span class="small muted">${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} · ${esc(S.params.ultimoRespaldo.por || '')}` : 'Aún no hay respaldo'} · se recomienda cada quincena (días 1 y 16)</span></div>
         <div style="margin-top:8px"><button class="btn" data-act="export-json">Descargar respaldo (.json)</button> <button class="btn" data-act="export-js">Descargar datos para el repositorio (operaciones.js)</button></div>
         <div><button class="btn" data-act="import">Importar Excel original o respaldo…</button><input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden></div>
         <div><button class="btn danger" data-act="reset">Volver a los datos del repositorio</button></div>
@@ -2770,15 +2770,15 @@
     if (!ui.permU || !people.find(u => u.name === ui.permU)) ui.permU = people[0] && people[0].name;
     const sel = ui.permU;
     const sw = (g) => PERMS.filter(p => p.g === g).map(p => `<label class="sw"><input type="checkbox" data-perm="${p.k}" data-u="${esc(sel)}" ${can(p.k, sel) ? 'checked' : ''}><span class="knob"></span><span class="swl">${p.l}</span></label>`).join('');
-    return `<div class="card perms"><div class="card-h"><h2>🔐 Permisos: qué puede ver y usar cada persona ${tip('Apaga un botón o una pantalla y esa persona deja de verlo. Tú, como administrador, siempre tienes todo.')}</h2></div><div class="card-b">
+    return `<div class="card perms"><div class="card-h"><h2>Permisos: qué puede ver y usar cada persona ${tip('Apaga un botón o una pantalla y esa persona deja de verlo. Tú, como administrador, siempre tienes todo.')}</h2></div><div class="card-b">
       ${people.length ? `<div class="chips" style="margin-bottom:12px">${people.map(u => `<button class="chipb ${u.name === sel ? 'on' : ''}" data-act="perm-user" data-u="${esc(u.name)}">${esc(u.name.split(' ').slice(0, 2).join(' '))}</button>`).join('')}</div>
-      <div class="tpls"><span class="small muted">Plantillas rápidas:</span> <button class="btn sm" data-act="perm-tpl" data-val="view">👁️ Solo consulta</button> <button class="btn sm" data-act="perm-tpl" data-val="ops">🛠️ Operativo</button> <button class="btn sm" data-act="perm-tpl" data-val="all">⭐ Todo</button> <button class="btn sm" data-act="perm-try">▶ Probar como ${esc(sel.split(' ')[0])}</button></div>
+      <div class="tpls"><span class="small muted">Plantillas rápidas:</span> <button class="btn sm" data-act="perm-tpl" data-val="view">Solo consulta</button> <button class="btn sm" data-act="perm-tpl" data-val="ops">Operativo</button> <button class="btn sm" data-act="perm-tpl" data-val="all">Todo</button> <button class="btn sm" data-act="perm-try">Probar como ${esc(sel.split(' ')[0])}</button></div>
       <h3 style="margin:14px 0 6px">Etapas que puede ver ${tip('Las etapas apagadas no aparecen en su menú ni en la ficha del cliente. Los datos generales del cliente siempre se ven.')}</h3>
-      <div class="tpls" style="margin-bottom:8px"><button class="btn sm" data-act="perm-etapas" data-val="propia">🎯 Solo su etapa (${esc(STAGE[(user(sel) || {}).stage] ? STAGE[user(sel).stage].name : '—')})</button> <button class="btn sm" data-act="perm-etapas" data-val="todas">👁️ Todas</button></div>
+      <div class="tpls" style="margin-bottom:8px"><button class="btn sm" data-act="perm-etapas" data-val="propia">Solo su etapa (${esc(STAGE[(user(sel) || {}).stage] ? STAGE[user(sel).stage].name : '—')})</button> <button class="btn sm" data-act="perm-etapas" data-val="todas">Todas</button></div>
       <div class="switches">${sw('e')}</div>
       <h3 style="margin:14px 0 6px">Pantallas</h3><div class="switches">${sw('v')}</div><h3 style="margin:14px 0 6px">Botones</h3><div class="switches">${sw('a')}</div>
       <p class="small muted" style="margin:8px 0 0">“Marcar pasos a mano” está apagado para todos: los pasos se marcan solos cuando la persona completa los datos. Actívalo solo como excepción. Tú, como administradora, siempre puedes marcarlos.</p>` : '<div class="empty">Agrega usuarios en Equipo para darles permisos.</div>'}
-      ${CL.enabled ? '<p class="small muted" style="margin:14px 0 0">🔒 En modo nube, el acceso lo protege el correo y la contraseña de cada persona.</p><!--' : ''}<hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><b>PIN de administrador:</b> ${S.adminPin ? '<span class="badge verde">Activado</span> <button class="btn sm" data-act="pin-set">Cambiar PIN</button> <button class="btn sm danger" data-act="pin-clear">Quitar PIN</button>' : '<span class="badge amar">Sin PIN</span> <button class="btn sm pri" data-act="pin-set">Crear PIN</button>'}</div>
+      ${CL.enabled ? '<p class="small muted" style="margin:14px 0 0">En modo nube, el acceso lo protege el correo y la contraseña de cada persona.</p><!--' : ''}<hr style="border:0;border-top:1px solid var(--line2);margin:16px 0"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><b>PIN de administrador:</b> ${S.adminPin ? '<span class="badge verde">Activado</span> <button class="btn sm" data-act="pin-set">Cambiar PIN</button> <button class="btn sm danger" data-act="pin-clear">Quitar PIN</button>' : '<span class="badge amar">Sin PIN</span> <button class="btn sm pri" data-act="pin-set">Crear PIN</button>'}</div>
       <p class="small muted" style="margin:8px 0 0">El PIN protege la cuenta de administrador al cambiar de usuario. Es una barrera de uso, no seguridad bancaria: los datos viven en el navegador y en el repositorio.</p>${CL.enabled ? '-->' : ''}</div></div>`;
   }
   function setPin() {
@@ -2837,7 +2837,7 @@
       if (CL.enabled && !/^\S+@\S+\.\S+$/.test(em)) { toast('Escribe un correo válido'); return false; }
       if (em && S.users.some(x => (x.email || '').toLowerCase() === em)) { toast('Ese correo ya está en el equipo'); return false; }
       S.users.push({ name: n, full: dlg.querySelector('#u-fn').value.trim() || undefined, proyectos: proyDe(dlg), stage: s, rol: dlg.querySelector('#u-r').value.trim() || (STAGE[s] ? STAGE[s].rol : 'Jefatura'), admin: dlg.querySelector('#u-a').checked || undefined, email: em || undefined });
-      if (CL.enabled) { const pw = Math.random().toString(36).slice(2) + 'Aa1!' + Math.random().toString(36).slice(2); CL.createAccount(em, pw).catch(x => { if (x.code !== 'auth/email-already-in-use') throw x; }).then(() => CL.reset(em)).then(() => toast('📧 Se envió un correo a ' + em + ' para crear su contraseña')).catch(x => toast('Usuario agregado, pero no se pudo crear la cuenta: ' + (x.code || x.message))); }
+      if (CL.enabled) { const pw = Math.random().toString(36).slice(2) + 'Aa1!' + Math.random().toString(36).slice(2); CL.createAccount(em, pw).catch(x => { if (x.code !== 'auth/email-already-in-use') throw x; }).then(() => CL.reset(em)).then(() => toast('Se envió un correo a ' + em + ' para crear su contraseña')).catch(x => toast('Usuario agregado, pero no se pudo crear la cuenta: ' + (x.code || x.message))); }
       S.log.push({ ts: Date.now(), usuario: S.actor, opId: '—', etapa: 'gen', campo: 'usuario_alta', antes: '', despues: n }); save(); toast('Usuario agregado'); render(true); } });
   }
   function editUser(name) {
@@ -2965,19 +2965,19 @@
   }
   function vAyuda() {
     const step = (n, t, d) => `<div class="how"><span class="hn">${n}</span><div><b>${t}</b><p class="muted">${d}</p></div></div>`;
-    return `${pageHead('Ayuda', 'Cómo funciona el CRM en 2 minutos.', `<button class="btn" data-act="welcome">Ver la bienvenida</button> <button class="btn" data-act="manual-print">🖨️ Imprimir manual</button>`)}
-    <h2 class="sec" style="margin-top:0">✨ Novedades: cómo se usan</h2>
+    return `${pageHead('Ayuda', 'Cómo funciona el CRM en 2 minutos.', `<button class="btn" data-act="welcome">Ver la bienvenida</button> <button class="btn" data-act="manual-print">Imprimir manual</button>`)}
+    <h2 class="sec" style="margin-top:0">Novedades: cómo se usan</h2>
     <div class="grid two nov">
-      <div class="card"><div class="card-b">${step('🎯', 'Saber qué me falta', 'Abre al cliente. Al inicio de tu etapa verás <b>"Para llegar al 100% te falta"</b>. Toca el botón de cada paso y te lleva directo al dato. Cuando todo está listo dice <b>✅ al 100%</b>.')}
-        ${step('💾', 'Guardar', 'Cada dato se guarda solo al salir del campo. Igual tienes el botón <b>💾 Guardar</b> al final de cada etapa: te confirma y te dice cuánto te falta.')}
-        ${step('👤', 'Quién lleva el cliente', 'Si el cliente no tiene responsable y tú completas un dato de tu etapa, <b>quedas como responsable</b> automáticamente. Te sale un aviso.')}</div></div>
-      <div class="card"><div class="card-b">${step('📝', 'Recorrido de la cláusula', 'En Contratos pon la <b>fecha de cada paso cuando ocurra</b>: enviada a comercial → firmada por el cliente → enviada al banco → desembolso → file en notaría. El CRM calcula solo los días.')}
-        ${step('📅', 'Fechas que cambian', 'Dentro de la cláusula escribe en <b>Observaciones</b> lo que falta confirmar. Cuando esté confirmado, marca <b>"Fechas confirmadas"</b>.')}
-        ${step('📴', 'Si se va el internet', 'Sigue trabajando: arriba sale el aviso <b>"Sin conexión"</b> y todo se sube solo cuando vuelve. Solo leer PDF de Evolta y capturas necesita internet.')}</div></div>
+      <div class="card"><div class="card-b">${step('', 'Saber qué me falta', 'Abre al cliente. Al inicio de tu etapa verás <b>"Para llegar al 100% te falta"</b>. Toca el botón de cada paso y te lleva directo al dato. Cuando todo está listo dice <b>al 100%</b>.')}
+        ${step('', 'Guardar', 'Cada dato se guarda solo al salir del campo. Igual tienes el botón <b>Guardar</b> al final de cada etapa: te confirma y te dice cuánto te falta.')}
+        ${step('', 'Quién lleva el cliente', 'Si el cliente no tiene responsable y tú completas un dato de tu etapa, <b>quedas como responsable</b> automáticamente. Te sale un aviso.')}</div></div>
+      <div class="card"><div class="card-b">${step('', 'Recorrido de la cláusula', 'En Contratos pon la <b>fecha de cada paso cuando ocurra</b>: enviada a comercial → firmada por el cliente → enviada al banco → desembolso → file en notaría. El CRM calcula solo los días.')}
+        ${step('', 'Fechas que cambian', 'Dentro de la cláusula escribe en <b>Observaciones</b> lo que falta confirmar. Cuando esté confirmado, marca <b>"Fechas confirmadas"</b>.')}
+        ${step('', 'Si se va el internet', 'Sigue trabajando: arriba sale el aviso <b>"Sin conexión"</b> y todo se sube solo cuando vuelve. Solo leer PDF de Evolta y capturas necesita internet.')}</div></div>
     </div>
-    ${isJefe() ? `<div class="card" style="margin-top:12px"><div class="card-b">${step('🛡️', 'Respaldo (solo jefatura)', 'Los días <b>1 y 16</b> te aparece en Inicio el aviso del respaldo: toca <b>Descargar respaldo</b> y guarda los 2 archivos. Si algún día se pierde información: <b>Configurar → ♻️ Restaurar desde respaldo</b>. Para la copia automática en Google Drive sigue la guía <b>respaldo-drive/LEEME.md</b> (te acompaña Claude).')}</div></div>` : ''}
+    ${isJefe() ? `<div class="card" style="margin-top:12px"><div class="card-b">${step('', 'Respaldo (solo jefatura)', 'Los días <b>1 y 16</b> te aparece en Inicio el aviso del respaldo: toca <b>Descargar respaldo</b> y guarda los 2 archivos. Si algún día se pierde información: <b>Configurar → Restaurar desde respaldo</b>. Para la copia automática en Google Drive sigue la guía <b>respaldo-drive/LEEME.md</b> (te acompaña Claude).')}</div></div>` : ''}
     <p class="small muted">¿Dudas o algo no funciona? Escríbelo en <b>Buzón</b> (menú Más): llega a la jefatura.</p>
-    <h2 class="sec">📘 Manual paso a paso</h2>
+    <h2 class="sec">Manual paso a paso</h2>
     ${manualHtml()}
     <h2 class="sec">El camino de cada cliente</h2>
     <div class="flow help-flow">${STAGES.map((s, i) => `<div class="fstage" style="--sc:${colVar(s.key)}"><div class="fs-top"><span class="fs-n">${s.n}</span><b>${s.name}</b></div><p class="small muted" style="margin:6px 0">${esc(s.desc)}</p><div class="fs-who">${IC.nouser.replace('<svg', '<svg class="mini"')}${esc(s.rol)}</div></div>${i < 4 ? '<span class="arrow">›</span>' : ''}`).join('')}</div>
@@ -2995,9 +2995,9 @@
   }
   function showWelcome() {
     const s = (n, t, d) => `<div class="how"><span class="hn">${n}</span><div><b>${t}</b><p class="muted">${d}</p></div></div>`;
-    modal({ title: '👋 Bienvenida al CRM de Contratos y Cobranzas', ok: 'Entendido, empezar', cancel: '', body: `<p class="muted" style="margin-top:0">Cada cliente pasa por <b>5 etapas</b>: Cobranzas → Contratos → Finanzas → Formalización → Postventa.</p>
-      ${s(1, 'Elige quién eres', 'Arriba, en "Trabajando como". Así queda registrado quién hizo cada acción.')}${s(2, 'Abre Mi día', 'Ahí ves tus expedientes del más urgente al menos urgente, con un botón para el siguiente paso.')}${s(3, 'Completa tus datos', 'En cada cliente llena las fechas y estados de tu etapa: los pasos se marcan solos. Usa 📞 💬 para anotar una gestión en 2 toques.')}${s(4, 'Mide resultados', 'Con "Descargar Excel" obtienes productividad, eficiencia y eficacia.')}
-      <p class="small muted">Tip: el botón <b>☾ / ☀</b> cambia entre modo noche y día. Puedes volver a esta guía en <b>Ayuda</b>.</p>`, onOk: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } }, onCancel: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } } });
+    modal({ title: 'Bienvenida al CRM de Contratos y Cobranzas', ok: 'Entendido, empezar', cancel: '', body: `<p class="muted" style="margin-top:0">Cada cliente pasa por <b>5 etapas</b>: Cobranzas → Contratos → Finanzas → Formalización → Postventa.</p>
+      ${s(1, 'Elige quién eres', 'Arriba, en "Trabajando como". Así queda registrado quién hizo cada acción.')}${s(2, 'Abre Mi día', 'Ahí ves tus expedientes del más urgente al menos urgente, con un botón para el siguiente paso.')}${s(3, 'Completa tus datos', 'En cada cliente llena las fechas y estados de tu etapa: los pasos se marcan solos. Usa para anotar una gestión en 2 toques.')}${s(4, 'Mide resultados', 'Con "Descargar Excel" obtienes productividad, eficiencia y eficacia.')}
+      <p class="small muted">Tip: el botón <b>/ </b> cambia entre modo noche y día. Puedes volver a esta guía en <b>Ayuda</b>.</p>`, onOk: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } }, onCancel: () => { try { localStorage.setItem('crm-mg-welcome', '1'); } catch (e) { } } });
   }
 
   /* ---- Devoluciones de venta (Seguimiento): datos del cliente (del CRM, del PDF de Evolta o a mano), cuenta de destino,
@@ -3026,7 +3026,7 @@
     const P = dvProd(L), med = mediana(cer.map(r => r.t.dias)), regs = T.map(r => r.t.reg).filter(v => v != null), medReg = mediana(regs);
     const ges = [...new Set(L.map(dvGestor).filter(Boolean))].map(g => { const G = L.filter(x => dvGestor(x) === g), TT = G.map(dvTiempo); return { g, n: G.length, ab: TT.filter(t => t.enCurso).length, venc: TT.filter(t => t.enCurso && t.sem === 'rojo').length, med: mediana(TT.filter(t => !t.enCurso).map(t => t.dias)), p: dvProd(G) }; }).sort((a, b) => (b.p.productividad ?? -1) - (a.p.productividad ?? -1));
     const k = (n, l, c) => `<div class="kpi"><div class="n ${c || ''}">${n}</div><div class="small muted">${l}</div></div>`;
-    return `<details class="card tp-card prod-exp" open><summary class="card-h"><h2>⏱️ Tiempo de atención de las solicitudes</h2><span class="small muted">De la solicitud del cliente a la derivación a Contabilidad · meta ${meta} ${U}</span></summary><div class="card-b">
+    return `<details class="card tp-card prod-exp" open><summary class="card-h"><h2>Tiempo de atención de las solicitudes</h2><span class="small muted">De la solicitud del cliente a la derivación a Contabilidad · meta ${meta} ${U}</span></summary><div class="card-b">
       <div class="kpis ops-kpis">${k(med == null ? '—' : med + ' <span class="small muted">' + U + '</span>', 'Mediana de atención (cerradas)')}${k(P.productividad == null ? '—' : P.productividad + '%', `Productividad · eficacia ${P.eficacia ?? '—'}% × eficiencia ${P.eficiencia ?? '—'}%`, P.productividad == null ? '' : 'txt-' + prodColor(P.productividad, mP))}${k(venc.length, `Pendientes que ya pasaron ${meta} ${U}`, venc.length ? 'txt-rojo' : '')}${k(medReg == null ? '—' : medReg + ' <span class="small muted">' + U + '</span>', 'Mediana de la solicitud al registro en el CRM')}</div>
       ${ges.length ? `<div class="ops-tw">${tbl('dv-ges-t', [{ h: 'Gestiona', s: r => r.g, f: r => `<span class="dv-ges"><span class="avatar sm">${initials(r.g)}</span>${esc(r.g)}</span>` }, { h: 'Devoluciones', cls: 'r', s: r => r.n, f: r => r.n },
         { h: 'Mediana (días)', cls: 'r', s: r => r.med ?? -1, f: r => r.med == null ? '<span class="muted">—</span>' : `<b>${r.med}</b>` }, { h: 'Eficacia', cls: 'r', s: r => r.p.eficacia ?? -1, f: r => prodBadge(r.p.eficacia, +S.params.metaEficacia) }, { h: 'Eficiencia', cls: 'r', s: r => r.p.eficiencia ?? -1, f: r => prodBadge(r.p.eficiencia, +S.params.metaEficiencia) },
@@ -3035,7 +3035,7 @@
   }
   const dvEstHtml = (x) => { const l = DV_LBL[x.estado] || x.estado || '';
     const sub = x.estado === 'Pendiente' ? `Autoriza: ${esc(x.autorizadaPor || DV_AUTORIZAN.join(' o '))}` : x.estado === 'Programada' ? `${x.fDerivada ? 'Derivada el ' + fdate(x.fDerivada) + ' · ' : ''}Cerrada` : '';
-    return `<span class="badge ${DV_EST[x.estado] || ''}">${x.estado === 'Programada' ? '✔ ' : x.estado === 'Pendiente' ? '⏳ ' : ''}${esc(l)}</span>${sub ? `<div class="small muted">${sub}</div>` : ''}`; };
+    return `<span class="badge ${DV_EST[x.estado] || ''}">${x.estado === 'Programada' ? '✔ ' : x.estado === 'Pendiente' ? '' : ''}${esc(l)}</span>${sub ? `<div class="small muted">${sub}</div>` : ''}`; };
   const DV_MOTIVOS = ['Desistimiento de separación', 'Desistimiento de compra', 'Pago en exceso', 'Resolución de contrato', 'Otro'];
   const DV_CUENTAS = ['de ahorros soles', 'de ahorros dólares', 'corriente soles', 'corriente dólares'];
   const DV_G = [
@@ -3094,7 +3094,7 @@
     if (falta.length) return toast('Falta completar: ' + falta.join(', '));
     if (hay(d.cci) && String(d.cci).replace(/\D/g, '').length !== 20 && !await ask('El CCI no tiene 20 dígitos. ¿Guardar igual?', 'Guardar igual')) return;
     const dup = DV.find(x => x.id !== d.id && x.estado !== 'Anulada' && ((hay(d.dni) && String(x.dni || '').trim() === String(d.dni).trim() && String(x.unidad || '').trim().toUpperCase() === String(d.unidad || '').trim().toUpperCase()) || (hay(d.cci) && String(x.cci || '').replace(/\D/g, '') === String(d.cci).replace(/\D/g, '') && Number(x.importe) === Number(String(d.importe).replace(/[^\d.]/g, '')))));
-    if (dup && d.nuevo && !await ask(`⚠️ Ya existe la devolución ${dup.codigo || ''} de ${dup.cliente || ''} (${dup.proyecto || ''} ${dup.unidad || ''}, ${DEVOLUCION.soles(dup.importe)}, ${DV_LBL[dup.estado] || dup.estado}). ¿Registrar otra de todas formas?`, 'Registrar otra')) return;
+    if (dup && d.nuevo && !await ask(`Ya existe la devolución ${dup.codigo || ''} de ${dup.cliente || ''} (${dup.proyecto || ''} ${dup.unidad || ''}, ${DEVOLUCION.soles(dup.importe)}, ${DV_LBL[dup.estado] || dup.estado}). ¿Registrar otra de todas formas?`, 'Registrar otra')) return;
     if (!d.solicitud && !await ask('No adjuntaste la captura del correo de solicitud, que es el sustento de la devolución. ¿Guardar sin ella?', 'Guardar sin captura')) return;
     ['importe', 'precioDpto', 'precioTotal', 'penalidad'].forEach(k => { if (hay(d[k])) d[k] = Number(String(d[k]).replace(/[^\d.]/g, '')) || 0; });
     if (!hay(d.gestor)) d.gestor = dvGestor(d) || S.actor || '';
@@ -3124,7 +3124,7 @@
   function dvZipModal(mes) {
     const meses = [...new Set(DV.map(dvMes))].sort().reverse(); if (!meses.length) return toast('Aún no hay devoluciones para respaldar');
     const sel = mes && meses.includes(mes) ? mes : meses[0];
-    modal({ title: '🗂️ Respaldo mensual de devoluciones', ok: '⬇️ Descargar ZIP', body: `<p class="small" style="margin-top:0">Se descarga en tu computadora un ZIP con una carpeta por devolución (formato PDF, captura del correo de solicitud y constancia de transferencia) y un Excel del mes. Guárdalo en tu carpeta de respaldos: no ocupa espacio en Drive.</p>
+    modal({ title: 'Respaldo mensual de devoluciones', ok: 'Descargar ZIP', body: `<p class="small" style="margin-top:0">Se descarga en tu computadora un ZIP con una carpeta por devolución (formato PDF, captura del correo de solicitud y constancia de transferencia) y un Excel del mes. Guárdalo en tu carpeta de respaldos: no ocupa espacio en Drive.</p>
       <div class="form"><label>Mes<select id="dv-zm">${meses.map(m => `<option value="${m}" ${m === sel ? 'selected' : ''}>${mesLargo(m)} · ${DV.filter(x => dvMes(x) === m).length} devoluciones</option>`).join('')}</select></label></div>`,
       onOk: (dlg) => { const m = dlg.querySelector('#dv-zm').value, lista = DV.filter(x => dvMes(x) === m).sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
         toast('Preparando el respaldo…');
@@ -3151,16 +3151,16 @@
         { h: 'Empresa', s: x => x.empresa, f: x => esc(x.empresa || '—') }, { h: 'Importe', cls: 'r', s: x => Number(x.importe) || 0, f: x => (DEVOLUCION.soles(x.importe) || '—') + (Number(x.penalidad) > 0 ? `<div class="small txt-rojo" title="${esc(x.motivoPenalidad || '')}">Penalidad ${DEVOLUCION.soles(x.penalidad)}</div>` : '') }, { h: 'Programada', s: x => x.fProgramada, f: x => fdate(x.fProgramada) || '—' },
         { h: 'Gestiona', s: x => dvGestor(x), f: x => dvGestor(x) ? `<span class="dv-ges"><span class="avatar sm">${initials(dvGestor(x))}</span>${esc(dvGestor(x))}</span>` : '<span class="badge amar plain">Sin asignar</span>' },
         { h: 'Tiempo', cls: 'r', s: x => { const t = dvTiempo(x); return t ? t.dias : -1; }, f: x => { const t = dvTiempo(x); if (!t) return '<span class="muted">—</span>'; return `<span class="nowrap">${semDot(t.sem)} <b>${t.dias}</b> / ${t.meta} d</span><div class="small muted">${t.enCurso ? 'en curso' : 'atendida'}</div>`; } },
-        { h: 'Estado', s: x => DV_ORD[x.estado], f: x => dvEstHtml(x) }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">📎 Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
-        { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="dv-pdf" data-id="${x.id}">📄 Formato</button>` }];
+        { h: 'Estado', s: x => DV_ORD[x.estado], f: x => dvEstHtml(x) }, { h: 'Sustento', f: x => x.solicitud ? '<span title="Captura del correo adjunta">Correo</span>' : '<span class="badge rojo plain">Sin captura</span>' },
+        { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="dv-pdf" data-id="${x.id}">Formato</button>` }];
       return `<div class="kpis ops-kpis">${kpi(pend.length, `Pendientes de autorización · ${sum(pend)}`, pend.length ? 'warn' : '')}${kpi(prog.length, `Programadas y derivadas a Contabilidad este mes · ${sum(prog)}`)}${kpi(pen.length, `Con penalidad al cliente · ${sumPen}`)}${kpi(sin.length, 'Sin captura del correo', sin.length ? 'bad' : '')}</div>
         ${dvTiemposHtml()}<div class="ops-tw full">${tbl(id + '-t', cols, L, DV.length ? 'No hay devoluciones con estos filtros.' : 'Aún no hay devoluciones. Toca “Nueva devolución” para registrar la primera.')}</div>`;
     };
     let hecho = ''; try { hecho = localStorage.getItem(DV_RESP_K) || ''; } catch (e) { }
     const aviso = isJefe() && t.getDate() <= 15 && hecho < prev && DV.some(x => dvMes(x) === prev)
-      ? `<div class="dv-aviso">📦 <span>Inicio de mes: descarga el <b>respaldo de devoluciones de ${mesLargo(prev)}</b> y guárdalo en tu computadora.</span><button class="btn sm pri" data-act="dv-zip" data-mes="${prev}">Descargar respaldo</button></div>` : '';
+      ? `<div class="dv-aviso"><span>Inicio de mes: descarga el <b>respaldo de devoluciones de ${mesLargo(prev)}</b> y guárdalo en tu computadora.</span><button class="btn sm pri" data-act="dv-zip" data-mes="${prev}">Descargar respaldo</button></div>` : '';
     const sel = (k, label, opts) => `<select data-dvf="${k}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Devoluciones', 'Devoluciones de venta: datos del cliente, cuenta de destino, sustento y formato.', `<a class="btn pri" href="#/devolucion/nueva">➕ Nueva devolución</a> <button class="btn" data-act="dv-excel">⬇️ Excel</button> <button class="btn" data-act="dv-zip">🗂️ Respaldo del mes</button>`)}
+    return `${pageHead('Devoluciones', 'Devoluciones de venta: datos del cliente, cuenta de destino, sustento y formato.', `<a class="btn pri" href="#/devolucion/nueva">➕ Nueva devolución</a> <button class="btn" data-act="dv-excel">Excel</button> <button class="btn" data-act="dv-zip">Respaldo del mes</button>`)}
       ${dvErr ? `<div class="ev-falta" style="margin-bottom:12px">${esc(dvErr)}</div>` : ''}${aviso}
       <div class="filters"><input type="search" placeholder="Buscar código, cliente, DNI, dpto…" value="${esc(F.q)}" data-dvf="q" autocomplete="off">
         ${sel('est', 'Todos los estados', Object.keys(DV_EST).map(e => [e, DV_LBL[e]]))}${sel('mes', 'Todos los meses', [...new Set(DV.map(dvMes))].sort().reverse().map(m => [m, mesLargo(m)]))}${sel('emp', 'Todas las empresas', [...new Set(DV.map(x => x.empresa).filter(Boolean))].sort().map(e => [e, e]))}${sel('ges', 'Todos los responsables', [...new Set(DV.map(dvGestor).filter(Boolean))].sort().map(e => [e, e]))}</div>
@@ -3179,19 +3179,19 @@
         : `<input ${base} value="${esc(v)}" ${t === 'n' ? 'inputmode="decimal"' : ''} ${t === 'list' ? `list="dvl-${k}"` : ''}>`;
       return `<label class="dv-f${w === 2 ? ' w2' : ''}" for="dv-${k}"><span>${l}</span>${inp}</label>`; };
     const capt = (k, titulo, ayuda) => `<div class="dv-cap"><b>${titulo}</b><span class="small muted">${ayuda}</span>${d[k]
-      ? `<button type="button" class="dv-th" data-act="dv-ver" data-k="${k}"><img src="${d[k]}" alt="${titulo}"></button><div class="dv-cb">${k === 'solicitud' ? '<button class="btn sm pri" data-act="dv-ocr">🔍 Leer datos de la captura</button>' : ''}<button class="btn sm" data-act="dv-quitar" data-k="${k}">Quitar</button></div>`
-      : `<label class="dv-drop">📎 Pega la captura con <b>Ctrl + V</b> o <u>elige un archivo</u><input type="file" accept="image/*" data-dvimg="${k}" style="display:none"></label>`}</div>`;
+      ? `<button type="button" class="dv-th" data-act="dv-ver" data-k="${k}"><img src="${d[k]}" alt="${titulo}"></button><div class="dv-cb">${k === 'solicitud' ? '<button class="btn sm pri" data-act="dv-ocr">Leer datos de la captura</button>' : ''}<button class="btn sm" data-act="dv-quitar" data-k="${k}">Quitar</button></div>`
+      : `<label class="dv-drop">Pega la captura con <b>Ctrl + V</b> o <u>elige un archivo</u><input type="file" accept="image/*" data-dvimg="${k}" style="display:none"></label>`}</div>`;
     const op = d.opId && getOp(d.opId);
     return `${pageHead(d.codigo || 'Nueva devolución', d.codigo ? `${esc(d.cliente || '')} · gestiona ${esc(dvGestor(d) || '—')} · registrada por ${esc(((d.creado || {}).por) || '—')}` : 'Registra la solicitud, adjunta el correo y genera el formato.',
-        `<a class="btn" href="#/devoluciones">‹ Volver</a> <button class="btn" data-act="dv-pdf">📄 Formato PDF</button>${!d.nuevo && isAdmin() ? ' <button class="btn" data-act="dv-del">Eliminar</button>' : ''} <button class="btn pri" data-act="dv-guardar">Guardar</button>`)}
+        `<a class="btn" href="#/devoluciones">‹ Volver</a> <button class="btn" data-act="dv-pdf">Formato PDF</button>${!d.nuevo && isAdmin() ? ' <button class="btn" data-act="dv-del">Eliminar</button>' : ''} <button class="btn pri" data-act="dv-guardar">Guardar</button>`)}
       <div class="dv-form">
       <div class="card"><div class="card-b"><h3 class="dv-h">1. Carga los datos del cliente</h3>
         <div class="dv-cargas"><label class="dv-f dv-bus" for="dv-buscar"><span>Buscar en el CRM (nombre, DNI o unidad)</span><input id="dv-buscar" list="dvl-ops" placeholder="Escribe y elige de la lista" autocomplete="off"></label>
-          <button class="btn" data-act="dv-evolta">📄 Cargar PDF de Evolta</button><input type="file" id="dv-evfile" accept="application/pdf" style="display:none"><span class="small muted">o llénalos a mano más abajo.</span></div>
+          <button class="btn" data-act="dv-evolta">Cargar PDF de Evolta</button><input type="file" id="dv-evfile" accept="application/pdf" style="display:none"><span class="small muted">o llénalos a mano más abajo.</span></div>
         ${op ? `<p class="small" style="margin:8px 0 0">Vinculada al cliente <a href="#/cliente/${op.id}"><b>${esc(op.cliente)}</b></a> (${op.id}).</p>` : ''}</div></div>
       <div class="card"><div class="card-b"><h3 class="dv-h">2. Sustento</h3><div class="dv-caps">${capt('solicitud', 'Correo de solicitud', 'Captura del correo que pide la devolución. Con “Leer datos” se llenan la cuenta, el CCI, el titular y el importe.')}${capt('voucher', 'Constancia de transferencia', 'Opcional: cuando ya se devolvió el dinero.')}</div></div></div>
       ${DV_G.map(([tt, fs], i) => `<div class="card"><div class="card-b"><h3 class="dv-h">${i + 3}. ${tt}</h3><div class="dv-grid">${fs.map(campo).join('')}</div></div></div>`).join('')}
-      <div class="dv-acc"><button class="btn" data-act="dv-pdf">📄 Formato PDF</button><button class="btn pri" data-act="dv-guardar">Guardar devolución</button></div></div>
+      <div class="dv-acc"><button class="btn" data-act="dv-pdf">Formato PDF</button><button class="btn pri" data-act="dv-guardar">Guardar devolución</button></div></div>
       <datalist id="dvl-ops">${S.ops.map(o => `<option value="${esc(o.id)} · ${esc(o.cliente || '')} · DNI ${esc(o.dni || '—')} · ${esc(o.proyecto || '')} ${esc(o.unidad || '')}"></option>`).join('')}</datalist>
       ${Object.entries(listas).map(([k, L]) => `<datalist id="dvl-${k}">${L.map(v => `<option value="${esc(v)}"></option>`).join('')}</datalist>`).join('')}`;
   }
@@ -3249,19 +3249,19 @@
   }
   function cgAplicar(v) {
     const c = cgDraft(), r = v.res, o = r.cliente, obs = r.ok ? 'DNI validado' : 'DNI validado con observaciones (revisa la lista)';
-    if (v.para === 'cli' && o) { cgAgregarOp(o); v.aviso = `✅ <span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)} (${esc([o.proyecto, o.unidad].filter(Boolean).join(' · '))}). Se completaron solos el proyecto, la unidad y el propietario${c.tipo === 'notaria' ? ', y la notaría, el abogado y el banco si estaban vacíos' : c.tipo === 'banco' ? ', y el banco y el ejecutivo si estaban vacíos' : ''}.</span><a class="btn sm" href="#/cliente/${encodeURIComponent(o.id)}">Ver ficha</a>`; return; }
+    if (v.para === 'cli' && o) { cgAgregarOp(o); v.aviso = `<span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)} (${esc([o.proyecto, o.unidad].filter(Boolean).join(' · '))}). Se completaron solos el proyecto, la unidad y el propietario${c.tipo === 'notaria' ? ', y la notaría, el abogado y el banco si estaban vacíos' : c.tipo === 'banco' ? ', y el banco y el ejecutivo si estaban vacíos' : ''}.</span><a class="btn sm" href="#/cliente/${encodeURIComponent(o.id)}">Ver ficha</a>`; return; }
     c.rec = { nombre: o ? o.cliente : r.nombre, dni: r.dni, rel: o ? 'Propietario' : (c.rec.rel || 'Tercero autorizado') };
-    v.aviso = o ? `✅ <span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)}. Se llenaron nombre y DNI de quien recibe.</span>`
-      : `ℹ️ <span><b>${obs} · no es cliente del CRM:</b> ${esc(r.nombre)} (DNI ${r.dni}) pasó a “Quién recibe” como ${esc(c.rec.rel.toLowerCase())}.</span>`;
+    v.aviso = o ? `<span><b>${obs} · es cliente del CRM:</b> ${esc(o.cliente)}. Se llenaron nombre y DNI de quien recibe.</span>`
+      : `ℹ<span><b>${obs} · no es cliente del CRM:</b> ${esc(r.nombre)} (DNI ${r.dni}) pasó a “Quién recibe” como ${esc(c.rec.rel.toLowerCase())}.</span>`;
   }
   function cgPanel(para) {
     const v = ui.cgVal; if (!v || v.para !== para) return '';
-    const slot = (k, t) => `<label class="cg-slot ${v[k] ? 'ok' : ''}"><b>${t}</b>${v[k + 'Url'] ? `<img src="${v[k + 'Url']}" alt="${t}">` : '<span class="cg-ph">📷</span>'}<span class="small muted">${v[k] ? '✓ Foto cargada · 🔄 Cambiar' : 'Tomar foto o elegir archivo'}</span><input type="file" accept="image/*" data-cgdni="${k}" hidden></label>`;
-    const ic = { ok: '✓', info: 'ℹ', aviso: '⚠' };
-    const res = v.cargando ? `<p class="small muted">⏳ ${esc(v.cargando)}</p>` : v.err ? `<p class="cg-err">⚠ ${esc(v.err)}</p>`
+    const slot = (k, t) => `<label class="cg-slot ${v[k] ? 'ok' : ''}"><b>${t}</b>${v[k + 'Url'] ? `<img src="${v[k + 'Url']}" alt="${t}">` : '<span class="cg-ph small muted">Sin foto</span>'}<span class="small muted">${v[k] ? '✓ Foto cargada · Cambiar' : 'Tomar foto o elegir archivo'}</span><input type="file" accept="image/*" data-cgdni="${k}" hidden></label>`;
+    const ic = { ok: '✓', info: 'ℹ', aviso: '' };
+    const res = v.cargando ? `<p class="small muted">${esc(v.cargando)}</p>` : v.err ? `<p class="cg-err">${esc(v.err)}</p>`
       : v.res ? `<ul class="cg-chk">${v.res.checks.map(c => `<li class="${c.nivel}"><b>${ic[c.nivel]}</b><span>${c.txt}</span></li>`).join('')}</ul>` : '<p class="small muted">Carga las dos fotos y se valida solo. Que se vean completas, de frente y sin reflejos.</p>';
     return `<div class="cg-val">${slot('frente', '1. Anverso (frente)')}${slot('reverso', '2. Reverso')}<div class="cg-res"><b>Validación del DNI</b>${res}
-      <div class="cg-vb"><button type="button" class="btn sm pri" data-act="cg-validar" ${v.reverso && !v.cargando ? '' : 'disabled'}>🪪 Validar</button><button type="button" class="btn sm" data-act="cg-val-cerrar">Cerrar</button></div></div></div>
+      <div class="cg-vb"><button type="button" class="btn sm pri" data-act="cg-validar" ${v.reverso && !v.cargando ? '' : 'disabled'}>Validar</button><button type="button" class="btn sm" data-act="cg-val-cerrar">Cerrar</button></div></div></div>
       ${v.aviso ? `<div class="cg-ban ${v.res && v.res.ok ? 'ok' : 'warn'}">${v.aviso}</div>` : ''}`;
   }
   function vCargos() {
@@ -3275,33 +3275,33 @@
     const hist = L.length ? `<div class="cg-tw"><table class="cg-t"><thead><tr><th>Emitido</th><th>Código</th><th>Para</th><th>Clientes</th><th>Estado</th></tr></thead><tbody>${L.map(x => `<tr>
         <td class="nowrap">${fechaHora(x.ts)}<div class="small muted">${esc(x.por || '')}</div></td><td class="nowrap"><b>${esc(x.codigo)}</b></td><td><span class="cg-tag">${esc(CARGO.DEST[x.tipo] || '')}</span> ${esc(x.dest || '')}</td>
         <td>${x.items.map(i => i.opId && getOp(i.opId) ? `<a href="#/cliente/${encodeURIComponent(i.opId)}">${esc(i.propietario)}</a>` : esc(i.propietario)).join(', ')}</td>
-        <td>${x.firmado ? `<span class="cg-st r">✅ Recibido ${fdate(x.firmado.fecha)}${x.firmado.nombre ? ' · ' + esc(x.firmado.nombre) : ''}</span>` : '<span class="cg-st p">⏳ Falta cargo firmado</span>'}<div class="cg-ac">${x.firmado ? (x.firmado.foto ? `<button class="btn sm" data-act="cg-foto" data-id="${x.id}">📎 Ver foto</button>` : '') : `<button class="btn sm pri" data-act="cg-firmado" data-id="${x.id}">✅ Registrar cargo firmado</button>`}<button class="btn sm" data-act="cg-reimprimir" data-id="${x.id}">🖨️ Reimprimir</button></div></td></tr>`).join('')}</tbody></table></div>`
+        <td>${x.firmado ? `<span class="cg-st r">Recibido ${fdate(x.firmado.fecha)}${x.firmado.nombre ? ' · ' + esc(x.firmado.nombre) : ''}</span>` : '<span class="cg-st p">Falta cargo firmado</span>'}<div class="cg-ac">${x.firmado ? (x.firmado.foto ? `<button class="btn sm" data-act="cg-foto" data-id="${x.id}">Ver foto</button>` : '') : `<button class="btn sm pri" data-act="cg-firmado" data-id="${x.id}">Registrar cargo firmado</button>`}<button class="btn sm" data-act="cg-reimprimir" data-id="${x.id}">Reimprimir</button></div></td></tr>`).join('')}</tbody></table></div>`
       : `<div class="empty">${cgErr ? esc(cgErr) : cgListo || !CL.enabled ? 'Aún no hay cargos emitidos.' : 'Cargando…'}</div>`;
     return `${pageHead('Actas y cargos', 'Emite en un minuto el cargo de entrega de documentos o el acta de entrega de la unidad, con los datos del CRM ya llenos.', '',
         'El <b>cargo</b> se imprime en una hoja A4: arriba el <b>original</b> (se queda con quien recibe) y abajo el <b>cargo</b> (regresa firmado y sellado al área). Cuando vuelva, toca <b>“Registrar cargo firmado”</b> y adjunta la foto. Con <b>“Validar DNI”</b> tomas foto a las dos caras del DNI: el CRM compara el frente con el reverso, revisa que esté vigente y, si es cliente, llena sus datos solo. Las fotos del DNI no se guardan. Cada cargo queda en la Actividad de cada cliente.')}
-      <div class="cg-tiles"><button type="button" class="cg-tile on"><i>📦</i><span><b>Cargo de entrega de documentos</b><small>Minutas, cláusulas y otros documentos a notaría, banco o propietario.</small></span></button>
-        <button type="button" class="cg-tile" data-act="acta-elegir"><i>🏠</i><span><b>Acta de entrega de la unidad</b><small>Eliges al cliente y se abre el generador de actas ya lleno.</small></span></button></div>
+      <div class="cg-tiles"><button type="button" class="cg-tile on"><i></i><span><b>Cargo de entrega de documentos</b><small>Minutas, cláusulas y otros documentos a notaría, banco o propietario.</small></span></button>
+        <button type="button" class="cg-tile" data-act="acta-elegir"><i></i><span><b>Acta de entrega de la unidad</b><small>Eliges al cliente y se abre el generador de actas ya lleno.</small></span></button></div>
       <div class="dv-form">
       <div class="card"><div class="card-b"><h3 class="dv-h">1. ¿A quién se entrega?</h3>
-        <div class="cg-pills">${pill('cg-tipo', 'notaria', '🏛️ Notaría', c.tipo === 'notaria')}${pill('cg-tipo', 'banco', '🏦 Banco', c.tipo === 'banco')}${pill('cg-tipo', 'propietario', '👤 Propietario o tercero autorizado', c.tipo === 'propietario')}</div>
+        <div class="cg-pills">${pill('cg-tipo', 'notaria', 'Notaría', c.tipo === 'notaria')}${pill('cg-tipo', 'banco', 'Banco', c.tipo === 'banco')}${pill('cg-tipo', 'propietario', 'Propietario o tercero autorizado', c.tipo === 'propietario')}</div>
         <div class="dv-grid">${U('dest', etq[0], etq[2])}${U('abogado', etq[1], etq[3])}${U('banco', 'Banco', 'banco')}</div>
         <p class="small muted cg-p">Se llenan solos con los datos del primer cliente que agregues. Puedes cambiarlos.</p></div></div>
       <div class="card"><div class="card-b"><h3 class="dv-h">2. Clientes del cargo</h3>
         <div class="cg-tools"><label class="dv-f cg-bus" for="cg-buscar"><span>Buscar cliente (nombre, DNI o unidad) y elegir de la lista</span><input id="cg-buscar" list="cgl-ops" placeholder="Escribe aquí…" autocomplete="off"></label>
-          <button type="button" class="btn pri" data-act="cg-val" data-k="cli">🪪 Validar DNI (anverso y reverso)</button><button type="button" class="btn" data-act="cg-item-add">➕ Agregar fila a mano</button></div>
+          <button type="button" class="btn pri" data-act="cg-val" data-k="cli">Validar DNI (anverso y reverso)</button><button type="button" class="btn" data-act="cg-item-add">➕ Agregar fila a mano</button></div>
         ${cgPanel('cli')}
         ${c.items.length ? `<div class="cg-tw"><table class="cg-t cg-it"><thead><tr><th>Ítem</th><th>Proyecto</th><th>Dpto / Est / Depo</th><th>Propietario</th><th></th></tr></thead><tbody>${items}</tbody></table></div>` : '<div class="empty" style="padding:14px">Aún no hay clientes en este cargo.</div>'}
         <p class="small muted cg-p">Puedes poner varios clientes en un mismo cargo (por ejemplo, todas las minutas que van hoy a la misma notaría). Con el DNI: si es cliente del CRM se completa solo; si no lo es, su nombre y DNI pasan a “Quién recibe”.</p></div></div>
       <div class="card"><div class="card-b"><h3 class="dv-h">3. Se hace constar la entrega de</h3>${docs}<div class="cg-chips"><span class="small muted">Agregar:</span>${chips}</div>
         <label class="dv-f" style="margin-top:10px"><span>Observación (opcional)</span><input data-cg="obs" value="${esc(c.obs)}" autocomplete="off"></label></div></div>
       <div class="card"><div class="card-b"><h3 class="dv-h">4. Quién recibe <span class="small muted" style="font-weight:400">(opcional: si lo dejas vacío, sale con líneas para llenar a mano)</span></h3>
-        <div class="cg-tools" style="margin-bottom:10px"><button type="button" class="btn pri" data-act="cg-val" data-k="rec">🪪 Validar DNI de quien recibe (anverso y reverso)</button>${c.items.length ? '<button type="button" class="btn" data-act="cg-mismo">👤 Es el mismo propietario</button>' : ''}</div>
+        <div class="cg-tools" style="margin-bottom:10px"><button type="button" class="btn pri" data-act="cg-val" data-k="rec">Validar DNI de quien recibe (anverso y reverso)</button>${c.items.length ? '<button type="button" class="btn" data-act="cg-mismo">Es el mismo propietario</button>' : ''}</div>
         ${cgPanel('rec')}
         <div class="dv-grid" style="margin-top:10px"><label class="dv-f"><span>Nombres y apellidos</span><input data-cgr="nombre" value="${esc(c.rec.nombre)}" autocomplete="off"></label><label class="dv-f"><span>DNI</span><input data-cgr="dni" value="${esc(c.rec.dni)}" inputmode="numeric" autocomplete="off"></label>
           <label class="dv-f"><span>Relación</span><select data-cgr="rel"><option value=""></option>${CG_REL.map(r => `<option ${c.rec.rel === r ? 'selected' : ''}>${r}</option>`).join('')}</select></label></div></div></div>
       <div class="card"><div class="card-b"><h3 class="dv-h">5. Impresión</h3><div class="cg-pills">${pill('cg-fmt', '2', '2 por hoja: original + cargo (ahorra papel)', c.formato !== 1)}${pill('cg-fmt', '1', '1 por hoja', c.formato === 1)}</div>
         <p class="cg-note">El <b>original</b> se queda con quien recibe; el <b>cargo</b> regresa firmado al área como constancia. Si hay más de 6 clientes o documentos, sale uno por hoja para que entre todo. Se guarda con “Guardar como PDF” en la ventana de impresión.</p></div></div>
-      <div class="dv-acc"><span class="small muted">Código: ${cgCodigo()}</span><button class="btn" data-act="cg-limpiar">Limpiar</button><button class="btn pri" data-act="cg-emitir">🖨️ Emitir cargo (PDF)</button></div>
+      <div class="dv-acc"><span class="small muted">Código: ${cgCodigo()}</span><button class="btn" data-act="cg-limpiar">Limpiar</button><button class="btn pri" data-act="cg-emitir">Emitir cargo (PDF)</button></div>
       <div class="card"><div class="card-h"><h2>Últimos cargos emitidos</h2><span class="small muted">${pend ? `<b>${pend}</b> por recibir firmado${pend > 1 ? 's' : ''}` : 'Al volver el cargo firmado, regístralo con la foto del cargo sellado.'}</span></div>${hist}</div>
       </div>
       <datalist id="cgl-ops">${S.ops.map(o => `<option value="${esc(o.id)} · ${esc(o.cliente || '')} · DNI ${esc(o.dni || '—')} · ${esc(o.proyecto || '')} ${esc(o.unidad || '')}"></option>`).join('')}</datalist>`;
@@ -3349,7 +3349,7 @@
     stopBuzon(); let primera = true;
     bzUnsub = CL.listenBuzon(isJefe() ? '' : me, (ch) => {
       ch.forEach(c => { const i = BZ.findIndex(x => x.id === c.id); if (c.type === 'removed') { if (i >= 0) BZ.splice(i, 1); return; }
-        if (i >= 0) BZ[i] = c.data; else { BZ.push(c.data); if (!primera && isJefe() && c.data.email !== me) toast('📬 Nuevo en el buzón: ' + (c.data.tipo === 'error' ? 'error reportado' : 'sugerencia') + ' de ' + c.data.autor); } });
+        if (i >= 0) BZ[i] = c.data; else { BZ.push(c.data); if (!primera && isJefe() && c.data.email !== me) toast('Nuevo en el buzón: ' + (c.data.tipo === 'error' ? 'error reportado' : 'sugerencia') + ' de ' + c.data.autor); } });
       primera = false; bzErr = ''; scheduleRender();
     }, (e) => { bzErr = e && e.code === 'permission-denied' ? 'El buzón aún no está activado en Firebase (falta actualizar las reglas).' : 'No se pudo cargar el buzón.'; scheduleRender(); });
   }
@@ -3378,9 +3378,9 @@
     const chip = (e) => `<span class="badge ${(BZ_EST[e] || BZ_EST.nuevo)[1]}">${(BZ_EST[e] || BZ_EST.nuevo)[0]}</span>`;
     const tipoBtn = (k, ic, l, d) => `<button type="button" class="bz-tipo ${bzForm.tipo === k ? 'on' : ''}" data-act="bz-tipo" data-val="${k}"><span class="bz-ic">${ic}</span><b>${l}</b><small>${d}</small></button>`;
     const card = (x) => `<div class="bz-it ${x.estado === 'nuevo' && jefe ? 'nuevo' : ''}">
-      <div class="bz-h"><span class="bz-ic">${x.tipo === 'error' ? '🐞' : '💡'}</span><b>${x.tipo === 'error' ? 'Error' : 'Sugerencia'}</b>${chip(x.estado)}<span class="small muted">${esc(x.autor || '')} · ${fh(x.ts)}${x.pantalla ? ' · pantalla: ' + esc(x.pantalla) : ''}</span></div>
+      <div class="bz-h"><span class="bz-ic">${x.tipo === 'error' ? '' : ''}</span><b>${x.tipo === 'error' ? 'Error' : 'Sugerencia'}</b>${chip(x.estado)}<span class="small muted">${esc(x.autor || '')} · ${fh(x.ts)}${x.pantalla ? ' · pantalla: ' + esc(x.pantalla) : ''}</span></div>
       <p class="bz-t">${esc(x.texto)}</p>
-      ${x.img ? `<button type="button" class="bz-th" data-act="bz-ver" data-id="${x.id}"><img src="${x.img}" alt="Captura enviada por ${esc(x.autor || '')}"><span>🔍 Ver captura</span></button>` : ''}
+      ${x.img ? `<button type="button" class="bz-th" data-act="bz-ver" data-id="${x.id}"><img src="${x.img}" alt="Captura enviada por ${esc(x.autor || '')}"><span>Ver captura</span></button>` : ''}
       ${jefe ? `<div class="bz-j"><label class="small muted">Estado <select data-bzest="${x.id}">${Object.entries(BZ_EST).map(([k, [l]]) => `<option value="${k}" ${x.estado === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <textarea id="bzr-${x.id}" rows="2" maxlength="1000" placeholder="Respuesta para ${esc((x.autor || '').split(' ')[0])} (opcional)">${esc(x.resp || '')}</textarea>
         <div class="bz-jb"><button class="btn sm pri" data-act="bz-resp" data-id="${x.id}">Guardar respuesta</button>${isAdmin() ? `<button class="btn sm" data-act="bz-del" data-id="${x.id}">Eliminar</button>` : ''}</div></div>`
@@ -3390,10 +3390,10 @@
     return `${pageHead('Buzón', jefe ? 'Errores y sugerencias del equipo. Evalúa, responde y marca su estado.' : 'Reporta un error o envía una idea. Le llega a la jefatura con tu nombre.')}
     ${bzErr ? `<div class="ev-falta" style="margin-bottom:12px">${esc(bzErr)}</div>` : ''}
     <div class="card"><div class="card-b bz-form">
-      <div class="bz-tipos">${tipoBtn('error', '🐞', 'Reportar un error', 'Algo no funciona o sale un mensaje extraño')}${tipoBtn('sugerencia', '💡', 'Enviar una sugerencia', 'Una idea para mejorar el CRM')}</div>
+      <div class="bz-tipos">${tipoBtn('error', '', 'Reportar un error', 'Algo no funciona o sale un mensaje extraño')}${tipoBtn('sugerencia', '', 'Enviar una sugerencia', 'Una idea para mejorar el CRM')}</div>
       <label class="bz-l" for="bz-texto">${bzForm.tipo === 'error' ? '¿Qué pasó? Cuéntanos qué estabas haciendo y qué mensaje salió.' : '¿Qué te gustaría mejorar o agregar?'}</label>
       <textarea id="bz-texto" rows="4" maxlength="2000" autocomplete="off" placeholder="${bzForm.tipo === 'error' ? 'Ej.: al guardar la fecha de firma en Contratos sale un error en rojo…' : 'Ej.: sería útil ver los vencimientos de esta semana en Mi día…'}">${esc(bzForm.texto)}</textarea>
-      <div class="bz-cap">${bzForm.img ? `<img src="${bzForm.img}" alt="Captura adjunta"><button type="button" class="btn sm" data-act="bz-quitar">Quitar captura</button>` : `📎 <b>Adjunta una captura</b> (opcional): pégala con <b>Ctrl + V</b> o <label class="bz-file">elige un archivo<input type="file" id="bz-file" accept="image/*" style="display:none"></label>`}</div>
+      <div class="bz-cap">${bzForm.img ? `<img src="${bzForm.img}" alt="Captura adjunta"><button type="button" class="btn sm" data-act="bz-quitar">Quitar captura</button>` : `<b>Adjunta una captura</b> (opcional): pégala con <b>Ctrl + V</b> o <label class="bz-file">elige un archivo<input type="file" id="bz-file" accept="image/*" style="display:none"></label>`}</div>
       <div class="bz-acc"><span class="small muted">Se envía con tu nombre, la fecha y la pantalla donde estabas.</span><button class="btn pri" data-act="bz-enviar">Enviar</button></div>
     </div></div>
     <h2 class="sec">${jefe ? 'Bandeja de la jefatura' : 'Mis envíos'}</h2>
@@ -3480,7 +3480,7 @@
     if (!ui.avisosVistos && (!CL.enabled || cloudState === 'ready')) { ui.avisosVistos = true; setTimeout(avisosDelDia, 1200); }
     $('.side').classList.remove('open');
   }
-  /* ---- 🔔 Avisos: los pendientes de cada persona (y de todo el equipo para la jefatura), en un solo lugar ---- */
+  /* ---- Avisos: los pendientes de cada persona (y de todo el equipo para la jefatura), en un solo lugar ---- */
   function avisosDe(n) {
     const out = [], add = (nivel, ic, txt, go, cnt) => { if (cnt === 0) return; out.push({ nivel, ic, txt, go, cnt: cnt || 1 }); };
     const u = user(n); if (!u) return out;
@@ -3489,40 +3489,40 @@
     const pl = (c, a, b) => `${c} ${c === 1 ? a : b}`;
     // expedientes urgentes y en riesgo
     const urg = mios.filter(r => r.d.alerta === 'Inmediato').length, rie = mios.filter(r => r.d.alerta === 'Por acumulación').length;
-    add('rojo', '🔴', `${pl(urg, 'expediente urgente', 'expedientes urgentes')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', urg);
-    add('amar', '🟡', `${pl(rie, 'expediente en riesgo', 'expedientes en riesgo')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', rie);
+    add('rojo', '', `${pl(urg, 'expediente urgente', 'expedientes urgentes')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', urg);
+    add('amar', '', `${pl(rie, 'expediente en riesgo', 'expedientes en riesgo')}${jefe ? ' en el área' : ''}`, jefe ? '#/clientes' : '#/mi', rie);
     // compromisos de seguimiento
     const ag = agenda(jefe ? null : n), venc = ag.filter(x => x.cat === 'vencido').length, hoy = ag.filter(x => x.cat === 'hoy').length;
-    add('rojo', '📅', `${pl(venc, 'compromiso vencido', 'compromisos vencidos')}`, '#/agenda', venc);
-    add('amar', '📅', `${pl(hoy, 'compromiso para hoy', 'compromisos para hoy')}`, '#/agenda', hoy);
+    add('rojo', '', `${pl(venc, 'compromiso vencido', 'compromisos vencidos')}`, '#/agenda', venc);
+    add('amar', '', `${pl(hoy, 'compromiso para hoy', 'compromisos para hoy')}`, '#/agenda', hoy);
     // datos obligatorios vacíos
     const Q = calidadDatos(), yo = Q.filas.find(f => f.name === n), falt = jefe ? Q.req - Q.ok : (yo ? yo.items.length : 0);
-    add('amar', '📝', `${pl(falt, 'dato obligatorio vacío', 'datos obligatorios vacíos')}${jefe ? ' en el equipo' : ''}`, jefe ? '#/usuarios' : '#/mi', falt);
+    add('amar', '', `${pl(falt, 'dato obligatorio vacío', 'datos obligatorios vacíos')}${jefe ? ' en el equipo' : ''}`, jefe ? '#/usuarios' : '#/mi', falt);
     // tiempos fuera de meta en lo que lleva la persona
     const quienTramo = { cob: 'cob_asistente', val: 'con_asistente', clc: 'con_asistente', rl: 'con_asistente' };
     const venTr = Object.keys(TRAMOS).flatMap(t => rows(true).map(r => r.o).filter(o => jefe || (quienTramo[t] && o[quienTramo[t]] === n)).map(o => ({ t, x: tramo(o, t) }))).filter(z => z.x.enCurso && z.x.sem === 'rojo').length;
-    add('rojo', '⏱️', `${pl(venTr, 'tramo abierto pasó', 'tramos abiertos pasaron')} su meta de tiempo`, '#/tiempos', venTr);
+    add('rojo', '', `${pl(venTr, 'tramo abierto pasó', 'tramos abiertos pasaron')} su meta de tiempo`, '#/tiempos', venTr);
     // cláusulas con fechas por confirmar
     const fc = S.ops.filter(o => o.con_clFechasOk && o.con_clFechasOk !== 'Sí' && (jefe || o.con_asistente === n)).length;
-    add('amar', '📝', `${pl(fc, 'cláusula con fechas', 'cláusulas con fechas')} por confirmar`, jefe ? '#/etapa/con' : '#/mi', fc);
+    add('amar', '', `${pl(fc, 'cláusula con fechas', 'cláusulas con fechas')} por confirmar`, jefe ? '#/etapa/con' : '#/mi', fc);
     // cartas de aprobación por vencer
     const cv = cartasPorVencer().filter(x => jefe || x.o.cob_asistente === n || x.o.con_asistente === n).length;
-    add('rojo', '📄', `${pl(cv, 'carta de aprobación vence', 'cartas de aprobación vencen')} en 15 días o menos`, '#/tiempos', cv);
+    add('rojo', '', `${pl(cv, 'carta de aprobación vence', 'cartas de aprobación vencen')} en 15 días o menos`, '#/tiempos', cv);
     // devoluciones
     const dv = (typeof DV !== 'undefined' ? DV : []).filter(x => (jefe || dvGestor(x) === n)).map(dvTiempo).filter(t => t && t.enCurso && t.sem === 'rojo').length;
-    add('rojo', '↩️', `${pl(dv, 'devolución pasó', 'devoluciones pasaron')} su meta de atención`, '#/devoluciones', dv);
+    add('rojo', '↩', `${pl(dv, 'devolución pasó', 'devoluciones pasaron')} su meta de atención`, '#/devoluciones', dv);
     // cierres
     const obs = S.ops.filter(o => Object.values(o.cierres || {}).some(c => c.estado === 'observado' && c.firma && c.firma.por === n)).length;
-    add('rojo', '↩️', `${pl(obs, 'cierre observado', 'cierres observados')} por jefatura`, '#/mi', obs);
+    add('rojo', '↩', `${pl(obs, 'cierre observado', 'cierres observados')} por jefatura`, '#/mi', obs);
     if (jefe) {
-      add('amar', '✅', `${pl(pendientesVB().length, 'cierre espera', 'cierres esperan')} tu V°B°`, '#/mi', pendientesVB().length);
+      add('amar', '', `${pl(pendientesVB().length, 'cierre espera', 'cierres esperan')} tu V°B°`, '#/mi', pendientesVB().length);
       const ing = S.ops.filter(o => pendienteIngreso(o) && o.aprob.estado === 'pendiente').length;
-      add('amar', '🆕', `${pl(ing, 'cliente nuevo espera', 'clientes nuevos esperan')} tu aprobación`, '#/mi', ing);
-      const cr = comprobantesRepetidos().length; add('rojo', '⚠️', `${pl(cr, 'comprobante de pago repetido', 'comprobantes de pago repetidos')}`, '#/mi', cr);
-      const sob = cargaDatos().filas.filter(f => f.estado === 'alta').length; add('amar', '⚖️', `${pl(sob, 'persona sobrecargada', 'personas sobrecargadas')}`, '#/carga', sob);
-      const bz = typeof bzNuevos === 'function' ? bzNuevos() : 0; add('info', '💬', `${pl(bz, 'mensaje nuevo', 'mensajes nuevos')} en el Buzón`, '#/buzon', bz);
-      const nu = noUbicados().length; add('amar', '📌', `${pl(nu, 'dato no ubicado espera', 'datos no ubicados esperan')} tu decisión`, '#/mi', nu);
-      if (respaldoPendiente()) add('rojo', '🛡️', 'Respaldo de la quincena pendiente', '#/resumen', 1);
+      add('amar', '', `${pl(ing, 'cliente nuevo espera', 'clientes nuevos esperan')} tu aprobación`, '#/mi', ing);
+      const cr = comprobantesRepetidos().length; add('rojo', '', `${pl(cr, 'comprobante de pago repetido', 'comprobantes de pago repetidos')}`, '#/mi', cr);
+      const sob = cargaDatos().filas.filter(f => f.estado === 'alta').length; add('amar', '', `${pl(sob, 'persona sobrecargada', 'personas sobrecargadas')}`, '#/carga', sob);
+      const bz = typeof bzNuevos === 'function' ? bzNuevos() : 0; add('info', '', `${pl(bz, 'mensaje nuevo', 'mensajes nuevos')} en el Buzón`, '#/buzon', bz);
+      const nu = noUbicados().length; add('amar', '', `${pl(nu, 'dato no ubicado espera', 'datos no ubicados esperan')} tu decisión`, '#/mi', nu);
+      if (respaldoPendiente()) add('rojo', '', 'Respaldo de la quincena pendiente', '#/resumen', 1);
     }
     const ord = { rojo: 0, amar: 1, info: 2 };
     return out.sort((a, b) => ord[a.nivel] - ord[b.nivel]);
@@ -3534,8 +3534,8 @@
   function avisosPanel() {
     const A = avisosDe(S.actor), fila = (a) => `<a class="av-row ${a.nivel}" href="${a.go}" data-close><span class="av-ic">${a.ic}</span><span>${esc(a.txt)}</span><span class="av-go">Ver ›</span></a>`;
     const eq = isJefe() ? avisosEquipo() : [];
-    modal({ title: '🔔 Tus avisos', ok: 'Entendido', cancel: '', body: `${A.length ? `<div class="av-list">${A.map(fila).join('')}</div>` : '<div class="empty">🎉 No tienes pendientes. ¡Todo al día!</div>'}
-      ${eq.length ? `<h3 style="margin:16px 0 6px">👥 Pendientes de tu equipo</h3><div class="av-list">${eq.map(x => `<div class="av-row ${x.rojos ? 'rojo' : x.total ? 'amar' : 'ok'}"><span class="av-ic">${x.rojos ? '🔴' : x.total ? '🟡' : '🟢'}</span><span><b>${esc(x.u.name)}</b> <span class="small muted">${x.total ? x.A.slice(0, 3).map(a => esc(a.txt)).join(' · ') : 'todo al día'}</span></span><span class="av-go">${x.total}</span></div>`).join('')}</div>` : ''}
+    modal({ title: 'Tus avisos', ok: 'Entendido', cancel: '', body: `${A.length ? `<div class="av-list">${A.map(fila).join('')}</div>` : '<div class="empty">No tienes pendientes. ¡Todo al día!</div>'}
+      ${eq.length ? `<h3 style="margin:16px 0 6px">Pendientes de tu equipo</h3><div class="av-list">${eq.map(x => `<div class="av-row ${x.rojos ? 'rojo' : x.total ? 'amar' : 'ok'}"><span class="av-ic">${x.rojos ? '' : x.total ? '' : ''}</span><span><b>${esc(x.u.name)}</b> <span class="small muted">${x.total ? x.A.slice(0, 3).map(a => esc(a.txt)).join(' · ') : 'todo al día'}</span></span><span class="av-go">${x.total}</span></div>`).join('')}</div>` : ''}
       <p class="small muted" style="margin:12px 0 0">Los avisos se actualizan solos. Toca <b>Ver ›</b> para ir a resolverlos.</p>` });
     try { localStorage.setItem('crm-mg-avisos-' + S.actor, iso(today())); } catch (e) { }
   }
@@ -3554,7 +3554,7 @@
     $('#actor').disabled = CL.enabled; $('#logoutBtn').hidden = !CL.enabled;
     const bell = $('#bellBtn'); if (bell) { let c = { n: 0 }; try { c = avisosCuenta(); } catch (e) { } bell.hidden = !S.actor; bell.querySelector('.cnt').textContent = c.n > 99 ? '99+' : c.n || ''; bell.querySelector('.cnt').hidden = !c.n; bell.classList.toggle('hot', !!c.rojo); bell.title = c.n ? `Tienes ${c.n} pendientes` : 'Sin pendientes'; }
     const nuevo = !CL.enabled && window.CRM_DATA && window.CRM_DATA.version && S.seedVersion !== window.CRM_DATA.version;
-    if (ui.previewReal) { $('#banner').innerHTML = `<div class="banner">👁️ Estás probando el CRM como <b>${esc(S.actor)}</b>. <button class="btn sm" data-act="perm-back">Volver a mi usuario</button></div>`; return; }
+    if (ui.previewReal) { $('#banner').innerHTML = `<div class="banner">Estás probando el CRM como <b>${esc(S.actor)}</b>. <button class="btn sm" data-act="perm-back">Volver a mi usuario</button></div>`; return; }
     $('#banner').innerHTML = nuevo ? `<div class="banner">El repositorio tiene datos más recientes que los de este navegador. <button class="btn sm" data-act="reset">Cargar datos del repositorio</button> <button class="btn sm" data-act="dismiss-banner">Mantener los míos</button></div>` : '';
   }
 
@@ -3729,7 +3729,7 @@
     const C = { ops: L('ops'), seguimientos: L('seguimientos'), log: L('log'), devoluciones: L('devoluciones'), cargos: L('cargos') };
     if (!C.ops.length) return toast('El archivo no tiene clientes: no parece un respaldo del CRM');
     const fecha = (j.respaldo && j.respaldo.generado) || j.generado || j.version || '';
-    modal({ title: '🛡️ Restaurar desde respaldo', ok: 'Restaurar', wide: true, body: `<p style="margin-top:0">Respaldo del <b>${fecha ? new Date(fecha).toLocaleString('es-PE') : 'fecha desconocida'}</b>:</p>
+    modal({ title: 'Restaurar desde respaldo', ok: 'Restaurar', wide: true, body: `<p style="margin-top:0">Respaldo del <b>${fecha ? new Date(fecha).toLocaleString('es-PE') : 'fecha desconocida'}</b>:</p>
       <ul class="small">${[['ops', 'clientes'], ['seguimientos', 'seguimientos'], ['log', 'cambios del historial'], ['devoluciones', 'devoluciones'], ['cargos', 'actas y cargos']].map(([k, l]) => `<li><label><input type="checkbox" data-rk="${k}" ${C[k].length && !(k === 'log' && CL.enabled) ? 'checked' : 'disabled'}> ${C[k].length} ${l}${k === 'log' && CL.enabled ? ' <span class="muted">(el historial está protegido: no se reescribe, queda guardado en el archivo)</span>' : ''}</label></li>`).join('')}</ul>
       <div class="ev-falta">Se vuelven a escribir los registros del respaldo: lo que falte o se haya dañado regresa como estaba ese día. <b>No se borra</b> lo registrado después del respaldo, pero si un registro cambió después, vuelve a su versión del respaldo.</div>`,
       onOk: (dlg) => { const sel = [...dlg.querySelectorAll('[data-rk]:checked')].map(x => x.dataset.rk); setTimeout(async () => {
@@ -3746,7 +3746,7 @@
         } catch (e) { toast('No se pudo restaurar: ' + (e.code || e.message)); }
       }, 50); } });
   }
-  const respaldoAviso = () => !isJefe() || !respaldoPendiente() ? '' : `<div class="dv-aviso">🛡️ <span><b>Respaldo de la quincena pendiente.</b> Descarga el respaldo completo del CRM (clientes, seguimientos, devoluciones y actas) y guárdalo en tu computadora o en Google Drive. ${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} por ${esc(S.params.ultimoRespaldo.por || '')}.` : 'Aún no se ha hecho ninguno.'}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="respaldo-completo">Descargar respaldo</button><button class="btn sm" data-act="respaldo-drive">Guardar en Drive</button></span></div>`;
+  const respaldoAviso = () => !isJefe() || !respaldoPendiente() ? '' : `<div class="dv-aviso"><span><b>Respaldo de la quincena pendiente.</b> Descarga el respaldo completo del CRM (clientes, seguimientos, devoluciones y actas) y guárdalo en tu computadora o en Google Drive. ${(S.params.ultimoRespaldo || {}).fecha ? `Último: ${fdate(S.params.ultimoRespaldo.fecha)} por ${esc(S.params.ultimoRespaldo.por || '')}.` : 'Aún no se ha hecho ninguno.'}</span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="respaldo-completo">Descargar respaldo</button><button class="btn sm" data-act="respaldo-drive">Guardar en Drive</button></span></div>`;
   const snapshot = () => ({ version: new Date().toISOString(), ops: S.ops, seguimientos: S.seguimientos, log: S.log, params: S.params, users: S.users, perms: S.perms, adminPin: S.adminPin });
   async function doImport(file) {
     try {
@@ -3901,7 +3901,7 @@
     if (a === 'user-del') return removeUser(el.dataset.u);
     if (a === 'user-edit') return editUser(el.dataset.u);
     if (a === 'user-add') return addUser();
-    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>📄 Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Empresa (razón social)<input id="n-empresa" list="dl-empresa" placeholder="Se completa sola según el proyecto"></label><span></span></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
+    if (a === 'newop') return modal({ title: 'Nuevo cliente', ok: 'Crear', body: `<p class="ev-falta" style="margin-top:0">¿Tienes el estado de cuenta de Evolta? <button type="button" class="btn sm" data-act="evolta" data-close>Cargar PDF</button> y los datos se llenan solos.</p><div class="form"><div class="row2"><label>Cliente<input id="n-cliente"></label><label>DNI<input id="n-dni"></label></div><div class="row2"><label>Proyecto<input id="n-proyecto" list="dl-proyecto" placeholder="Elige o escribe uno nuevo"></label><label>Unidad<input id="n-unidad"></label></div><div class="row2"><label>Empresa (razón social)<input id="n-empresa" list="dl-empresa" placeholder="Se completa sola según el proyecto"></label><span></span></div><div class="row2"><label>Vendedor<input id="n-vendedor" list="dl-vendedor" placeholder="Elige o escribe uno nuevo"></label><label>Banco<input id="n-banco" list="dl-banco" placeholder="Elige o escribe uno nuevo"></label></div><div class="row2"><label>Precio (S/)<input id="n-precio" type="number"></label><label>Monto a financiar (S/)<input id="n-monto" type="number"></label></div></div>`,
       onOk: (dlg) => { const v = (i) => dlg.querySelector('#n-' + i).value.trim(); if (!v('cliente')) { toast('Escribe el nombre del cliente'); return false; }
         // aviso de cliente duplicado: mismo DNI, mismo nombre o misma unidad del mismo proyecto
         const nrm = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -3916,7 +3916,7 @@
         if (dups.length && dlg._dupOk !== firma) {
           dlg._dupOk = firma; let box = dlg.querySelector('.dup-aviso');
           if (!box) { box = document.createElement('div'); box.className = 'ev-falta dup-aviso'; box.setAttribute('role', 'alert'); dlg.querySelector('.dlg-b').prepend(box); }
-          box.innerHTML = `<b>⚠️ Este cliente podría estar repetido:</b><ul style="margin:6px 0 6px 18px;padding:0">${dups.slice(0, 5).map(d => `<li><b>${esc(d.o.cliente)}</b> (${esc(d.o.id)})${d.o.dni ? ' · DNI ' + esc(d.o.dni) : ''}${d.o.proyecto ? ' · ' + esc(d.o.proyecto) : ''}${d.o.unidad ? ' – ' + esc(d.o.unidad) : ''} · <i>${d.r.join(', ')}</i> <button type="button" class="btn sm" data-act="goto" data-href="#/cliente/${esc(d.o.id)}" data-close>Ver</button></li>`).join('')}</ul>Si de verdad es otro cliente u otra compra, toca <b>Crear de todas formas</b>.`;
+          box.innerHTML = `<b>Este cliente podría estar repetido:</b><ul style="margin:6px 0 6px 18px;padding:0">${dups.slice(0, 5).map(d => `<li><b>${esc(d.o.cliente)}</b> (${esc(d.o.id)})${d.o.dni ? ' · DNI ' + esc(d.o.dni) : ''}${d.o.proyecto ? ' · ' + esc(d.o.proyecto) : ''}${d.o.unidad ? ' – ' + esc(d.o.unidad) : ''} · <i>${d.r.join(', ')}</i> <button type="button" class="btn sm" data-act="goto" data-href="#/cliente/${esc(d.o.id)}" data-close>Ver</button></li>`).join('')}</ul>Si de verdad es otro cliente u otra compra, toca <b>Crear de todas formas</b>.`;
           dlg.querySelector('[data-m=ok]').textContent = 'Crear de todas formas'; box.scrollIntoView({ block: 'nearest' }); return false;
         }
         const max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)); const op = { id: 'OP-' + String(max + 1).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), cliente: v('cliente') };
@@ -4020,7 +4020,7 @@
     if (resta <= Math.min(AVISO_MS, min * 30000)) { // aviso el último minuto (o la mitad del tiempo, si es muy corto)
       let av = $('#idle-aviso');
       if (!av) { av = document.createElement('div'); av.id = 'idle-aviso'; av.setAttribute('role', 'alertdialog'); document.body.appendChild(av); }
-      av.innerHTML = `<b>⏱️ ¿Sigues ahí?</b><span>Por seguridad, tu sesión se cerrará en <b>${Math.ceil(resta / 1000)} s</b> por inactividad.</span><button class="btn pri" type="button" data-act="seguir">Seguir trabajando</button>`;
+      av.innerHTML = `<b>¿Sigues ahí?</b><span>Por seguridad, tu sesión se cerrará en <b>${Math.ceil(resta / 1000)} s</b> por inactividad.</span><button class="btn pri" type="button" data-act="seguir">Seguir trabajando</button>`;
     }
   }
   ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => document.addEventListener(ev, () => marcaActividad(), { passive: true, capture: true }));
@@ -4032,7 +4032,7 @@
     let b = $('#net-aviso');
     if (navigator.onLine) { if (b) { b.classList.add('ok'); b.innerHTML = '✓ <b>Conexión recuperada.</b> Subiendo los cambios guardados…'; setTimeout(() => { if (navigator.onLine && b) b.remove(); }, 4000); } return; }
     if (!b) { b = document.createElement('div'); b.id = 'net-aviso'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
-    b.classList.remove('ok'); b.innerHTML = '📴 <b>Sin conexión a internet.</b> Puedes seguir trabajando: los cambios se guardan en esta computadora y se suben solos cuando vuelva la conexión. <span>Leer PDF de Evolta, capturas y enviar a Drive necesitan internet.</span>';
+    b.classList.remove('ok'); b.innerHTML = '<b>Sin conexión a internet.</b> Puedes seguir trabajando: los cambios se guardan en esta computadora y se suben solos cuando vuelva la conexión. <span>Leer PDF de Evolta, capturas y enviar a Drive necesitan internet.</span>';
   }
   window.addEventListener('online', () => { avisoRed(); revisarInactividad(); });
   window.addEventListener('offline', avisoRed);

@@ -149,8 +149,8 @@
 
   /* Pestañas de Evolta que se cotejan con una captura: en qué etapa van y cómo se reparten en columnas */
   const EV_TABS = {
-    nkb: { t: 'Notaría y Kardex/Banco', ic: '🏛️', stage: 'con', groups: NKB, cols: [[0], [1, 2], [3]], min: 4 },
-    cf: { t: 'Carta Fianza', ic: '✉️', stage: 'fin', groups: CF, cols: [[0]], min: 2, wide: true }
+    nkb: { t: 'Notaría y Kardex/Banco', ic: '', stage: 'con', groups: NKB, cols: [[0], [1, 2], [3]], min: 4 },
+    cf: { t: 'Carta Fianza', ic: '', stage: 'fin', groups: CF, cols: [[0]], min: 2, wide: true }
   };
   const NKB_KEYS = NKB.flatMap(g => g.f.map(f => f.k));
   Object.keys(EV_TABS).forEach(tk => { FIELDS[tk] = EV_TABS[tk].groups.flatMap(g => g.f).filter(f => !Object.values(FIELDS).flat().some(x => x.k === f.k)).map(f => ({ k: f.k, l: f.l, t: f.t || 'text' })); });
@@ -215,7 +215,7 @@
       case 'con': return [
         it('Asistente legal asignado', has('con_asistente'), { con_asistente: ME, con_fAsignacion: T }), it('Expediente validado', has('con_fValidacion'), { con_fValidacion: T }),
         it('Actualización de documentos definida', has('con_actDocs'), { con_actDocs: 'SI APLICA' }),
-        it('¿Requiere carta fianza o minuta de levantamiento? (Finanzas)', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '✅', 'No requiere: pasa directo a Formalización'], ['Aplica - En curso', '📄', 'Sí requiere: lo trabaja Finanzas']] }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
+        it('¿Requiere carta fianza o minuta de levantamiento? (Finanzas)', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '', 'No requiere: pasa directo a Formalización'], ['Aplica - En curso', '', 'Sí requiere: lo trabaja Finanzas']] }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
         it('Documentos enviados a notaría', op.con_docsNotaria === 'ENVIADOS', { con_docsNotaria: 'ENVIADOS' }), it('Minuta enviada a firmas', has('con_fInicioFirmas'), { con_fInicioFirmas: T }),
         it('Cheque en CRM Evolta', op.con_cheque === 'SI', { con_cheque: 'SI' }), it('Kardex completo', op.con_estadoKardex === 'Completo' || op.con_estadoKardex === 'No corresponde', { con_estadoKardex: 'Completo' }),
         it('Pegar la captura de Evolta (Notaría y Kardex/Banco): se llena y valida sola', nkbOk(op), null, null, 'nkb'),it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
@@ -223,7 +223,7 @@
       case 'fin':
         if (op.fin_tipo === 'No aplica') return [it('No requiere carta fianza ni minuta de levantamiento (lo definió Contratos)', true)];
         return [
-          it('Definir si aplica carta fianza / minuta', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '✅', 'No aplica'], ['Aplica - En curso', '📄', 'Sí aplica']] }),
+          it('Definir si aplica carta fianza / minuta', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '', 'No aplica'], ['Aplica - En curso', '', 'Sí aplica']] }),
           it('Responsable de valorados asignado', has('fin_responsable'), { fin_responsable: ME }),
           it('Solicitud registrada', has('fin_fSolicitud'), { fin_fSolicitud: T }),
           it(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? 'Minuta de levantamiento firmada' : 'Carta fianza emitida', d.done.fin, op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? { for_fFirmaMinuta: T } : { fin_fEmision: T }),
@@ -233,7 +233,7 @@
             it('Carta fianza al día (vigente o devuelta)', op.fin_cfEstado === 'Devuelta' || (op.fin_fVenc && op.fin_fVenc >= iso(today())))])];
       case 'for': return [
         it('Asistente de formalización asignado', has('for_asistente'), { for_asistente: ME }), it('Formalización iniciada', has('for_fInicio'), { for_fInicio: T }),
-        it('Definir si aplica levantamiento de hipoteca', has('for_aplicaLev'), null, { k: 'for_aplicaLev', opts: [['Sí', '📄', 'Sí aplica'], ['No', '✅', 'No aplica']] }),
+        it('Definir si aplica levantamiento de hipoteca', has('for_aplicaLev'), null, { k: 'for_aplicaLev', opts: [['Sí', '', 'Sí aplica'], ['No', '', 'No aplica']] }),
         ...(op.for_aplicaLev === 'Sí' ? [it('Minuta de levantamiento firmada', has('for_fFirmaMinuta'), { for_fFirmaMinuta: T })] : []),
         it('Ingreso a notaría', has('for_fIngresoNotaria'), { for_fIngresoNotaria: T }), it('Inscripción registral (SUNARP)', has('for_fInscripcion'), { for_fInscripcion: T }), it('Independización', has('for_fIndep'), { for_fIndep: T }),
         it('Copia simple SUNARP cargada en Evolta con su N° de título', has('for_titulo') && op.for_copiaEvolta === 'CARGADA')];
