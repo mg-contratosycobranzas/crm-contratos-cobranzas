@@ -94,7 +94,7 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
   const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = 'Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
@@ -248,7 +248,7 @@
     return `<div class="tw"><table><thead><tr>${cols.map((c, i) => `<th class="${c.cls || ''} ${c.s ? '' : 'ns'}" ${c.s ? `data-act="sort" data-t="${id}" data-i="${i}"` : ''}>${c.h}${st && st.i === i ? (st.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>${r.map(x => `<tr>${cols.map(c => `<td class="${c.cls || ''}" data-label="${esc(String(c.h).replace(/<[^>]+>/g, ''))}">${c.f(x)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   const uniq = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort();
-  const match = (r, q) => !q || [r.o.cliente, r.o.id, r.o.dni, r.o.proyecto, r.o.unidad, r.o.vendedor, r.d.responsable].join(' ').toLowerCase().includes(q.toLowerCase());
+  const match = (r, q) => { if (!q) return true; const ev = /idproforma=(\d+)/i.exec(q); if (ev) return String(r.o.idProforma || '') === ev[1]; return [r.o.cliente, r.o.id, r.o.dni, r.o.proyecto, r.o.unidad, r.o.vendedor, r.d.responsable, r.o.idProforma].join(' ').toLowerCase().includes(q.toLowerCase()); };
 
   /* ================= toast / modal ================= */
   let toastT;
@@ -998,6 +998,18 @@
       draw();
     };
     inp.click();
+  }
+  /* ---- Botón de Evolta hacia el CRM: Evolta abre #/evolta/<idProforma> y el CRM lleva a la ficha de ese cliente ---- */
+  const BOTON_EVOLTA = () => "javascript:(function(){var m=/idProforma=(\\d+)/i.exec(location.href);if(!m){alert('Abre la ficha de un cliente en Evolta y vuelve a tocar este boton.');return;}window.open('" + location.origin + location.pathname + "#/evolta/'+m[1],'_blank');})();";
+  function vEvoltaIr(id) {
+    const o = S.ops.find(x => String(x.idProforma || '') === String(id));
+    if (o) { setTimeout(() => { location.replace('#/cliente/' + o.id); }, 0); return '<div class="empty">Abriendo la ficha del cliente…</div>'; }
+    // al abrir desde Evolta el CRM puede estar todavía cargando los datos: se reintenta unos segundos
+    if ((ui.evTry || 0) < (S.ops.length ? 2 : 10)) { ui.evTry = (ui.evTry || 0) + 1; setTimeout(() => { if (route().view === 'evolta') render(true); }, 1200); return '<div class="empty">Buscando al cliente…</div>'; }
+    ui.evTry = 0;
+    return `${pageHead('Cliente de Evolta', `Proforma N° ${esc(id)}`, '', '')}<div class="card"><div class="card-b"><p><b>Este cliente todavía no está en el CRM.</b> No encontré ningún cliente con el número de proforma ${esc(id)}.</p>
+      <p class="small muted">Puede pasar por dos motivos: el cliente aún no entró en la última actualización de Evolta, o está en el CRM pero sin su número de proforma (se completa al usar <b>Actualizar desde Evolta</b>).</p>
+      <p>${can('a_import') ? '<a class="btn pri" href="#/operaciones">Ir a Resumen de operaciones</a> ' : ''}<a class="btn" href="#/clientes">Buscar en Clientes</a></p></div></div>`;
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
@@ -2979,6 +2991,8 @@
         ${step('', 'Fechas que cambian', 'Dentro de la cláusula escribe en <b>Observaciones</b> lo que falta confirmar. Cuando esté confirmado, marca <b>"Fechas confirmadas"</b>.')}
         ${step('', 'Si se va el internet', 'Sigue trabajando: arriba sale el aviso <b>"Sin conexión"</b> y todo se sube solo cuando vuelve. Solo leer PDF de Evolta y capturas necesita internet.')}</div></div>
     </div>
+    <div class="card" style="margin-top:12px"><div class="card-b">${step('', 'Botón de Evolta hacia el CRM', 'Estando en la ficha de un cliente en Evolta, un toque y se abre su ficha en este CRM. <b>Se instala una sola vez:</b> 1) muestra la barra de favoritos del navegador (Ctrl + Shift + B); 2) arrastra el botón de abajo hasta esa barra; 3) abre la ficha de un cliente en Evolta y toca el botón. Si el cliente aún no está en el CRM, te lo dice. También puedes <b>pegar el enlace de Evolta en el buscador de Clientes</b>.')}
+      <p style="margin:6px 0 0"><a class="btn pri" href="${esc(BOTON_EVOLTA())}" draggable="true" data-act="evbtn-info" title="Arrástralo a la barra de favoritos">CRM Cobranzas</a> <span class="small muted">← arrastra este botón a tu barra de favoritos</span></p></div></div>
     ${isJefe() ? `<div class="card" style="margin-top:12px"><div class="card-b">${step('', 'Respaldo (solo jefatura)', 'Los días <b>1 y 16</b> te aparece en Inicio el aviso del respaldo: toca <b>Descargar respaldo</b> y guarda los 2 archivos. Si algún día se pierde información: <b>Configurar → Restaurar desde respaldo</b>. Para la copia automática en Google Drive sigue la guía <b>respaldo-drive/LEEME.md</b> (te acompaña Claude).')}</div></div>` : ''}
     <p class="small muted">¿Dudas o algo no funciona? Escríbelo en <b>Buzón</b> (menú Más): llega a la jefatura.</p>
     <h2 class="sec">Manual paso a paso</h2>
@@ -3471,7 +3485,7 @@
     if (!S.ops.length && r.view !== 'config') html = `${pageHead('Bienvenida', 'Todavía no hay datos cargados.')}<div class="card"><div class="card-b"><p>Importa tu Excel <b>SEGUIMIENTOS.xlsx</b> (hoja BASE_MAESTRA) o un respaldo desde <a href="#/config">Configuración</a>.</p></div></div>`;
     else {
       try {
-        html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'labores' ? vLabores() : r.view === 'cobrar' ? vCobrar() : r.view === 'campos' ? vCampos() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
+        html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'labores' ? vLabores() : r.view === 'evolta' ? vEvoltaIr(r.arg) : r.view === 'cobrar' ? vCobrar() : r.view === 'campos' ? vCampos() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
           : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'cargos' ? vCargos() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
@@ -3838,6 +3852,7 @@
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'importar-excel') return importarExcel();
+    if (a === 'evbtn-info') { e.preventDefault(); return toast('No lo toques aquí: arrástralo a la barra de favoritos y úsalo desde Evolta'); }
     if (a === 'evolta-sync') return evoltaSync();
     if (a === 'tp-pdf') return tpInforme();
     if (a === 'tp-resumen') return tpResumen();
