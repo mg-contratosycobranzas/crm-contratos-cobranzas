@@ -53,7 +53,11 @@
       { k: 'vendedor', l: 'Vendedor', t: 'text', list: 'vendedor' }, { k: 'jefeVentas', l: 'Jefe de ventas', t: 'text', list: 'jefeVentas' },
       { k: 'banco', l: 'Banco / financiamiento', t: 'text', list: 'banco' }, { k: 'ejecBanco', l: 'Ejecutivo / asesor de banco', t: 'text', list: 'ejecBanco' }, { k: 'fRecibeBanco', l: 'Fecha en que el ejecutivo de banco recibe el caso', t: 'date' },
       { k: 'montoBanco', l: 'Monto a financiar (S/)', t: 'number' }, { k: 'bono', l: 'Bono MiVivienda (S/)', t: 'number' }, { k: 'precio', l: 'Precio de venta (S/)', t: 'number' },
-      { k: 'observaciones', l: 'Observaciones', t: 'textarea', w: 2 }
+      { k: 'observaciones', l: 'Observaciones', t: 'textarea', w: 2 },
+      { k: 'idProforma', l: 'N° de proforma (Evolta)', t: 'text' }, { k: 'evEstadoOC', l: 'Estado de la venta en Evolta', t: 'text' }, { k: 'evEstadoSF', l: 'Desembolso según Evolta', t: 'text' },
+      { k: 'evEntidad', l: 'Entidad de financiamiento (Evolta)', t: 'text' }, { k: 'evTipoFin', l: 'Tipo de financiamiento (Evolta)', t: 'text' },
+      { k: 'evDesembolsado', l: 'Financiamiento desembolsado según Evolta (S/)', t: 'number' }, { k: 'evBonoPagado', l: 'Bono pagado según Evolta (S/)', t: 'number' }, { k: 'bonoVerde', l: 'Bono verde (S/)', t: 'number' },
+      { k: 'evIniPendiente', l: 'Cuota inicial pendiente según Evolta (S/)', t: 'number' }, { k: 'evSync', l: 'Última actualización desde Evolta', t: 'date' }
     ],
     cob: [
       { k: 'cob_asistente', l: 'Asistente de cobranza', t: 'owner' },
