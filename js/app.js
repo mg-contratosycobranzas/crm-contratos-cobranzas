@@ -894,7 +894,7 @@
     return { ventas: [...por.values()], leidas, dolares };
   }
   function evoltaPlan(ventas, modo, crear) {
-    const dig = (x) => String(x || '').replace(/\D/g, ''), U = (x) => hn(x), res = { act: [], nuevos: [], noCrm: 0, alertas: [], igual: 0, ignoradas: 0 };
+    const dig = (x) => String(x || '').replace(/\D/g, ''), U = (x) => hn(x), res = { act: [], nuevos: [], sinCrear: 0, noCrm: 0, alertas: [], igual: 0, ignoradas: 0 };
     const porId = new Map(S.ops.filter(o => o.idProforma).map(o => [String(o.idProforma), o]));
     const usados = new Set();
     ventas.forEach(v => {
@@ -904,8 +904,10 @@
         const c2 = cand.filter(x => x.unidad && v.unidades.some(u => U(u) === U(x.unidad)));
         if (c2.length === 1) o = c2[0]; else if (c2.length === 0 && cand.length === 1) { o = cand[0]; aviso = `Se cruzó por DNI pero la unidad es distinta (CRM ${o.unidad || '—'} / Evolta ${v.unidades.join(', ') || '—'}): revisa que sea el mismo caso`; } else if (cand.length > 1 && c2.length !== 1) { res.alertas.push({ t: 'dni', nombre: v.cliente, txt: `Hay ${cand.length} clientes del CRM con ese DNI y no se pudo elegir uno: no se actualizó` }); return; } }
       if (!o) { res.noCrm++;
-        const banco = v.entidad && !/inmobiliaria/i.test(v.entidad), elegible = crear && v.estadoOC === 'Activo' && /minuta|pagando/i.test(v.estado) && banco && !v.dolar && (v.fin || 0) - (v.desemb || 0) > 1;
-        if (elegible) res.nuevos.push(v); return; }
+        const pend = Math.max(0, (v.fin || 0) - (v.desemb || 0)) + Math.max(0, (v.bono || 0) - (v.bonoPag || 0)) + (v.ini || 0);
+        // en seguimiento de cobranza = venta activa con minuta, con banco (no crédito directo de la inmobiliaria), en soles y con algo por cobrar
+        const elegible = v.estadoOC === 'Activo' && /minuta|pagando/i.test(v.estado) && v.entidad && !/inmobiliaria/i.test(v.entidad) && !v.dolar && pend > 1;
+        if (elegible && crear) res.nuevos.push(v); else if (elegible) res.sinCrear++; return; }
       usados.add(o.id);
       const cambios = [], put = (k, val, soloVacio) => { if (val == null || val === '') return; const ant = o[k], vacio = ant == null || ant === ''; if (soloVacio || modo === 'vacios') { if (!vacio) return; } if (typeof val === 'number' ? Number(ant) === val : String(ant) === String(val)) return; cambios.push({ k, antes: ant, despues: val }); };
       if (v.dolar) res.alertas.push({ t: 'dolar', o, nombre: o.cliente, txt: 'La venta está en dólares en Evolta: los montos no se cargaron' });
@@ -922,15 +924,31 @@
     });
     return res;
   }
+  function carteraPorAsistente() {
+    const tip = diasTipicos(), m = new Map();
+    rows().filter(r => r.d.etapa !== 'cerrado' && r.o.evEstadoOC !== 'Devuelto').forEach(r => { const pc = porCobrar({ o: r.o, esp: desembolsoEsperado(r.o, tip, r.d) }); if (pc.total <= 0) return;
+      const n = r.d.owner.cob || 'Sin asignar', a = m.get(n) || { casos: 0, total: 0 }; a.casos++; a.total += pc.total; m.set(n, a); });
+    return m;
+  }
   function evoltaAplicar(plan) {
-    const hoy = Date.now(); let max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)), nAct = 0, nNue = 0;
-    plan.act.forEach(({ o, cambios, soloFecha }) => { cambios.forEach(c => { const antes = o[c.k]; o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
+    const hoy = Date.now(), asis = {}, quien = (o) => { const d = D.get(o.id); return (d && d.owner.cob) || 'Sin asignar'; }, sumar = (o, k, n) => { if (!(n > 0)) return; const a = (asis[quien(o)] = asis[quien(o)] || { ini: 0, des: 0 }); a[k] += n; };
+    let max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)), nAct = 0, nNue = 0, totIni = 0, totDes = 0;
+    plan.act.forEach(({ o, cambios, soloFecha }) => { cambios.forEach(c => { const antes = o[c.k];
+        if (c.k === 'evIniPendiente' && antes != null && Number(antes) > Number(c.despues)) { sumar(o, 'ini', Number(antes) - Number(c.despues)); totIni += Number(antes) - Number(c.despues); }
+        if ((c.k === 'evDesembolsado' || c.k === 'evBonoPagado') && Number(c.despues) > Number(antes || 0) && o.evSync) { sumar(o, 'des', Number(c.despues) - Number(antes || 0)); totDes += Number(c.despues) - Number(antes || 0); }
+        o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
         if (c.k !== 'evSync') S.log.push({ ts: hoy, usuario: S.actor, opId: o.id, etapa: 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); if (!soloFecha) nAct++; });
-    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: v.fechaVenta || iso(today()), cliente: v.cliente, dni: v.doc, proyecto: v.proyecto, unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
+    const nuevos = [];
+    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), fechaVenta: v.fechaVenta || undefined, cliente: v.cliente, dni: v.doc, proyecto: v.proyecto, unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
         telefono: v.tel || undefined, email: v.email || undefined, precio: v.precio ?? undefined, montoBanco: v.fin ?? undefined, bono: v.bono ?? undefined, bonoVerde: v.bonoVerde ?? undefined, evDesembolsado: v.desemb ?? undefined, evBonoPagado: v.bonoPag ?? undefined, evIniPendiente: v.ini ?? undefined,
         cob_porRecibir: v.ini ?? undefined, idProforma: v.id, evEstadoOC: v.estadoOC, evEstadoSF: v.estadoSF, evEntidad: v.entidad, evTipoFin: v.tipoFin, evSync: iso(today()) };
-      Object.keys(op).forEach(k => op[k] === undefined && delete op[k]); marcaIngreso(op); S.ops.push(CRM.normalize(op)); S.log.push({ ts: hoy, usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); nNue++; });
+      Object.keys(op).forEach(k => op[k] === undefined && delete op[k]); marcaIngreso(op); S.ops.push(CRM.normalize(op)); nuevos.push(op.id); S.log.push({ ts: hoy, usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); nNue++; });
+    recompute();
+    if (nuevos.length) { const ids = new Set(nuevos); planAssign(ids).filter(p => p.stage === 'cob').forEach(p => { const o = getOp(p.op); if (o) { o[p.key] = p.who; (pendingOps[o.id] = pendingOps[o.id] || {})[p.key] = p.who; } }); }  // reparto de Cobranzas por proyecto y carga
     if (S.log.length > 6000) S.log.splice(0, S.log.length - 6000);
+    recompute(); const car = carteraPorAsistente(), carteraAsis = {}; let cartera = 0; car.forEach((a, n) => { carteraAsis[n] = Math.round(a.total); cartera += a.total; });
+    const hist = (S.params.evHist || []).filter(h => h.f !== iso(today())); hist.push({ f: iso(today()), por: S.actor || '', nuevos: nNue, ini: Math.round(totIni), des: Math.round(totDes), cartera: Math.round(cartera), asis: Object.fromEntries(Object.entries(asis).map(([n, a]) => [n, { ini: Math.round(a.ini), des: Math.round(a.des) }])), carteraAsis });
+    S.params.evHist = hist.slice(-30);
     S.params.ultimaEvolta = { fecha: iso(today()), por: S.actor || '', actualizados: nAct, nuevos: nNue };
     S.log.push({ ts: hoy, usuario: S.actor, opId: '—', etapa: 'gen', campo: 'sync_evolta', antes: '', despues: `${nAct} clientes actualizados, ${nNue} nuevos` });
     commit(); return { nAct, nNue };
@@ -942,18 +960,18 @@
       const files = [...inp.files]; inp.value = ''; if (!files.length) return;
       let L; try { L = evoltaLeer(await Promise.all(files.map(async f => ({ nombre: f.name, texto: new TextDecoder('utf-8').decode(await f.arrayBuffer()).replace(/^﻿/, '') })))); } catch (e) { console.error(e); return toast('No se pudo leer: ' + e.message); }
       if (!L.ventas.length) return toast('Los archivos no tienen ventas');
-      const O = { modo: 'evolta', crear: false, resp: true };
+      const O = { modo: 'evolta', crear: true, resp: true };
       const pintar = () => {
         const R = evoltaPlan(L.ventas, O.modo, O.crear), sig = R.act.filter(x => !x.soloFecha), fm = (k, v) => /^(precio|montoBanco|bono|bonoVerde|evDesembolsado|evBonoPagado|evIniPendiente)$/.test(k) ? money(v) : esc(String(v ?? ''));
         const hayBase = sig.some(x => x.cambios.some(y => y.k === 'evIniPendiente' && y.antes != null)), cobrado = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evIniPendiente'); return t + (c && c.antes != null && Number(c.antes) > Number(c.despues) ? Number(c.antes) - Number(c.despues) : 0); }, 0);
         const desemb = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evDesembolsado'); return t + (c && Number(c.despues) > Number(c.antes || 0) ? Number(c.despues) - Number(c.antes || 0) : 0); }, 0);
         const claves = ['precio', 'montoBanco', 'bono', 'bonoVerde', 'evDesembolsado', 'evBonoPagado', 'evIniPendiente'], etq = { evDesembolsado: 'Desembolsado', evBonoPagado: 'Bono pagado', evIniPendiente: 'Inicial pendiente' };
         const filas = sig.filter(x => x.cambios.some(c => claves.includes(c.k))).slice(0, 60), nuevoFin = R.nuevos.length;
-        return { R, nCamb: sig.length + R.nuevos.length, html: `<p class="small" style="margin-top:0">Se leyeron <b>${L.leidas}</b> filas (<b>${L.ventas.length}</b> ventas distintas). <b>${sig.length}</b> clientes del CRM se actualizan, <b>${R.igual}</b> ya estaban al día y <b>${R.noCrm}</b> ventas de Evolta no están en el CRM. Aún no se guardó nada.</p>
+        return { R, nCamb: sig.length + R.nuevos.length, html: `<p class="small" style="margin-top:0">Se leyeron <b>${L.leidas}</b> filas (<b>${L.ventas.length}</b> ventas distintas). <b>${sig.length}</b> clientes del CRM se actualizan, <b>${R.igual}</b> ya estaban al día y <b>${R.nuevos.length}</b> ventas nuevas se suman al seguimiento. Aún no se guardó nada.</p>
           <div class="carga-op"><b class="small">Qué se actualiza y qué no</b><span class="small">Se actualizan los <b>montos</b> (precio, financiamiento, bonos, desembolsado e inicial pendiente) y se completan datos vacíos (teléfono, correo, vendedor, banco). <b>No se toca el avance</b>: fechas, firmas, notaría, abogado, kardex, cláusulas, seguimientos ni etapas.</span>
             <label class="small"><input type="radio" name="e-modo" value="evolta" ${O.modo === 'evolta' ? 'checked' : ''}> <b>Evolta manda en los montos</b> (recomendado)</label>
             <label class="small"><input type="radio" name="e-modo" value="vacios" ${O.modo === 'vacios' ? 'checked' : ''}> Solo completar lo que está vacío</label>
-            <label class="small"><input type="checkbox" id="e-crear" ${O.crear ? 'checked' : ''}> Crear los clientes de banco que faltan en el CRM (${R.nuevos.length || (O.crear ? 0 : 'se calcula al marcar')}; solo ventas activas con financiamiento por desembolsar)</label>
+            <label class="small"><input type="checkbox" id="e-crear" ${O.crear ? 'checked' : ''}> <span><b>Sumar al CRM las ventas que están en seguimiento de cobranza</b> y aún no están (${O.crear ? R.nuevos.length : R.sinCrear}): ventas activas con minuta, con banco y con algo por cobrar. Se reparten entre los asistentes de Cobranzas por proyecto.</span></label>
             <label class="small"><input type="checkbox" id="e-resp" ${O.resp ? 'checked' : ''}> Descargar un respaldo antes de aplicar</label></div>
           <div class="cob-sum card"><span><b>${hayBase ? money(cobrado) : '—'}</b><small>${hayBase ? 'de inicial cobrada desde la última vez' : 'primera carga: desde la próxima verás cuánto se cobró'}</small></span><span><b>${money(desemb)}</b><small>de desembolsos nuevos</small></span><span class="${R.alertas.length ? 'txt-amar' : ''}"><b>${R.alertas.length}</b><small>alertas para revisar</small></span></div>
           ${R.alertas.length ? `<h3 style="margin:10px 0 4px">Para revisar</h3>${[['dev', 'ventas que Evolta marca como DEVUELTAS (ya no salen en "A quién cobrar")'], ['desemb', 'clientes que Evolta ya muestra desembolsados, pero en el CRM falta la fecha de desembolso (regístrala en Finanzas)'], ['ini', 'clientes con cuota inicial pendiente distinta entre CRM y Evolta (no se cambia el avance de Cobranzas: confírmalo y corrígelo en la ficha)'], ['unidad', 'clientes cruzados por DNI con otra unidad (revisa que sea el mismo caso)'], ['dni', 'DNI con varios clientes en el CRM (no se actualizaron)'], ['dolar', 'ventas en dólares (los montos no se cargaron)']].map(([t, tx]) => { const L = R.alertas.filter(a => a.t === t); return L.length ? `<details class="fe-mas" style="margin:4px 0"><summary><b>${L.length}</b> ${tx}</summary><ul class="small" style="margin:6px 0 0 18px">${L.slice(0, 30).map(a => `<li>${esc(a.nombre || '')}${t === 'ini' || t === 'unidad' ? ': ' + esc(a.txt) : ''}</li>`).join('')}${L.length > 30 ? `<li class="muted">y ${L.length - 30} más</li>` : ''}</ul></details>` : ''; }).join('')}` : ''}
@@ -1766,16 +1784,29 @@
       `<b>Sobrecargado</b> = tiene más de ${C.tope} casos por encima del promedio de su etapa; <b>Con capacidad</b> = tiene ${C.tope} o más por debajo (el margen es el "tope de carga" de Configurar). La barra muestra en rojo los casos urgentes, en amarillo los que se acumulan y en verde los que están bajo control; la línea es el promedio de la etapa.`)}
       <div class="kpis ops-kpis">${kpi(C.abiertos.length, 'Casos abiertos')}${kpi(sinAsig, 'Sin responsable asignado', sinAsig ? 'txt-amar' : '')}${kpi(altas.length, 'Personas sobrecargadas', altas.length ? 'txt-rojo' : '')}${kpi(C.ban.reduce((t, g) => t + g.s.curso, 0), 'Casos en el banco')}${kpi(C.not.reduce((t, g) => t + g.s.curso, 0), 'Casos en notaría')}</div>
       ${altas.length ? `<div class="ev-falta tp-avisos">💡 <b>Sugerencia:</b> ${altas.map(f => { const lib = C.filas.filter(x => x.etapa === f.etapa && x.estado === 'baja')[0]; return `${esc(f.name)} tiene ${f.n} casos (promedio ${f.prom.toFixed(0)})${lib ? `; ${esc(lib.name)} tiene capacidad (${lib.n})` : ''}`; }).join(' · ')}. Puedes repartir con <b>Tomar y repartir</b>.</div>` : ''}
+      ${(() => { const Dn = dineroAsistentes(); if (!Dn.filas.length) return '';
+        return `<div class="card tp-card"><div class="card-h"><h2>Dinero por cobrar y cobrado, por asistente</h2><span class="small muted">${Dn.hay ? `${Dn.nCargas} cargas de Evolta · última: ${fdate(Dn.ultFecha)}` : 'Aún no hay cargas de Evolta'}</span></div><div class="ops-tw">${tbl('cg-din', [
+          { h: 'Asistente de Cobranzas', f: x => esc(x.n), s: x => x.n }, { h: 'Casos con saldo', cls: 'r', f: x => x.casos, s: x => x.casos }, { h: 'Por cobrar', cls: 'r', f: x => `<b>${money(x.cartera)}</b>`, s: x => x.cartera },
+          { h: 'Cobrado en la última carga', cls: 'r', f: x => Dn.hay ? money(x.ultima) : '—', s: x => x.ultima }, { h: 'Cobrado en las últimas 4 cargas', cls: 'r', f: x => Dn.hay ? money(x.cuatro) : '—', s: x => x.cuatro },
+          { h: '% cobrado', cls: 'r', f: x => x.pct == null ? '—' : x.pct + ' %', s: x => x.pct ?? -1 }], Dn.filas)}</div>
+          <p class="small muted" style="margin:8px 16px 12px"><b>Cobrado</b> = cuota inicial que bajó + desembolsos y bonos nuevos que Evolta informó entre una carga y la siguiente, atribuidos al asistente de Cobranzas del cliente. <b>% cobrado</b> = cobrado ÷ (cobrado + por cobrar). Se llena con la actualización semanal desde Evolta.</p></div>`; })()}
       <div class="card tp-card"><div class="card-h"><h2>👥 Equipo interno</h2><span class="small muted">Responsable actual de cada caso abierto</span></div><div class="ops-tw">${tbl('cg-int', cols, C.filas, 'No hay casos abiertos.')}</div></div>
       <div class="card tp-card"><div class="card-h"><h2>🏦 Ejecutivos de banco</h2><span class="small muted">Casos que hoy están en el banco (aún no llegan a notaría)</span></div><div class="ops-tw">${tbl('cg-ban', colsExt(['Banco', 'Ejecutivo / asesor']), C.ban, 'No hay casos en el banco con fecha de recepción.')}</div></div>
       <div class="card tp-card"><div class="card-h"><h2>⚖️ Notarías y abogados</h2><span class="small muted">Casos asignados a un abogado que aún no firma el cliente</span></div><div class="ops-tw">${tbl('cg-not', colsExt(['Notaría', 'Abogado / doctor']), C.not, 'No hay casos en notaría con abogado asignado.')}</div></div>`;
+  }
+  // dinero por cobrar y cobrado, por asistente de Cobranzas (las cargas semanales de Evolta dejan el historial)
+  function dineroAsistentes() {
+    const car = carteraPorAsistente(), hist = S.params.evHist || [], ult = hist[hist.length - 1], ult4 = hist.slice(-4), names = new Set([...car.keys(), ...hist.flatMap(h => Object.keys(h.asis || {}))]);
+    const f = (h, n) => h && h.asis && h.asis[n] ? h.asis[n].ini + h.asis[n].des : 0;
+    return { hay: hist.length > 0, nCargas: hist.length, ultFecha: ult ? ult.f : '', filas: [...names].map(n => { const c = car.get(n) || { casos: 0, total: 0 }, cob4 = ult4.reduce((t, h) => t + f(h, n), 0);
+      return { n, casos: c.casos, cartera: Math.round(c.total), ultima: f(ult, n), cuatro: cob4, pct: cob4 + c.total > 0 ? Math.round(cob4 * 100 / (cob4 + c.total)) : null }; }).sort((a, b) => b.cartera - a.cartera) };
   }
   function cargaExcel() {
     const C = cargaDatos(), wb = XLSX.utils.book_new();
     const add = (n, d) => { const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }]); ws['!cols'] = Object.keys(d[0] || { x: 1 }).map(h => ({ wch: Math.max(12, h.length + 4) })); XLSX.utils.book_append_sheet(wb, ws, n); };
     add('Equipo interno', C.filas.map(f => ({ Persona: f.name, Etapa: STAGE[f.etapa] ? STAGE[f.etapa].name : f.etapa, 'Casos a cargo': f.n, Urgentes: f.inm, 'Por acumulación': f.acu, 'Promedio de la etapa': Math.round(f.prom * 10) / 10, Estado: { alta: 'Sobrecargado', baja: 'Con capacidad', ok: 'Normal', sin: 'Por asignar' }[f.estado], 'Eficacia % (validación)': f.tiempo ? f.tiempo.eficacia ?? '' : '', 'Eficiencia % (validación)': f.tiempo ? f.tiempo.eficiencia ?? '' : '', 'Productividad % (validación)': f.tiempo ? f.tiempo.productividad ?? '' : '', 'Mediana validación': f.tiempo ? f.tiempo.mediana ?? '' : '' })));
     const ex = (L, h) => L.map(g => ({ ...Object.fromEntries(h.map((x, i) => [x, g.ks[i] || '(sin registrar)'])), 'Casos abiertos': g.s.curso, Vencidos: g.s.vencidos, 'Por vencer': g.s.porVencer, 'El más antiguo (días)': g.s.viejo }));
-    add('Ejecutivos de banco', ex(C.ban, ['Banco', 'Ejecutivo'])); add('Notarías y abogados', ex(C.not, ['Notaría', 'Abogado']));
+    add('Dinero por asistente', dineroAsistentes().filas.map(x => ({ 'Asistente de Cobranzas': x.n, 'Casos con saldo': x.casos, 'Por cobrar (S/)': x.cartera, 'Cobrado última carga (S/)': x.ultima, 'Cobrado últimas 4 cargas (S/)': x.cuatro, '% cobrado': x.pct == null ? '' : x.pct }))); add('Ejecutivos de banco', ex(C.ban, ['Banco', 'Ejecutivo'])); add('Notarías y abogados', ex(C.not, ['Notaría', 'Abogado']));
     add('Detalle', C.abiertos.map(r => ({ ID: r.o.id, Cliente: r.o.cliente, Proyecto: r.o.proyecto, Etapa: STAGE[r.d.etapa] ? STAGE[r.d.etapa].name : r.d.etapa, Responsable: r.d.responsable, Alerta: r.d.alerta, Banco: r.o.banco, 'Ejecutivo de banco': r.o.ejecBanco, Notaría: r.o.con_notaria, Abogado: r.o.con_abogado })));
     XLSX.writeFile(wb, `Carga_del_equipo_${iso(today())}.xlsx`); toast('Excel generado');
   }
