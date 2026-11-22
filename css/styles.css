@@ -679,3 +679,22 @@ details.cob-g{margin-bottom:10px}details.cob-g>summary{cursor:pointer;padding:8p
 @media (max-width:760px){.cob-row{grid-template-columns:1fr auto;grid-template-areas:'c m' 'd k' 'a a'}.cob-c{grid-area:c}.cob-m{grid-area:m}.cob-d{grid-area:d}.cob-k{grid-area:k;text-align:right}.cob-a{grid-area:a;justify-content:flex-start}}
 .cob-ult{font-size:13px;color:var(--muted)}.cob-ult.alerta{color:var(--rojo);font-weight:600}
 .carga-op{display:grid;gap:6px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0 12px}.carga-op label{display:flex;gap:6px;align-items:flex-start}.carga-av{color:var(--amar);margin-top:2px}
+
+/* rediseño: menos botones a la vista */
+.nav-g{margin-top:2px}
+.nav-g>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:12px 10px 6px;font-weight:600;user-select:none}
+.nav-g>summary::-webkit-details-marker{display:none}
+.nav-g>summary::after{content:'';margin-left:auto;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.nav-g[open]>summary::after{transform:rotate(45deg)}
+.nav-g>summary .cnt{margin-left:4px;text-transform:none;letter-spacing:0}
+.top-more,.mas-acc{position:relative;display:inline-block}
+.top-more>summary,.mas-acc>summary{list-style:none;cursor:pointer}
+.top-more>summary::-webkit-details-marker,.mas-acc>summary::-webkit-details-marker{display:none}
+.top-more .menu,.mas-acc .menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:6px;display:grid;gap:2px;min-width:210px}
+.top-more .menu .btn,.mas-acc .menu .btn{justify-content:flex-start;text-align:left;border:0;background:transparent;color:var(--ink);width:100%;white-space:nowrap;gap:8px}
+.top-more .menu .btn:hover,.mas-acc .menu .btn:hover{background:var(--surface2)}
+.top-more .menu .btn.danger,.mas-acc .menu .btn.danger{color:var(--rojo)}
+.top-more .menu .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+.page-acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.qs-more{margin:8px 0}.qs-more>summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 2px}.qs-more .qs{margin-top:8px}
+.apps{display:flex;gap:12px;flex-wrap:wrap}

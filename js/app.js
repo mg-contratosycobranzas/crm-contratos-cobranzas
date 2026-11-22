@@ -428,7 +428,14 @@
   function clientPicker(act, title) { ui.pickAct = act || 'pick-client'; modal({ title: title || '¿De qué cliente?', ok: 'Cerrar', cancel: '', body: '<input type="search" id="pk-q" placeholder="Escribe el nombre, DNI o proyecto…" autocomplete="off"><div id="pk-list" class="pklist"></div>' }); $('#dlg').querySelector('[data-m=ok]').hidden = true; pickList(''); setTimeout(() => { const i = $('#pk-q'); i && i.focus(); }, 60); }
 
   /* ================= vistas ================= */
-  function pageHead(title, sub, extra, tipText) { return `<div class="page-h"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div>${extra || ''}</div></div>${tipText ? hint(tipText) : ''}`; }
+  function pageHead(title, sub, extra, tipText) {
+    let acc = extra || ''; const bs = acc.match(/<button[\s\S]*?<\/button>/g) || [];
+    if (bs.length >= 3 && acc.replace(/<button[\s\S]*?<\/button>/g, '').trim() === '') { // más de 2 botones: se ven los principales y el resto va en un menú
+      const pri = bs.filter(b => /class="[^"]*\bpri\b/.test(b)), vis = (pri.length ? pri : [bs[0]]).slice(0, 2), resto = bs.filter(b => !vis.includes(b));
+      acc = vis.join(' ') + (resto.length ? ` <details class="mas-acc"><summary class="btn">Más acciones</summary><div class="menu">${resto.join('')}</div></details>` : '');
+    }
+    return `<div class="page-h"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</div><div class="page-acc">${acc}</div></div>${tipText ? hint(tipText) : ''}`;
+  }
 
   /* ---- Resumen / torre de control ---- */
   function userStats(u) {
@@ -533,8 +540,7 @@
   function homeApps(nCrit, nVenc) {
     const t = (href, ic, l, n, cls) => `<a class="tile ${cls || ''}" href="${href}"><i>${ic}</i><span>${l}</span>${n ? `<em>${n}</em>` : ''}</a>`;
     const bt = (act, ic, l) => `<button class="tile" data-act="${act}"><i>${ic}</i><span>${l}</span></button>`;
-    return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/clientes', '🗂️', 'Clientes'), primeraEtapa() && t('#/etapa/' + primeraEtapa(), '🧭', 'Etapas'), can('v_agenda') && t('#/agenda', '📅', 'Agenda', nVenc || '', 'hot'),
-      can('v_equipo') && t('#/usuarios', '👥', 'Equipo'), can('v_actividad') && t('#/actividad', '📈', 'Actividad'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente'), can('a_export') && bt('export-xlsx', '⬇️', 'Excel'), t('#/buzon', '📬', 'Buzón', isJefe() ? bzNuevos() || '' : '', 'hot'), t('#/ayuda', '💡', 'Ayuda')].filter(Boolean).join('');
+    return [can('v_mi') && t('#/mi', '☀️', 'Mi día', nCrit || '', 'hot'), can('v_clientes') && t('#/cobrar', '🎯', 'A quién cobrar'), can('a_newop') && bt('newop', '➕', 'Nuevo cliente')].filter(Boolean).join('');
   }
   function insights(all, abiertos, venc, Pm) {
     const out = [], sinA = abiertos.filter(r => r.d.responsable === 'Sin asignar').length;
@@ -1934,18 +1940,15 @@
     const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
     const tip = diasTipicos();
     return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
-      <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
-        ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
+      ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
           // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
           const proys = uniq(o => o.proyecto).filter(p => !F.emp || S.ops.some(o => o.proyecto === p && (empresaDe(o) || ep[o.proyecto]) === F.emp));
-          return sel('emp', 'Todas las empresas', emps.map(e => [e, e])) + sel('proy', 'Todos los proyectos', proys.map(p => [p, p])); })()}
-        ${sel('mesIng', 'Mes de ingreso: todos', meses(o => mesDe(fechaBase(o))))}
-        ${sel('mes', 'Se recibe en: todos', meses(o => mesDe(desembolsoEsperado(o, tip).fecha)))}
-        ${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}
-        ${sel('etapa', 'Todas las etapas', [...STAGES.map(s => [s.key, s.name]), ['cerrado', 'Cerrado']])}</div>
-      <div class="filters">${sel('vend', 'Todos los vendedores', uniq(o => o.vendedor).map(p => [p, p]))}${sel('jefe', 'Todos los jefes de ventas', uniq(o => o.jefeVentas).map(p => [p, p]))}${sel('ejec', 'Todos los ejecutivos de banco', uniq(o => o.ejecBanco).map(p => [p, p]))}${sel('abog', 'Todos los abogados', uniq(o => o.con_abogado).map(p => [p, p]))}${sel('firma', 'Firma del cliente: todas', [['pend', 'Pendiente de firma'], ['ok', 'Ya firmó']])}
-        <button class="btn sm" data-act="ops-limpiar" title="Quitar todos los filtros">✕ Limpiar filtros</button></div>
-      <div class="filters ops-opts"><span class="small muted">Vista</span>${sel('vista', '', [['simple', 'Simple (lo principal)'], ['completa', 'Completa (todas las columnas)']], true)}<span class="small muted">Mostrar</span>${sel('size', '', [['20', '20 por página'], ['30', '30 por página'], ['50', '50 por página']], true)}</div>
+          const extra = ['emp', 'mesIng', 'etapa', 'vend', 'jefe', 'ejec', 'abog', 'firma'].filter(k => F[k]).length;
+          return `<div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">${sel('proy', 'Todos los proyectos', proys.map(p => [p, p]))}${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}${sel('mes', 'Se recibe en: todos', meses(o => mesDe(desembolsoEsperado(o, tip).fecha)))}</div>
+      <details class="fe-mas" style="margin-bottom:10px" ${extra ? 'open' : ''}><summary>Más filtros y opciones ${extra ? `<span class="badge amar plain">${extra} activo${extra > 1 ? 's' : ''}</span>` : ''}</summary>
+        <div class="filters" style="margin-top:8px">${sel('emp', 'Todas las empresas', emps.map(e => [e, e]))}${sel('mesIng', 'Mes de ingreso: todos', meses(o => mesDe(fechaBase(o))))}${sel('etapa', 'Todas las etapas', [...STAGES.map(st => [st.key, st.name]), ['cerrado', 'Cerrado']])}${sel('vend', 'Todos los vendedores', uniq(o => o.vendedor).map(p => [p, p]))}${sel('jefe', 'Todos los jefes de ventas', uniq(o => o.jefeVentas).map(p => [p, p]))}${sel('ejec', 'Todos los ejecutivos de banco', uniq(o => o.ejecBanco).map(p => [p, p]))}${sel('abog', 'Todos los abogados', uniq(o => o.con_abogado).map(p => [p, p]))}${sel('firma', 'Firma del cliente: todas', [['pend', 'Pendiente de firma'], ['ok', 'Ya firmó']])}
+          <button class="btn sm" data-act="ops-limpiar" title="Quitar todos los filtros">Limpiar filtros</button></div>
+        <div class="filters ops-opts"><span class="small muted">Vista</span>${sel('vista', '', [['simple', 'Simple (lo principal)'], ['completa', 'Completa (todas las columnas)']], true)}<span class="small muted">Mostrar</span>${sel('size', '', [['20', '20 por página'], ['30', '30 por página'], ['50', '50 por página']], true)}</div></details>`; })()}
       ${region(id, build)}`;
   }
   // fecha al mediodía: así el huso horario de Perú no la corre al día anterior al pasar a Excel
@@ -2662,7 +2665,7 @@
   function vCliente(id) {
     const o = getOp(id); if (!o) return `<div class="empty">Cliente no encontrado. <a href="#/clientes">Volver</a></div>`;
     const d = D.get(id);
-    return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><button class="btn sm danger" data-act="op-del" data-op="${o.id}">🗑️ Eliminar cliente</button></div>
+    return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><details class="mas-acc"><summary class="btn sm" aria-label="Más acciones" title="Más acciones">⋯</summary><div class="menu"><button class="btn danger" data-act="op-del" data-op="${o.id}">Eliminar cliente</button></div></details></div>
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div id="f-ciclo">${cicloHtml(o)}</div>
     <div class="ficha-grid"><div>
@@ -2671,7 +2674,8 @@
       <details class="sc" style="--sc:var(--c-jef)" ${o.evolta ? 'open' : ''}><summary><b>Datos generales y comerciales</b><span class="grow"></span><span class="muted small">editar ▾</span></summary><div class="sc-body" style="grid-template-columns:1fr">${camposFicha(o, 'gen', d, true)}</div></details>
     </div>
     <div class="card" style="position:sticky;top:70px"><div class="card-h"><h2>Seguimiento del cliente</h2></div><div class="card-b">
-      <div class="qs">${['Llamada', 'WhatsApp', 'Correo', 'Reunión', 'Trámite', 'Nota'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div>
+      <div class="qs">${['Llamada', 'WhatsApp', 'Nota'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div>
+      <details class="qs-more"><summary>Más tipos de gestión</summary><div class="qs">${['Correo', 'Reunión', 'Trámite'].map(t => `<button type="button" class="qb" data-act="quickseg" data-op="${o.id}" data-t="${t}"><i>${TIPO_IC[t]}</i><span>${t}</span></button>`).join('')}</div></details>
       <details class="more"><summary>✍️ Escribir con más detalle</summary><form class="form" id="seg-form" data-op="${o.id}">
         <div class="row2"><label>Tipo<select name="tipo">${['Llamada', 'WhatsApp', 'Correo', 'Reunión', 'Trámite', 'Nota'].map(t => `<option>${t}</option>`).join('')}</select></label>
         <label>Etapa<select name="etapa">${STAGES.map(s => `<option value="${s.key}" ${d.etapa === s.key ? 'selected' : ''}>${s.name}</option>`).join('')}</select></label></div>
@@ -3415,11 +3419,28 @@
     const cfAlerta = S.ops.filter(o => esCarta(o) && ['venc', 'pronto'].includes(cfEstado(o).k)).length; // cartas vencidas o por vencer
     const insAlerta = all.filter(r => enFormalizacion(r) && INS_GRUPO[insEstado(r.o)] === 'obs').length; // inscripciones observadas o sin respuesta
     const I = { ins: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13l2 2 4-4"/></svg>', cf: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>', ops: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>', help: IC.help, act: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>', home: '<svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>', sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>', users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 5a3.5 3.5 0 0 1 0 7M22 21c0-3-2-5-5-5.5"/></svg>', cli: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>', cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>', cfg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>' };
-    const seg = [can('v_clientes') && item('#/cobrar', '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>A quién cobrar', '', r.view === 'cobrar'), can('v_clientes') && item('#/clientes', I.cli + 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente'), can('v_ops') && item('#/operaciones', I.ops + 'Resumen de operaciones', '', r.view === 'operaciones'), can('v_tiempos') && item('#/tiempos', '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Tiempos y productividad', '', r.view === 'tiempos'), can('v_carga') && item('#/carga', '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Carga del equipo', '', r.view === 'carga'), can('v_cartas') && item('#/cartas', I.cf + 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), can('v_ins') && item('#/inscripciones', I.ins + 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'), can('v_cargos') && item('#/cargos', '<svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>Actas y cargos', CG.filter(x => !x.firmado).length ? `<span class="cnt">${CG.filter(x => !x.firmado).length}</span>` : '', r.view === 'cargos'), can('v_dev') && item('#/devoluciones', '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Devoluciones', DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length ? `<span class="cnt">${DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion'), can('v_equipo') && item('#/usuarios', I.users + 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'), can('v_actividad') && item('#/actividad', I.act + 'Actividad', '', r.view === 'actividad'), can('v_config') && item('#/campos', '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Uso de campos', '', r.view === 'campos'), can('v_agenda') && item('#/agenda', I.cal + 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda')].filter(Boolean).join('');
-    return `<div class="nav-h">Menú</div>${item('#/resumen', I.home + 'Inicio', '', r.view === 'resumen')}${can('v_mi') ? item('#/mi', I.sun + 'Mi día', '', r.view === 'mi') + item('#/labores', '<svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg>Resumen de labores', '', r.view === 'labores') : ''}
-      ${primeraEtapa() ? `<div class="nav-h">Gestión por etapa</div>${STAGES.filter(s => verEtapa(s.key)).map(s => { const n = all.filter(x => x.d.etapa === s.key).length; return item('#/etapa/' + s.key, `${s.n}. ${s.name}`, `<span class="cnt">${n}</span>`, r.view === 'etapa' && r.arg === s.key, colVar(s.key)); }).join('')}` : ''}
-      ${seg ? `<div class="nav-h">Seguimiento</div>${seg}` : ''}
-      <div class="nav-h">Más</div>${item('#/buzon', '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Buzón', isJefe() && bzNuevos() ? `<span class="cnt hot">${bzNuevos()}</span>` : '', r.view === 'buzon')}${item('#/ayuda', I.help + 'Ayuda', '', r.view === 'ayuda')}${can('v_config') ? item('#/config', I.cfg + 'Configurar', '', r.view === 'config') : ''}`;
+    const nvS = (() => { try { return JSON.parse(localStorage.getItem('crm-mg-nav') || '{}'); } catch (e) { return {}; } })();
+    const abierto = (k, def, on) => on || (nvS[k] === undefined ? def : !!nvS[k]);
+    const ic = (d) => `<svg viewBox="0 0 24 24">${d}</svg>`;
+    const nDev = DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length, nCg = CG.filter(x => !x.firmado).length;
+    const A = (cond, href, icon, label, extra, on) => cond ? { on, html: item(href, icon + label, extra, on) } : null;
+    const grupo = (k, titulo, L, def, badge) => { L = L.filter(Boolean); if (!L.length) return ''; const on = L.some(x => x.on);
+      return `<details class="nav-g" data-g="${k}" ${abierto(k, def, on) ? 'open' : ''}><summary>${titulo}${badge ? `<span class="cnt hot">${badge}</span>` : ''}</summary>${L.map(x => x.html).join('')}</details>`; };
+    const arriba = [A(true, '#/resumen', I.home, 'Inicio', '', r.view === 'resumen'), A(can('v_mi'), '#/mi', I.sun, 'Mi día', '', r.view === 'mi'),
+      A(can('v_clientes'), '#/cobrar', ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>'), 'A quién cobrar', '', r.view === 'cobrar'),
+      A(can('v_agenda'), '#/agenda', I.cal, 'Agenda', venc ? `<span class="cnt hot">${venc}</span>` : '', r.view === 'agenda'),
+      A(can('v_clientes'), '#/clientes', I.cli, 'Clientes', `<span class="cnt">${all.length}</span>`, r.view === 'clientes' || r.view === 'cliente')].filter(Boolean).map(x => x.html).join('');
+    const etapas = primeraEtapa() ? grupo('etapas', 'Etapas', STAGES.filter(st => verEtapa(st.key)).map(st => { const n = all.filter(x => x.d.etapa === st.key).length, on = r.view === 'etapa' && r.arg === st.key; return { on, html: item('#/etapa/' + st.key, `${st.n}. ${st.name}`, `<span class="cnt">${n}</span>`, on, colVar(st.key)) }; }), true) : '';
+    const reportes = grupo('rep', 'Reportes', [A(can('v_ops'), '#/operaciones', I.ops, 'Resumen de operaciones', '', r.view === 'operaciones'), A(can('v_tiempos'), '#/tiempos', ic('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>'), 'Tiempos y productividad', '', r.view === 'tiempos'),
+      A(can('v_carga'), '#/carga', ic('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'), 'Carga del equipo', '', r.view === 'carga'), A(can('v_mi'), '#/labores', ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>'), 'Resumen de labores', '', r.view === 'labores'),
+      A(can('v_actividad'), '#/actividad', I.act, 'Actividad', '', r.view === 'actividad'), A(can('v_config'), '#/campos', ic('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'), 'Uso de campos', '', r.view === 'campos')], false);
+    const tramites = grupo('tram', 'Trámites', [A(can('v_cartas'), '#/cartas', I.cf, 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), A(can('v_ins'), '#/inscripciones', I.ins, 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'),
+      A(can('v_cargos'), '#/cargos', ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'), 'Actas y cargos', nCg ? `<span class="cnt">${nCg}</span>` : '', r.view === 'cargos'),
+      A(can('v_dev'), '#/devoluciones', ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'), 'Devoluciones', nDev ? `<span class="cnt">${nDev}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion')], false, cfAlerta + insAlerta);
+    const ajustes = grupo('adm', 'Equipo y ajustes', [A(can('v_equipo'), '#/usuarios', I.users, 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'),
+      A(true, '#/buzon', ic('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'), 'Buzón', isJefe() && bzNuevos() ? `<span class="cnt hot">${bzNuevos()}</span>` : '', r.view === 'buzon'),
+      A(true, '#/ayuda', I.help, 'Ayuda', '', r.view === 'ayuda'), A(can('v_config'), '#/config', I.cfg, 'Configurar', '', r.view === 'config')], false, isJefe() ? bzNuevos() || 0 : 0);
+    return `${arriba}${etapas}${reportes}${tramites}${ajustes}`;
   }
   function tabbarHtml(r) {
     const t = (href, ic, l, on, act) => `<a href="${href}" class="${on ? 'on' : ''}" ${act ? `data-act="${act}"` : ''}>${ic}<span>${l}</span></a>`;
@@ -3905,6 +3926,12 @@
         if (op.precio != null) op.cob_porRecibir = Math.max(0, op.precio - (op.montoBanco || 0)); // la inicial empieza pendiente, no cobrada
         marcaIngreso(op); if (op.aprob) toast('Cliente creado. Queda pendiente del V°B° de la administración');
         S.ops.push(CRM.normalize(op)); S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); commit(); location.hash = '#/cliente/' + op.id; } });
+  });
+  // grupos del menú: se recuerda cuáles dejó abiertos cada persona; los menús "Más" se cierran al elegir o al tocar afuera
+  document.addEventListener('click', (e) => {
+    const sm = e.target.closest && e.target.closest('details.nav-g > summary');
+    if (sm) { try { const v = JSON.parse(localStorage.getItem('crm-mg-nav') || '{}'); v[sm.parentElement.dataset.g] = !sm.parentElement.open; localStorage.setItem('crm-mg-nav', JSON.stringify(v)); } catch (x) { } }
+    document.querySelectorAll('details.top-more[open], details.mas-acc[open]').forEach(d => { if (!d.contains(e.target) || (e.target.closest && e.target.closest('.menu button'))) d.open = false; });
   });
   const closeSide = () => { const s = $('.side'); if (s) s.classList.remove('open'); };
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSide(); });
