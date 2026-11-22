@@ -737,7 +737,7 @@
       const { list, todos } = cobrarDatos(), suma = (L) => L.reduce((t, x) => t + x.pc.total, 0), en = (...g) => list.filter(x => g.includes(x.g)), sinC = list.filter(x => x.dsc == null || x.dsc >= 7).length;
       const contacto = (x) => `<span class="cob-ult ${x.dsc == null || x.dsc >= 7 ? 'alerta' : ''}">${x.dsc == null ? 'Sin contacto' : x.dsc === 0 ? 'Hoy' : x.dsc === 1 ? 'hace 1 día' : 'hace ' + x.dsc + ' días'}</span>`;
       const fila = (x) => `<div class="cob-row"><div class="cob-c"><a href="#/cliente/${x.o.id}" title="${esc(x.d.siguiente || '')}"><b>${esc(x.o.cliente)}</b></a><div class="small muted">${esc(x.o.proyecto || '')} ${esc(x.o.unidad || '')} · ${esc(x.o.banco || 'sin banco')}${x.o.ejecBanco ? ' · ' + esc(x.o.ejecBanco) : ''}</div>${x.prox ? `<div class="small cob-p">Compromiso ${fdate(x.prox.f).slice(0, 5)}: ${esc(x.prox.t || '')}</div>` : ''}</div>
-        <div class="cob-m"><b title="Financiamiento ${money(x.pc.fin)} · bono ${money(x.pc.bono)} · inicial pendiente ${money(x.pc.ini)}">${money(x.pc.total)}</b></div>
+        <div class="cob-m"><b title="Financiamiento ${money(x.pc.fin)} · bono ${money(x.pc.bono)} · bono verde ${money(x.pc.verde)} · inicial pendiente ${money(x.pc.ini)}">${money(x.pc.total)}</b></div>
         <div class="cob-d">${x.esp.fecha ? `<b>${fdate(x.esp.fecha).slice(0, 5)}</b>${x.esp.tipo === 'Programado' ? '' : ' <span class="small muted">(est.)</span>'}<div class="small muted">${x.n === 0 ? 'hoy' : x.n > 0 ? 'en ' + x.n + ' días' : 'hace ' + (-x.n) + ' días'}</div>` : '<span class="muted small">sin fecha</span>'}</div>
         <div class="cob-k">${contacto(x)}</div>
         <div class="cob-a"><button class="btn sm" data-act="quickseg" data-op="${x.o.id}" data-t="Llamada" title="Anotar una llamada">Llamé</button><button class="btn sm" data-act="quickseg" data-op="${x.o.id}" data-t="WhatsApp" title="Anotar un WhatsApp">WhatsApp</button></div></div>`;
@@ -747,18 +747,18 @@
     };
     const sel = (k, label, opts) => `<select data-f="cobrar" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F0[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     return `${pageHead('A quién cobrar', 'Créditos por desembolsar, del más urgente al menos urgente.', `<button class="btn" data-act="cobrar-excel">Descargar Excel</button>`,
-      '<b>Por cobrar</b> = saldo a financiar + bono (hasta que el banco desembolse) + cuota inicial pendiente. La fecha dice <b>(est.)</b> cuando la calcula el CRM: confírmala con el banco. En rojo se marca al cliente que lleva 7 días o más sin contacto. Toca "Llamé" o "WhatsApp" para anotar una gestión. Pasa el mouse sobre el nombre para ver qué le falta.')}
+      '<b>Por cobrar</b> = saldo a financiar + bonos (MiVivienda y verde, hasta que el banco desembolse) + cuota inicial pendiente. La fecha dice <b>(est.)</b> cuando la calcula el CRM: confírmala con el banco. En rojo se marca al cliente que lleva 7 días o más sin contacto. Toca "Llamé" o "WhatsApp" para anotar una gestión. Pasa el mouse sobre el nombre para ver qué le falta.')}
       <div class="filters"><input type="search" placeholder="Buscar cliente o DNI…" value="${esc(F0.q)}" data-f="cobrar" data-k="q" data-r="${id}">${sel('ejec', 'Todos los ejecutivos de banco', uniq(o => o.ejecBanco).map(p => [p, p]))}${sel('sin', 'Todos', [['1', 'Solo sin contacto hace 7+ días']])}</div>
       <details class="fe-mas" style="margin-bottom:10px"><summary>Más filtros <span class="muted small">· banco, proyecto, vendedor</span></summary><div class="filters" style="margin-top:8px">${sel('banco', 'Todos los bancos', uniq(o => o.banco).map(p => [p, p]))}${sel('proy', 'Todos los proyectos', uniq(o => o.proyecto).map(p => [p, p]))}${sel('vend', 'Todos los vendedores', uniq(o => o.vendedor).map(p => [p, p]))}</div></details>
       ${region(id, build)}`;
   }
   function cobrarExcel() {
     const { list } = cobrarDatos(), G = Object.fromEntries(COB_GRUPOS.map(([k, t]) => [k, t]));
-    const d = list.map(x => ({ Grupo: G[x.g], Cliente: x.o.cliente, DNI: x.o.dni || '', Proyecto: x.o.proyecto || '', Unidad: x.o.unidad || '', Banco: x.o.banco || '', 'Ejecutivo de banco': x.o.ejecBanco || '', Vendedor: x.o.vendedor || '', 'Saldo a financiar pendiente': x.pc.fin, 'Bono pendiente': x.pc.bono, 'Cuota inicial pendiente': x.pc.ini, 'Total por cobrar': x.pc.total,
+    const d = list.map(x => ({ Grupo: G[x.g], Cliente: x.o.cliente, DNI: x.o.dni || '', Proyecto: x.o.proyecto || '', Unidad: x.o.unidad || '', Banco: x.o.banco || '', 'Ejecutivo de banco': x.o.ejecBanco || '', Vendedor: x.o.vendedor || '', 'Saldo a financiar pendiente': x.pc.fin, 'Bono pendiente': x.pc.bono, 'Bono verde pendiente': x.pc.verde, 'Cuota inicial pendiente': x.pc.ini, 'Total por cobrar': x.pc.total,
       'Desembolso esperado': x.esp.fecha ? xlDate(x.esp.fecha) : '', 'Tipo de fecha': x.esp.tipo, 'Días para el desembolso': x.n ?? '', 'Qué falta': x.d.siguiente || '', Responsable: x.d.responsable || '', 'Último contacto': x.u ? xlDate(iso(new Date(x.u))) : 'Nunca', 'Días sin contacto': x.dsc ?? '', 'Próximo compromiso': x.prox ? xlDate(x.prox.f) : '', 'Detalle del compromiso': x.prox ? x.prox.t || '' : '' }));
     const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' });
-    ws['!cols'] = [30, 34, 12, 16, 10, 12, 22, 20, 16, 14, 16, 16, 14, 18, 12, 40, 18, 14, 12, 14, 30].map(w => ({ wch: w }));
-    const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) [8, 9, 10, 11].forEach(c => { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; });
+    ws['!cols'] = [30, 34, 12, 16, 10, 12, 22, 20, 16, 14, 14, 16, 16, 14, 18, 12, 40, 18, 14, 12, 14, 30].map(w => ({ wch: w }));
+    const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) [8, 9, 10, 11, 12].forEach(c => { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; });
     ws['!autofilter'] = { ref: ws['!ref'] };
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'A quién cobrar'); XLSX.writeFile(wb, `A_quien_cobrar_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${list.length} créditos`);
   }
@@ -1792,7 +1792,7 @@
   const OPS_COLS = [
     { h: 'ID', v: r => r.o.id }, { h: 'Proyecto', v: r => r.o.proyecto, s: 1 }, { h: 'Empresa', v: r => empresaDe(r.o) || r.ep[r.o.proyecto] || '' },
     { h: 'Unidad / Dpto.', v: r => r.o.unidad, s: 1 }, { h: 'Cliente', v: r => r.o.cliente, s: 1 }, { h: 'DNI', v: r => r.o.dni },
-    { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n' }, { h: 'Cuota inicial pendiente', v: r => r.o.cob_porRecibir, t: 'n', s: 1 },
+    { h: 'Precio de venta', v: r => r.o.precio, t: 'n' }, { h: 'Monto financiamiento', v: r => r.o.montoBanco, t: 'n' }, { h: 'Bonos', v: r => r.o.bono, t: 'n' }, { h: 'Bono verde', v: r => r.o.bonoVerde, t: 'n' }, { h: 'Inicial cobrada', v: r => r.d.cobRecibido, t: 'n' }, { h: 'Cuota inicial pendiente', v: r => r.o.cob_porRecibir, t: 'n', s: 1 },
     { h: 'Ejecutivo de ventas', v: r => r.o.vendedor }, { h: 'Jefe de ventas', v: r => r.o.jefeVentas }, { h: 'Banco', v: r => r.o.banco, s: 1 }, { h: 'Ejecutivo de banco', v: r => r.o.ejecBanco },
     { h: 'Ejecutivo recibe el caso', v: r => r.o.fRecibeBanco, t: 'd' }, { h: 'Llega a notaría', v: r => r.o.con_fLlegaNotaria, t: 'd' }, { h: 'Días banco → notaría', v: r => tramo(r.o, 'ban').dias, t: 'i', x: r => tramo(r.o, 'ban') }, { h: 'Notaría', v: r => r.o.con_notaria },
     { h: 'Kardex', v: r => r.o.con_kardexMonto }, { h: 'Abogado a cargo', v: r => r.o.con_abogado }, { h: 'Asignación del abogado', v: r => r.o.con_fAsignaAbogado, t: 'd' },
@@ -1801,7 +1801,7 @@
     { h: 'Fecha base (ingreso)', v: r => fechaBase(r.o), t: 'd' }, { h: 'Mes de ingreso', v: r => mesTxt(mesDe(fechaBase(r.o))) },
     { h: 'Desembolso programado', v: r => desembolsoProg(r.o), t: 'd' }, { h: 'Fecha de desembolso', v: r => r.o.fin_fDesembolso, t: 'd' },
     { h: 'Desembolso esperado', v: r => r.esp.fecha, t: 'd' }, { h: 'Tipo de fecha', v: r => r.esp.tipo }, { h: 'Mes en que se recibe', v: r => mesTxt(mesDe(r.esp.fecha)), s: 1 },
-    { h: 'Monto a recibir (financ. + bono)', v: r => aRecibir(r.o), t: 'n' }, { h: 'Total por cobrar', v: r => porCobrar(r).total, t: 'n', s: 1 }, { h: 'Comentario', v: r => r.o.observaciones },
+    { h: 'Monto a recibir (financ. + bonos)', v: r => aRecibir(r.o), t: 'n' }, { h: 'Total por cobrar', v: r => porCobrar(r).total, t: 'n', s: 1 }, { h: 'Comentario', v: r => r.o.observaciones },
     { h: 'Días base → desembolso', v: r => diasDesembolso(r.o).dias, t: 'i', x: r => diasDesembolso(r.o) },
     { h: 'Etapa actual', v: r => r.d.etapa === 'cerrado' ? 'Cerrado' : STAGE[r.d.etapa].name, s: 1 }];
   // fecha comprometida para el desembolso: la última cláusula generada manda; si no, el cronograma de Evolta (saldo a financiar)
@@ -1838,14 +1838,15 @@
   }
   const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic'];
   const mesDe = (f) => f ? f.slice(0, 7) : '', mesTxt = (m) => m ? `${MESES_C[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}` : '—';
-  const aRecibir = (o) => (Number(o.montoBanco) || 0) + (Number(o.bono) || 0);
+  const aRecibir = (o) => (Number(o.montoBanco) || 0) + (Number(o.bono) || 0) + (Number(o.bonoVerde) || 0);
   // por cobrar = saldo a financiar + bono (solo si el desembolso aún no llegó) + cuota inicial pendiente
   function porCobrar(r) {
-    const o = r.o, rec = r.esp && (r.esp.tipo === 'Real' || r.esp.tipo === 'Recibido sin fecha'), fin0 = Number(o.montoBanco) || 0, bono0 = Number(o.bono) || 0;
+    const o = r.o, rec = r.esp && (r.esp.tipo === 'Real' || r.esp.tipo === 'Recibido sin fecha'), fin0 = Number(o.montoBanco) || 0, bono0 = Number(o.bono) || 0, bv0 = Number(o.bonoVerde) || 0;
     const fin = o.evDesembolsado != null ? Math.max(0, fin0 - Number(o.evDesembolsado)) : rec ? 0 : fin0;      // si Evolta informa lo desembolsado, manda Evolta
     const bono = o.evBonoPagado != null ? Math.max(0, bono0 - Number(o.evBonoPagado)) : rec ? 0 : bono0;
+    const verde = fin > 0 || (o.evDesembolsado == null && !rec) ? bv0 : 0;      // el bono verde se recibe junto con el desembolso: si el financiamiento ya llegó, se da por recibido
     const ini = o.evIniPendiente != null ? Number(o.evIniPendiente) : Number(o.cob_porRecibir) || 0;
-    return { fin, bono, ini, total: fin + bono + ini, rec: o.evDesembolsado != null ? fin <= 0 : !!rec };
+    return { fin, bono, verde, ini, total: fin + bono + verde + ini, rec: o.evDesembolsado != null ? fin <= 0 : !!rec };
   }
   const opsFilter = () => flt('operaciones', { q: '', emp: '', proy: '', banco: '', etapa: '', mesIng: '', mes: '', vend: '', jefe: '', ejec: '', abog: '', firma: '', vista: 'simple', size: '20', page: 1 });
   // proyección mensual: cuánto se recibirá por desembolsos (financiamiento + bono) en cada mes
@@ -1895,13 +1896,13 @@
         <button class="btn sm" data-act="ops-page" data-p="${F.page - 1}" ${F.page <= 1 ? 'disabled' : ''}>‹ Anterior</button><span class="small">Página <b>${F.page}</b> de ${pages}</span><button class="btn sm" data-act="ops-page" data-p="${F.page + 1}" ${F.page >= pages ? 'disabled' : ''}>Siguiente ›</button></div>`;
       const mesChip = F.mes ? `<div class="small" style="margin-bottom:8px">Mostrando lo que se recibe en <b>${mesTxt(F.mes)}</b> <button class="btn sm" data-act="proy-mes" data-mes="">✕ Quitar</button></div>` : '';
       return `${proyHtml(opsRows(true), diasTipicos())}${mesChip}
-        <div class="kpis ops-kpis">${kpi(all.length, 'Operaciones')}${kpi(money(sum(r => aRecibir(r.o))), 'A recibir (financiamiento + bono)')}${kpi(money(sum(r => r.d.cobRecibido)), 'Inicial cobrada')}${kpi(money(sum(r => porCobrar(r).ini)), 'Cuota inicial pendiente')}${kpi('<b>' + money(sum(r => porCobrar(r).total)) + '</b>', 'TOTAL POR COBRAR (lo filtrado)')}${kpi((prom ?? '—') + ' días', 'Promedio ingreso → desembolso')}</div>
+        <div class="kpis ops-kpis">${kpi(all.length, 'Operaciones')}${kpi(money(sum(r => aRecibir(r.o))), 'A recibir (financiamiento + bonos)')}${kpi(money(sum(r => r.d.cobRecibido)), 'Inicial cobrada')}${kpi(money(sum(r => porCobrar(r).ini)), 'Cuota inicial pendiente')}${kpi('<b>' + money(sum(r => porCobrar(r).total)) + '</b>', 'TOTAL POR COBRAR (lo filtrado)')}${kpi((prom ?? '—') + ' días', 'Promedio ingreso → desembolso')}</div>
         ${pager}<div class="ops-tw ${F.vista === 'completa' ? 'full' : ''}">${tbl(id + '-t', cols, page)}</div>${all.length > size ? pager : ''}`;
     };
     const sel = (k, label, opts, noAll) => `<select data-f="operaciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
     const tip = diasTipicos();
-    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
+    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">⬇️ Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">⬇️ Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
       <div class="filters"><input type="search" placeholder="Buscar cliente, DNI, unidad…" value="${esc(F.q)}" data-f="operaciones" data-k="q" data-r="${id}">
         ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
           // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
@@ -1920,17 +1921,17 @@
   const xlDate = (s) => { const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d, 12); };
   // Excel con las columnas del "formato para datos" de la jefatura + total por cobrar (respeta los filtros)
   function exportCobro() {
-    const list = opsRows(), H = ['DEPARTAMENTO', 'CLIENTE', 'DNI', 'SALDO A FINANCIAR', 'BONOS MIVIENDA', 'CUOTA INICIAL PENDIENTE', 'VENDEDOR', 'JEFE DE VENTAS', 'EJECUTIVO DE BANCO', 'COMENTARIO', 'ABOGADO', 'KARDEX', 'FECHA DE FIRMA DEL CLIENTE', 'FECHA DE FIRMA INMOBILIARIA', 'PROYECTO', 'TOTAL POR COBRAR', 'ESTADO DEL DESEMBOLSO', 'DESEMBOLSO ESPERADO'];
+    const list = opsRows(), H = ['DEPARTAMENTO', 'CLIENTE', 'DNI', 'SALDO A FINANCIAR', 'BONOS MIVIENDA', 'CUOTA INICIAL PENDIENTE', 'VENDEDOR', 'JEFE DE VENTAS', 'EJECUTIVO DE BANCO', 'COMENTARIO', 'ABOGADO', 'KARDEX', 'FECHA DE FIRMA DEL CLIENTE', 'FECHA DE FIRMA INMOBILIARIA', 'PROYECTO', 'BONO VERDE', 'TOTAL POR COBRAR', 'ESTADO DEL DESEMBOLSO', 'DESEMBOLSO ESPERADO'];
     const num = (v) => filled(v) ? Number(v) : '', fd = (v) => filled(v) ? xlDate(v) : '';
-    const body = list.map(r => { const o = r.o, p = porCobrar(r); return [o.unidad || '', o.cliente || '', o.dni || '', num(o.montoBanco), num(o.bono), num(o.cob_porRecibir), o.vendedor || '', o.jefeVentas || '', o.ejecBanco || '', o.observaciones || '', o.con_abogado || '', o.con_kardexMonto ?? '', fd(o.con_fFirmaCliente), fd(o.con_fFirmaRL), o.proyecto || '', p.total, p.rec ? 'Ya desembolsado' : 'Por cobrar', fd(r.esp.fecha)]; });
-    const suma = (i) => body.reduce((t, x) => t + (Number(x[i]) || 0), 0), tot = H.map(() => ''); tot[1] = 'TOTAL (' + list.length + ' clientes)'; [3, 4, 5, 15].forEach(i => { tot[i] = suma(i); });
+    const body = list.map(r => { const o = r.o, p = porCobrar(r); return [o.unidad || '', o.cliente || '', o.dni || '', num(o.montoBanco), num(o.bono), num(o.cob_porRecibir), o.vendedor || '', o.jefeVentas || '', o.ejecBanco || '', o.observaciones || '', o.con_abogado || '', o.con_kardexMonto ?? '', fd(o.con_fFirmaCliente), fd(o.con_fFirmaRL), o.proyecto || '', num(o.bonoVerde), p.total, p.rec ? 'Ya desembolsado' : 'Por cobrar', fd(r.esp.fecha)]; });
+    const suma = (i) => body.reduce((t, x) => t + (Number(x[i]) || 0), 0), tot = H.map(() => ''); tot[1] = 'TOTAL (' + list.length + ' clientes)'; [3, 4, 5, 15, 16].forEach(i => { tot[i] = suma(i); });
     const ws = XLSX.utils.aoa_to_sheet([H, ...body, [], tot], { cellDates: true, dateNF: 'dd/mm/yyyy' });
-    ws['!cols'] = [14, 36, 12, 16, 16, 18, 22, 22, 24, 34, 24, 12, 16, 16, 18, 18, 20, 16].map(w => ({ wch: w }));
+    ws['!cols'] = [14, 36, 12, 16, 16, 18, 22, 22, 24, 34, 24, 12, 16, 16, 18, 14, 18, 20, 16].map(w => ({ wch: w }));
     const ref = XLSX.utils.decode_range(ws['!ref']);
-    for (let r = 1; r <= ref.e.r; r++) [3, 4, 5, 15].forEach(c => { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; });
+    for (let r = 1; r <= ref.e.r; r++) [3, 4, 5, 15, 16].forEach(c => { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; });
     ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: body.length, c: H.length - 1 } }) };
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cobranza'); XLSX.writeFile(wb, `Cobranza_por_cobrar_${iso(today())}.xlsx`, { cellDates: true });
-    toast(`Excel con ${list.length} clientes · total por cobrar ${money(suma(15))}`);
+    toast(`Excel con ${list.length} clientes · total por cobrar ${money(suma(16))}`);
   }
   function exportOps() {
     const list = opsRows(), data = list.map(r => { const x = {}; OPS_COLS.forEach(c => { const v = c.v(r); x[c.h] = !filled(v) ? '' : c.t === 'n' || c.t === 'i' ? Number(v) : c.t === 'd' ? xlDate(v) : v; });
