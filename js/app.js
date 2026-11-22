@@ -936,7 +936,7 @@
     commit(); return { nAct, nNue };
   }
   function evoltaSync() {
-    const inp = $('#evfile'); if (!inp) return toast('Recarga la página (Ctrl + F5) y vuelve a intentar');
+    const inp = $('#evcsv'); if (!inp) return toast('Recarga la página (Ctrl + F5) y vuelve a intentar');
     inp.value = '';
     inp.onchange = async () => {
       const files = [...inp.files]; inp.value = ''; if (!files.length) return;
