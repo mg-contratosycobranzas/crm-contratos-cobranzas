@@ -121,9 +121,9 @@
   const ESENCIAL = {
     gen: ['cliente', 'dni', 'telefono', 'proyecto', 'unidad', 'vendedor', 'jefeVentas', 'banco', 'ejecBanco', 'fRecibeBanco', 'montoBanco', 'bono', 'precio', 'observaciones'],
     cob: null, fin: null, pos: null,
-    con: ['con_asistente', 'con_fAsignacion', 'con_fValidacion', 'con_actDocs', 'con_clausula', 'con_docsNotaria', 'con_fInicioFirmas', 'con_cheque', 'con_estadoKardex',
-      'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL', 'con_datosCRM'],
-    for: ['for_asistente', 'for_fInicio', 'for_aplicaLev', 'for_fFirmaMinuta', 'for_fIngresoNotaria', 'for_fInscripcion', 'for_estadoIns', 'for_titulo', 'for_copiaEvolta', 'for_fIndep']
+    con: ['con_asistente', 'con_fAsignacion', 'con_fValidacion', 'con_clausula',
+      'con_notaria', 'con_fLlegaNotaria', 'con_abogado', 'con_fAsignaAbogado', 'con_motivoDemora', 'con_fFirmaCliente', 'con_fFirmaRL'],
+    for: ['for_asistente', 'for_fIngresoNotaria', 'for_fInscripcion', 'for_estadoIns', 'for_titulo', 'for_copiaEvolta', 'for_fIndep']
   };
   /* Pestaña "Notaría y Kardex/Banco" de Evolta: mismos campos, en el mismo orden.
      `ev` = cómo se llama el campo en Evolta (para leer la captura). Algunos reutilizan campos que ya existían. */
@@ -210,31 +210,22 @@
     const T = '$today', ME = '$me';
     switch (key) {
       case 'cob': return [
-        it('Asistente de cobranza asignado', has('cob_asistente'), { cob_asistente: ME }), it('Carta de aprobación registrada', has('cob_fCartaAprob'), { cob_fCartaAprob: T }),
-        it('Cobranza iniciada', has('cob_fInicio'), { cob_fInicio: T }), it('Inicial cobrada (saldo por recibir = 0)', d.done.cob, { cob_porRecibir: 0 }), it('Fecha de culminación registrada', has('cob_fCulm'), { cob_fCulm: T })];
+        it('Carta de aprobación registrada', has('cob_fCartaAprob'), { cob_fCartaAprob: T }),
+        it('Inicial cobrada (saldo por recibir = 0)', d.done.cob, { cob_porRecibir: 0, cob_fCulm: T })];
       case 'con': return [
-        it('Asistente legal asignado', has('con_asistente'), { con_asistente: ME, con_fAsignacion: T }), it('Expediente validado', has('con_fValidacion'), { con_fValidacion: T }),
-        it('Actualización de documentos definida', has('con_actDocs'), { con_actDocs: 'SI APLICA' }),
-        it('¿Requiere carta fianza o minuta de levantamiento? (Finanzas)', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '', 'No requiere: pasa directo a Formalización'], ['Aplica - En curso', '', 'Sí requiere: lo trabaja Finanzas']] }), it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
-        it('Documentos enviados a notaría', op.con_docsNotaria === 'ENVIADOS', { con_docsNotaria: 'ENVIADOS' }), it('Minuta enviada a firmas', has('con_fInicioFirmas'), { con_fInicioFirmas: T }),
-        it('Cheque en CRM Evolta', op.con_cheque === 'SI', { con_cheque: 'SI' }), it('Kardex completo', op.con_estadoKardex === 'Completo' || op.con_estadoKardex === 'No corresponde', { con_estadoKardex: 'Completo' }),
-        it('Pegar la captura de Evolta (Notaría y Kardex/Banco): se llena y valida sola', nkbOk(op), null, null, 'nkb'),it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
-        it('Firma del representante legal', has('con_fFirmaRL'), { con_fFirmaRL: T }), it('Datos ingresados al CRM Evolta', op.con_datosCRM === 'INGRESADO', { con_datosCRM: 'INGRESADO' })];
+        it('Expediente validado', has('con_fValidacion'), { con_fValidacion: T }),
+        it('¿Requiere carta fianza o minuta de levantamiento? (Finanzas)', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '', 'No requiere: pasa directo a Formalización'], ['Aplica - En curso', '', 'Sí requiere: lo trabaja Finanzas']] }),
+        it('Cláusula enviada (digital)', op.con_clausula === 'SI', { con_clausula: 'SI' }),
+        it('Captura de Evolta (notaría, kardex y abogado): se llena y valida sola', nkbOk(op), null, null, 'nkb'),
+        it('Firma del cliente', has('con_fFirmaCliente'), { con_fFirmaCliente: T }),
+        it('Firma del representante legal', has('con_fFirmaRL'), { con_fFirmaRL: T })];
       case 'fin':
         if (op.fin_tipo === 'No aplica') return [it('No requiere carta fianza ni minuta de levantamiento (lo definió Contratos)', true)];
         return [
-          it('Definir si aplica carta fianza / minuta', has('fin_tipo'), null, { k: 'fin_tipo', opts: [['No aplica', '', 'No aplica'], ['Aplica - En curso', '', 'Sí aplica']] }),
-          it('Responsable de valorados asignado', has('fin_responsable'), { fin_responsable: ME }),
           it('Solicitud registrada', has('fin_fSolicitud'), { fin_fSolicitud: T }),
           it(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? 'Minuta de levantamiento firmada' : 'Carta fianza emitida', d.done.fin, op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? { for_fFirmaMinuta: T } : { fin_fEmision: T }),
-          it('Desembolso registrado', has('fin_fDesembolso'), { fin_fDesembolso: T }),
-          ...(op.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO' ? [] : [it('Carta fianza completa y cotejada con Evolta', tabOk(op, 'cf')),
-            // saneado: la carta no puede estar vencida (o se renovó o ya se devolvió)
-            it('Carta fianza al día (vigente o devuelta)', op.fin_cfEstado === 'Devuelta' || (op.fin_fVenc && op.fin_fVenc >= iso(today())))])];
+          it('Desembolso registrado', has('fin_fDesembolso'), { fin_fDesembolso: T })];
       case 'for': return [
-        it('Asistente de formalización asignado', has('for_asistente'), { for_asistente: ME }), it('Formalización iniciada', has('for_fInicio'), { for_fInicio: T }),
-        it('Definir si aplica levantamiento de hipoteca', has('for_aplicaLev'), null, { k: 'for_aplicaLev', opts: [['Sí', '', 'Sí aplica'], ['No', '', 'No aplica']] }),
-        ...(op.for_aplicaLev === 'Sí' ? [it('Minuta de levantamiento firmada', has('for_fFirmaMinuta'), { for_fFirmaMinuta: T })] : []),
         it('Ingreso a notaría', has('for_fIngresoNotaria'), { for_fIngresoNotaria: T }), it('Inscripción registral (SUNARP)', has('for_fInscripcion'), { for_fInscripcion: T }), it('Independización', has('for_fIndep'), { for_fIndep: T }),
         it('Copia simple SUNARP cargada en Evolta con su N° de título', has('for_titulo') && op.for_copiaEvolta === 'CARGADA')];
       case 'pos': return [it('Derivado a postventa', op.pos_derivado === 'SI', { pos_derivado: 'SI' }), it('Unidad entregada', op.pos_entregada === 'SI', { pos_entregada: 'SI' })];

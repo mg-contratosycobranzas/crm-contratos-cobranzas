@@ -281,6 +281,7 @@
     const op = getOp(id); if (!op) return false;
     let v = raw; if (v === '' || v == null) v = undefined; else if (CRM.NUM_KEYS.has(k)) v = Number(v);
     if (op[k] === v) return false;
+    if (k === 'cob_porRecibir' && v !== undefined && v <= 0 && !op.cob_fCulm) setField(id, 'cob_fCulm', iso(today())); // la inicial llegó a 0: Cobranzas culmina hoy
     const before = op[k];
     if (v === undefined) delete op[k]; else op[k] = v;
     (pendingOps[id] = pendingOps[id] || {})[k] = v === undefined ? CL.DEL : v;
@@ -301,6 +302,8 @@
     const ok = STAGE[st.key].ownerKey; if (!ok || k === ok || (op[ok] && op[ok] !== 'Sin asignar')) return;
     setField(op.id, ok, S.actor);
     if (st.key === 'con' && !op.con_fAsignacion) setField(op.id, 'con_fAsignacion', iso(today()));
+    if (st.key === 'cob' && !op.cob_fInicio) setField(op.id, 'cob_fInicio', iso(today()));
+    if (st.key === 'for' && !op.for_fInicio) setField(op.id, 'for_fInicio', iso(today()));
     setTimeout(() => toast(`Quedaste como responsable de ${STAGE[st.key].name} de ${op.cliente}`), 700);
   }
   const applyMany = (id, obj) => { const op = getOp(id); const prev = {}; let ch = false; for (const k in obj) { prev[k] = op[k] === undefined ? '' : op[k]; if (setField(id, k, obj[k])) ch = true; } return ch ? prev : null; };
@@ -395,7 +398,7 @@
     });
     return plan;
   }
-  const applyPlan = (plan) => plan.forEach(p => { setField(p.op, p.key, p.who); if (p.stage === 'con' && !getOp(p.op).con_fAsignacion) setField(p.op, 'con_fAsignacion', iso(today())); });
+  const applyPlan = (plan) => plan.forEach(p => { setField(p.op, p.key, p.who); const o = getOp(p.op); if (p.stage === 'con' && !o.con_fAsignacion) setField(p.op, 'con_fAsignacion', iso(today())); if (p.stage === 'cob' && !o.cob_fInicio) setField(p.op, 'cob_fInicio', iso(today())); if (p.stage === 'for' && !o.for_fInicio) setField(p.op, 'for_fInicio', iso(today())); });
   /* Al llegar a Contratos (por un cambio hecho aquí) el expediente se asigna solo */
   let autoBusy = false;
   function autoAsignarLlegadas(antes) {
@@ -945,7 +948,7 @@
         o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
         if (c.k !== 'evSync') S.log.push({ ts: hoy, usuario: S.actor, opId: o.id, etapa: 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); if (!soloFecha) nAct++; });
     const nuevos = [];
-    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), fechaVenta: v.fechaVenta || undefined, cliente: v.cliente, dni: v.doc, proyecto: v.proyecto, unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
+    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), cob_fInicio: iso(today()), fechaVenta: v.fechaVenta || undefined, cliente: v.cliente, dni: v.doc, proyecto: v.proyecto, unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
         telefono: v.tel || undefined, email: v.email || undefined, precio: v.precio ?? undefined, montoBanco: v.fin ?? undefined, bono: v.bono ?? undefined, bonoVerde: v.bonoVerde ?? undefined, evDesembolsado: v.desemb ?? undefined, evBonoPagado: v.bonoPag ?? undefined, evIniPendiente: v.ini ?? undefined,
         cob_porRecibir: v.ini ?? undefined, idProforma: v.id, evEstadoOC: v.estadoOC, evEstadoSF: v.estadoSF, evEntidad: v.entidad, evTipoFin: v.tipoFin, evSync: iso(today()) };
       Object.keys(op).forEach(k => op[k] === undefined && delete op[k]); marcaIngreso(op); S.ops.push(CRM.normalize(op)); nuevos.push(op.id); S.log.push({ ts: hoy, usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); nNue++; });
@@ -2245,11 +2248,12 @@
       body: `<ol class="small" style="margin:0 0 10px;padding-left:18px"><li>En Evolta abre la venta y entra a la pestaña <b>${T.t}</b>.</li>
         <li>Toma una captura (<b>Windows + Shift + S</b>) y pégala abajo con <b>Ctrl + V</b>. También puedes seleccionar el texto de la pestaña, copiarlo y pegarlo.</li></ol>
         <div class="nkb-paste" contenteditable="true" tabindex="0" data-ph="Haz clic aquí y pega (Ctrl + V)"></div>
-        <p class="small" style="margin:8px 0"><label class="btn sm">Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p>${tk === 'nkb' ? `<div class="nkb-abo"><b class="small">Además (no viene en la captura)</b><div class="f-grid"><label class="f">Abogado / doctor a cargo en notaría<input id="nkb-abo" list="dl-abogado" value="${esc(op.con_abogado || '')}" autocomplete="off"></label><label class="f">Fecha de asignación del abogado<input type="date" id="nkb-fab" value="${esc(op.con_fAsignaAbogado || (op.con_abogado ? '' : iso(today())))}"></label></div></div>` : ''}<div id="nkb-res"></div>`,
+        <p class="small" style="margin:8px 0"><label class="btn sm">Elegir imagen…<input type="file" accept="image/*" id="nkb-img" hidden></label></p>${tk === 'nkb' ? `<div class="nkb-abo"><b class="small">Control de Evolta (no viene en la captura)</b><div class="f-grid"><label class="f">Documentos a notaría<select id="nkb-doc"><option value=""></option>${['ENVIADOS', 'PENDIENTES', 'INCOMPLETOS'].map(x => `<option ${op.con_docsNotaria === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="f">Cheque en CRM Evolta<select id="nkb-che"><option value=""></option>${['SI', 'NO'].map(x => `<option ${op.con_cheque === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="f">Estado del kardex<select id="nkb-kar"><option value=""></option>${['Pendiente', 'En proceso', 'Completo', 'Observado', 'No corresponde'].map(x => `<option ${op.con_estadoKardex === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label class="f">Datos ingresados al CRM Evolta<select id="nkb-dat"><option value=""></option>${['INGRESADO', 'NO INGRESADO'].map(x => `<option ${op.con_datosCRM === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div><div class="f-grid" style="margin-top:8px"><label class="f">Abogado / doctor a cargo en notaría<input id="nkb-abo" list="dl-abogado" value="${esc(op.con_abogado || '')}" autocomplete="off"></label><label class="f">Fecha de asignación del abogado<input type="date" id="nkb-fab" value="${esc(op.con_fAsignaAbogado || (op.con_abogado ? '' : iso(today())))}"></label></div></div>` : ''}<div id="nkb-res"></div>`,
       onOk: () => {
         if (!ev) { toast('Primero pega la captura o el texto de Evolta'); return false; }
         $$('#nkb-res [data-nk]').forEach(c => { if (c.checked) setField(op.id, c.dataset.nk, ev[c.dataset.nk]); });
-        if (tk === 'nkb') { const ab = (($('#nkb-abo') || {}).value || '').trim(), fa = ($('#nkb-fab') || {}).value || ''; if (ab) setField(op.id, 'con_abogado', ab); if (ab && fa && +fa.slice(0, 4) >= 1990) setField(op.id, 'con_fAsignaAbogado', fa); }
+        if (tk === 'nkb') { [['nkb-doc', 'con_docsNotaria'], ['nkb-che', 'con_cheque'], ['nkb-kar', 'con_estadoKardex'], ['nkb-dat', 'con_datosCRM']].forEach(([i, k]) => { const v = ($('#' + i) || {}).value || ''; if (v) setField(op.id, k, v); });
+          const ab = (($('#nkb-abo') || {}).value || '').trim(), fa = ($('#nkb-fab') || {}).value || ''; if (ab) setField(op.id, 'con_abogado', ab); if (ab && fa && +fa.slice(0, 4) >= 1990) setField(op.id, 'con_fAsignaAbogado', fa); }
         const faltaEvolta = [], faltaAmbos = [], faltaCrm = [], difieren = [];
         F.forEach(f => { const a = nkbNorm(f, ev[f.k]), b = nkbNorm(f, op[f.k]); if (!a && !b) faltaAmbos.push(f.k); else if (!a) faltaEvolta.push(f.k); else if (!b) faltaCrm.push(f.k); else if (a !== b) difieren.push(f.k); });
         const chk = { ts: Date.now(), por: S.actor, faltaEvolta, faltaAmbos, faltaCrm, difieren, pendientes: faltaEvolta.length + faltaAmbos.length + faltaCrm.length + difieren.length, evolta: ev };
@@ -2889,19 +2893,19 @@
   const MANUAL = {
     cob: { termina: 'Inicial en S/ 0',
       flujo: ['Toma el expediente', 'Carta de aprobación y vencimiento', 'Inicio de la cobranza', 'Actualiza la inicial por recibir', { q: '¿Inicial en S/ 0?', si: 'Registra la culminación: pasa a Contratos', no: 'Sigue el cobro y anota la gestión' }],
-      pasos: ['Toma el expediente: queda a tu nombre y aparece en tu Mi día.', 'Registra la fecha de la carta de aprobación del banco y su fecha de vencimiento, tal como figura en el documento del banco.', 'Registra la fecha en que inicias la cobranza de la cuota inicial.', 'Cada vez que el cliente paga, actualiza el monto de la inicial por recibir y anota la gestión en el seguimiento.', 'Cuando la inicial por recibir llegue a S/ 0, registra la fecha de culminación: el expediente pasa automáticamente a Contratos.'],
+      pasos: ['El expediente queda a tu nombre y aparece en tu Mi día; la fecha de inicio de la cobranza se anota sola.', 'Registra la fecha de la carta de aprobación del banco y su fecha de vencimiento, tal como figura en el documento del banco.', 'Cada vez que el cliente paga, actualiza el monto de la inicial por recibir y anota la gestión en el seguimiento.', 'Cuando la inicial por recibir llegue a S/ 0, marca "Inicial cobrada": la fecha de culminación se anota sola y el expediente pasa a Contratos.'],
       tools: ['Cargar estado de cuenta (PDF Evolta): llena los datos solo. Revisa que coincidan con Evolta.'] },
     con: { termina: 'Firmas del cliente y del representante',
       flujo: ['Toma y valida documentos', 'Envía la cláusula digital', 'Documentos a notaría e inicio de firmas', 'Notaría y Kardex: coteja con Evolta', 'Cheque y estado del kardex', { q: '¿Firmaron cliente y representante?', si: 'Datos a Evolta: pasa a Finanzas', no: 'Coordina las firmas y anota la gestión' }],
-      pasos: ['Toma el expediente y registra la fecha de validación de la documentación.', 'Indica si aplica actualización de documentos.', 'Envía la cláusula digital al cliente y marca "Cláusula enviada".', 'Envía los documentos a notaría y registra la fecha de envío de la minuta, que marca el inicio de firmas.', 'Completa la pestaña Notaría y Kardex/Banco y cotéjala con la captura de Evolta: el CRM compara los datos y te avisa si algo no coincide.', 'Registra el cheque en Evolta y el estado del kardex.', 'Registra la fecha de firma del cliente y la del representante legal.', 'Marca "Datos ingresados al CRM Evolta" para dejar la etapa completa.'],
+      pasos: ['Registra la fecha de validación de la documentación.', 'Indica si el expediente requiere carta fianza o minuta de levantamiento (Finanzas).', 'Envía la cláusula digital al cliente y marca "Cláusula enviada".', 'Pega la captura de Evolta (Notaría y Kardex/Banco): el CRM llena los datos y te avisa si algo no coincide. En el mismo cuadro anota el abogado y el control de Evolta (documentos a notaría, cheque, kardex y datos ingresados).', 'Registra la fecha de firma del cliente y la del representante legal.'],
       tools: ['Generar cláusula adicional (Word) a partir de la minuta en PDF.', 'Cotejar con Evolta en Notaría y Kardex/Banco: subes la captura y el CRM compara.'] },
     fin: { termina: 'Carta emitida, minuta firmada o "No aplica"',
       flujo: [{ q: '¿Aplica carta fianza o minuta?', si: 'Continúa con la solicitud', no: 'Marca "No aplica": pasa a Formalización' }, 'Toma como responsable de valorados', 'Solicitud al banco', 'Emisión: banco, monto y N° (coteja con Evolta)', 'Registra el desembolso', { q: '¿Carta vigente o devuelta?', si: 'Etapa saneada', no: 'Renuévala antes del vencimiento' }],
-      pasos: ['Define si el expediente requiere carta fianza o minuta de levantamiento. Si no aplica, márcalo y la etapa queda cerrada.', 'Toma el expediente como responsable de valorados.', 'Registra la fecha de solicitud al banco.', 'Registra la emisión de la carta fianza con banco, monto y número, y su fecha de vencimiento. Cotéjalo con la captura de Evolta.', 'Registra la fecha de desembolso.', 'Mantén la carta al día: renuévala antes de que venza o regístrala como devuelta con su fecha de devolución.'],
+      pasos: ['Registra la fecha de solicitud al banco.', 'Registra la emisión de la carta fianza con banco, monto y número, y su fecha de vencimiento.', 'Registra la fecha de desembolso.', 'Mantén la carta al día en la pantalla Cartas fianza: renuévala antes de que venza o regístrala como devuelta.'],
       tools: ['Cotejar con Evolta en Carta Fianza: banco, monto y N° frente a la captura.', 'Pantalla Cartas fianza: vencimientos, renovar, devolver y descarga en Excel.'] },
     for: { termina: 'Independización registrada',
       flujo: ['Toma y registra el inicio', { q: '¿Aplica levantamiento de hipoteca?', si: 'Registra la firma de la minuta', no: 'Sigue al ingreso a notaría' }, 'Ingreso a notaría', 'Inscripción SUNARP: estado, código y título', 'Gastos notariales y registrales', 'Copia simple SUNARP cargada en Evolta', 'Independización: pasa a Postventa'],
-      pasos: ['Toma el expediente y registra la fecha de inicio de la formalización.', 'Define si aplica levantamiento de hipoteca. Si aplica, registra la fecha de firma de la minuta de levantamiento.', 'Registra la fecha de ingreso a notaría.', 'Sigue la inscripción en SUNARP y registra su estado, el código de inscripción, el número de título y las observaciones.', 'Registra los gastos notariales y registrales.', 'Carga en Evolta la copia simple que emite SUNARP, con su número de título, y márcala como "Cargada".', 'Registra la fecha de independización: el expediente pasa a Postventa.'],
+      pasos: ['Registra la fecha de ingreso a notaría.', 'Sigue la inscripción en SUNARP en la pantalla Inscripciones: estado, código, número de título y observaciones.', 'Registra la fecha de inscripción registral y la de independización: el expediente pasa a Postventa.', 'Carga en Evolta la copia simple que emite SUNARP, con su número de título, y márcala como "Cargada".'],
       tools: ['Pantalla Inscripciones: estado, código y título de todos tus expedientes en una sola lista.'] },
     pos: { termina: 'Unidad entregada',
       flujo: ['Marca "Derivado a postventa"', 'Coordina la entrega con el cliente', 'Genera el acta de entrega', 'Marca "Unidad entregada": operación cerrada'],
