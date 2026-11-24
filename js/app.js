@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', carga_excel: 'Carga masiva desde Excel', sync_evolta: 'Actualización desde Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', unir_proyectos: 'Unión de proyectos', carga_excel: 'Carga masiva desde Excel', sync_evolta: 'Actualización desde Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -95,7 +95,7 @@
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
   const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', ingresos: 'v_ops', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'ingresos-excel': 'v_ops', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'proy-unir': 'a_params', 'ingresos-excel': 'v_ops', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = 'Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -1098,6 +1098,43 @@
     const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = [14, 14, 36, 12, 16, 10, 24, 14, 22, 16, 11, 24].map(w => ({ wch: w }));
     const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: 7 })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
     ws['!autofilter'] = { ref: ws['!ref'] }; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Ingresos nuevos'); XLSX.writeFile(wb, `Ingresos_nuevos_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${L.length} ingresos`);
+  }
+  /* ---- Unir proyectos: pasa los clientes de un proyecto a otro (solo cambia el nombre del proyecto; el avance no se toca) ---- */
+  function unirProyectos() {
+    const proys = uniq(o => o.proyecto).sort(); if (proys.length < 2) return toast('Hace falta tener al menos dos proyectos');
+    const O = { src: '', dst: '', resp: true };
+    const calc = () => {
+      if (!O.src || !O.dst || O.src === O.dst) return { ok: false, html: '<p class="small muted">Elige el proyecto repetido (origen) y el proyecto al que deben pasar sus clientes (destino).</p>' };
+      const src = S.ops.filter(o => o.proyecto === O.src), dst = S.ops.filter(o => o.proyecto === O.dst), uDst = new Map(dst.filter(o => o.unidad).map(o => [hn(o.unidad), o]));
+      const choques = src.filter(o => o.unidad && uDst.has(hn(o.unidad))), usuarios = S.users.filter(u => (u.proyectos || []).includes(O.src));
+      const copia = [['empresas', 'empresa'], ['dirProyecto', 'dirección'], ['clProyecto', 'datos de cláusula']].filter(([k]) => (S.params[k] || {})[O.src] && !(S.params[k] || {})[O.dst]).map(x => x[1]);
+      return { ok: src.length > 0, src, html: `<p><b>${src.length}</b> clientes de <b>${esc(O.src)}</b> pasarán a <b>${esc(O.dst)}</b> (que hoy tiene ${dst.length}).</p>
+        <div class="carga-op"><span class="small"><b>Qué cambia:</b> solo el nombre del proyecto de esos clientes. No cambian fechas, firmas, notaría, etapas ni seguimientos.</span>
+          ${usuarios.length ? `<span class="small">Quienes tenían <b>${esc(O.src)}</b> a su cargo (${usuarios.map(u => esc(u.name)).join(', ')}) pasan a tener <b>${esc(O.dst)}</b>.</span>` : ''}
+          ${copia.length ? `<span class="small">Se copia a ${esc(O.dst)} lo que solo tenía ${esc(O.src)}: ${copia.join(', ')}.</span>` : ''}
+          <span class="small">Desde ahora, el nombre "${esc(O.src)}" de Evolta se leerá como <b>${esc(O.dst)}</b>.</span></div>
+        ${choques.length ? `<div class="ev-falta"><b>Atención:</b> ${choques.length} ${choques.length === 1 ? 'unidad ya existe' : 'unidades ya existen'} en ${esc(O.dst)}. Puede que sea el mismo cliente repetido: revísalo después.<ul class="small" style="margin:6px 0 0 18px">${choques.slice(0, 8).map(o => `<li>${esc(o.unidad)}: ${esc(o.cliente)} y ${esc(uDst.get(hn(o.unidad)).cliente)}</li>`).join('')}${choques.length > 8 ? `<li class="muted">y ${choques.length - 8} más</li>` : ''}</ul></div>` : ''}
+        <details class="fe-mas"><summary>Ver los clientes que pasan (${src.length})</summary><ul class="small" style="margin:6px 0 0 18px">${src.slice(0, 40).map(o => `<li>${esc(o.cliente)} · ${esc(o.unidad || 'sin unidad')} (${o.id})</li>`).join('')}${src.length > 40 ? `<li class="muted">y ${src.length - 40} más</li>` : ''}</ul></details>
+        <label class="small" style="display:flex;gap:6px;margin-top:10px"><input type="checkbox" id="pu-resp" ${O.resp ? 'checked' : ''}> <span>Descargar un respaldo antes de aplicar</span></label>` };
+    };
+    const opts = (sel) => `<option value=""></option>${proys.map(p => `<option ${p === sel ? 'selected' : ''}>${esc(p)}</option>`).join('')}`;
+    const cuerpo = () => `<div class="f-grid"><label class="f">Proyecto repetido (origen: dejará de existir)<select id="pu-src">${opts(O.src)}</select></label><label class="f">Pasar sus clientes a (destino)<select id="pu-dst">${opts(O.dst)}</select></label></div><div id="pu-res" style="margin-top:10px"></div>`;
+    let ult = null;
+    modal({ title: 'Unir proyectos', ok: 'Unir proyectos', wide: true, body: cuerpo(),
+      onOk: () => {
+        if (!ult || !ult.ok) { toast('Elige origen y destino distintos'); return false; }
+        if (O.resp) { try { const R = respaldoArmar(); download(`Respaldo_antes_de_unir_proyectos_${R.f}.json`, R.json, 'application/json'); } catch (e) { console.error(e); } }
+        const ts = Date.now(); ult.src.forEach(o => { const a = o.proyecto; o.proyecto = O.dst; (pendingOps[o.id] = pendingOps[o.id] || {}).proyecto = O.dst; S.log.push({ ts, usuario: S.actor, opId: o.id, etapa: 'gen', campo: 'proyecto', antes: a, despues: O.dst }); });
+        S.users.forEach(u => { if ((u.proyectos || []).includes(O.src)) u.proyectos = [...new Set(u.proyectos.map(p => p === O.src ? O.dst : p))]; });
+        ['empresas', 'dirProyecto', 'clProyecto'].forEach(k => { const m = { ...(S.params[k] || {}) }; if (m[O.src] && !m[O.dst]) m[O.dst] = m[O.src]; delete m[O.src]; S.params[k] = m; });
+        S.params.aliasProy = { ...(S.params.aliasProy || {}), [hn(O.src)]: O.dst };
+        if (ui.proy === O.src) ui.proy = O.dst;
+        S.log.push({ ts, usuario: S.actor, opId: '—', etapa: 'gen', campo: 'unir_proyectos', antes: O.src, despues: `${O.dst} (${ult.src.length} clientes)` });
+        commit(); toast(`✓ ${ult.src.length} clientes pasaron a ${O.dst}`); render(true); } });
+    const dlg = $('#dlg'), res = dlg.querySelector('#pu-res');
+    const draw = () => { ult = calc(); res.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.ok ? `Unir ${ult.src.length} clientes` : 'Unir proyectos'; };
+    dlg.querySelector('.dlg-b').onchange = (e) => { if (e.target.id === 'pu-src') O.src = e.target.value; if (e.target.id === 'pu-dst') O.dst = e.target.value; if (e.target.id === 'pu-resp') { O.resp = e.target.checked; return; } draw(); };
+    draw();
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
@@ -2853,6 +2890,7 @@
     ${isAdmin() ? permsPanel() : ''}
     <div class="grid two" style="margin-top:14px">
       <div class="card"><div class="card-h"><h2>Plazos (SLA)</h2></div><div class="card-b f-grid" style="grid-template-columns:1fr 1fr">${pf('plazo', 'Plazo objetivo de atención (días)', 'Contratos: desde validación')}${pf('anticipo', 'Días de anticipación (por vencer)', 'Alerta amarilla')}${pf('slaCF', 'SLA carta fianza (días)', 'Desde solicitud')}${pf('slaMin', 'SLA minuta de levantamiento (días)', 'Desde desembolso')}${pf('slaNot', 'SLA trámite notarial (días)', 'Desde ingreso a notaría')}${pf('metaEficacia', 'Meta de eficacia (%)', 'Cerrados ÷ trabajados')}${pf('metaEficiencia', 'Meta de eficiencia (%)', 'Cerrados dentro del plazo')}${pf('metaSemana', 'Meta de cierres por semana', 'Procesos de toda el área')}${pf('metaDia', 'Meta de acciones por día', 'Por persona (Mi día)')}${pf('diasDesemb', 'Días estimados del ingreso al desembolso', 'Para proyectar ingresos si no hay fecha programada')}${pf('topeCarga', 'Reparto en Contratos: tope de diferencia de carga', 'Si el dueño del proyecto tiene esta cantidad más que el otro, pasa al otro')}${pf('autoAsignar', 'Asignar solo al llegar a Contratos (1 = sí, 0 = no)', 'Según proyectos a cargo y carga')}${pf('minInactivo', 'Cerrar sesión tras minutos sin uso', 'Seguridad: avisa 1 minuto antes. 0 = nunca')}</div></div>
+      ${can('a_params') ? `<div class="card"><div class="card-h"><h2>Unir dos proyectos</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Si un proyecto está repetido con otro nombre (por ejemplo <b>ALBORADA</b> y <b>ALBORADA I</b>), pasa todos sus clientes al proyecto correcto para que quede uno solo. Antes de aplicar se muestra qué cambia y se descarga un respaldo. No se toca el avance de los clientes.</p><button class="btn" data-act="proy-unir">Unir proyectos…</button></div></div>` : ''}
       <div class="card"><div class="card-h"><h2>Empresa por proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Escribe una vez la razón social de cada proyecto y todos sus clientes la toman (en la ficha, en el Resumen de operaciones y en el Excel).</p>
         <div class="f-grid" style="grid-template-columns:1fr 1.6fr">${uniq(o => o.proyecto).map(p => `<span class="small" style="align-self:center"><b>${esc(p)}</b></span><input list="dl-empresa" data-emp="${esc(p)}" value="${esc(empEnProy(p))}" placeholder="Ej.: MG PROYECTO 22 S.A.C." ${can('a_params') ? '' : 'disabled'}>`).join('')}</div></div></div>
       <div class="card"><div class="card-h"><h2>Dirección oficial de cada proyecto</h2></div><div class="card-b"><p class="small muted" style="margin-top:0">Se usa en la carta notarial. Escríbela como debe salir en la carta (la dirección municipal, no la del lote que trae la minuta).</p>
@@ -3940,6 +3978,7 @@
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'importar-excel') return importarExcel();
+    if (a === 'proy-unir') return unirProyectos();
     if (a === 'ingresos-excel') return ingresosExcel();
     if (a === 'evbtn-info') { e.preventDefault(); return toast('No lo toques aquí: arrástralo a la barra de favoritos y úsalo desde Evolta'); }
     if (a === 'evolta-sync') return evoltaSync();
