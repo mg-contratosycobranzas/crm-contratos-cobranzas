@@ -94,8 +94,8 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', ingresos: 'v_ops', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'ingresos-excel': 'v_ops', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = 'Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -939,12 +939,22 @@
       const n = r.d.owner.cob || 'Sin asignar', a = m.get(n) || { casos: 0, total: 0 }; a.casos++; a.total += pc.total; m.set(n, a); });
     return m;
   }
+  // ingresos nuevos: diferencia entre esta carga de Evolta y la anterior, por cliente
+  function evoltaPagosDe(plan) {
+    const out = [];
+    plan.act.forEach(({ o, cambios }) => { const d = D.get(o.id), asis = (d && d.owner.cob) || 'Sin asignar';
+      const add = (tipo, monto) => { if (monto > 0) out.push({ f: iso(today()), id: o.id, cliente: o.cliente, dni: o.dni || '', proyecto: o.proyecto || '', unidad: o.unidad || '', tipo, monto: Math.round(monto), asis }); };
+      cambios.forEach(c => { const antes = o[c.k];
+        if (c.k === 'evIniPendiente' && antes != null && Number(antes) > Number(c.despues)) add('Cuota inicial', Number(antes) - Number(c.despues));
+        if (c.k === 'evDesembolsado' && o.evSync && Number(c.despues) > Number(antes || 0)) add('Desembolso del banco', Number(c.despues) - Number(antes || 0));
+        if (c.k === 'evBonoPagado' && o.evSync && Number(c.despues) > Number(antes || 0)) add('Bono MiVivienda', Number(c.despues) - Number(antes || 0)); }); });
+    return out;
+  }
   function evoltaAplicar(plan) {
-    const hoy = Date.now(), asis = {}, quien = (o) => { const d = D.get(o.id); return (d && d.owner.cob) || 'Sin asignar'; }, sumar = (o, k, n) => { if (!(n > 0)) return; const a = (asis[quien(o)] = asis[quien(o)] || { ini: 0, des: 0 }); a[k] += n; };
+    const hoy = Date.now(), asis = {}, pagos = evoltaPagosDe(plan); // se calculan antes de pisar los montos anteriores
     let max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)), nAct = 0, nNue = 0, totIni = 0, totDes = 0;
+    pagos.forEach(p => { const a = (asis[p.asis] = asis[p.asis] || { ini: 0, des: 0 }); if (p.tipo === 'Cuota inicial') { a.ini += p.monto; totIni += p.monto; } else { a.des += p.monto; totDes += p.monto; } });
     plan.act.forEach(({ o, cambios, soloFecha }) => { cambios.forEach(c => { const antes = o[c.k];
-        if (c.k === 'evIniPendiente' && antes != null && Number(antes) > Number(c.despues)) { sumar(o, 'ini', Number(antes) - Number(c.despues)); totIni += Number(antes) - Number(c.despues); }
-        if ((c.k === 'evDesembolsado' || c.k === 'evBonoPagado') && Number(c.despues) > Number(antes || 0) && o.evSync) { sumar(o, 'des', Number(c.despues) - Number(antes || 0)); totDes += Number(c.despues) - Number(antes || 0); }
         o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
         if (c.k !== 'evSync') S.log.push({ ts: hoy, usuario: S.actor, opId: o.id, etapa: 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); if (!soloFecha) nAct++; });
     const nuevos = [];
@@ -958,6 +968,7 @@
     recompute(); const car = carteraPorAsistente(), carteraAsis = {}; let cartera = 0; car.forEach((a, n) => { carteraAsis[n] = Math.round(a.total); cartera += a.total; });
     const hist = (S.params.evHist || []).filter(h => h.f !== iso(today())); hist.push({ f: iso(today()), por: S.actor || '', nuevos: nNue, ini: Math.round(totIni), des: Math.round(totDes), cartera: Math.round(cartera), asis: Object.fromEntries(Object.entries(asis).map(([n, a]) => [n, { ini: Math.round(a.ini), des: Math.round(a.des) }])), carteraAsis });
     S.params.evHist = hist.slice(-30);
+    S.params.evPagos = [...(S.params.evPagos || []), ...pagos].slice(-2500); // historial de ingresos detectados
     S.params.ultimaEvolta = { fecha: iso(today()), por: S.actor || '', actualizados: nAct, nuevos: nNue };
     S.log.push({ ts: hoy, usuario: S.actor, opId: '—', etapa: 'gen', campo: 'sync_evolta', antes: '', despues: `${nAct} clientes actualizados, ${nNue} nuevos` });
     commit(); return { nAct, nNue };
@@ -983,6 +994,8 @@
             <label class="small"><input type="checkbox" id="e-crear" ${O.crear ? 'checked' : ''}> <span><b>Sumar al CRM las ventas que están en seguimiento de cobranza</b> y aún no están (${O.crear ? R.nuevos.length : R.sinCrear}): ventas activas con minuta, con banco y con algo por cobrar. Se reparten entre los asistentes de Cobranzas por proyecto.</span></label>
             <label class="small"><input type="checkbox" id="e-resp" ${O.resp ? 'checked' : ''}> Descargar un respaldo antes de aplicar</label></div>
           <div class="cob-sum card"><span><b>${hayBase ? money(cobrado) : '—'}</b><small>${hayBase ? 'de inicial cobrada desde la última vez' : 'primera carga: desde la próxima verás cuánto se cobró'}</small></span><span><b>${money(desemb)}</b><small>de desembolsos nuevos</small></span><span class="${R.alertas.length ? 'txt-amar' : ''}"><b>${R.alertas.length}</b><small>alertas para revisar</small></span></div>
+          ${(() => { const P = evoltaPagosDe(R); if (!P.length) return ''; const tot = P.reduce((t, x) => t + x.monto, 0);
+            return `<details class="fe-mas" style="margin:4px 0" open><summary><b>${P.length}</b> ingresos nuevos detectados por <b>${money(tot)}</b> (se guardan en "Ingresos nuevos")</summary><div class="ev-tw"><table class="ev-t"><thead><tr><th>Cliente</th><th>Tipo</th><th>Monto</th><th>Asistente</th></tr></thead><tbody>${P.slice(0, 30).map(x => `<tr><td>${esc(x.cliente)}</td><td>${esc(x.tipo)}</td><td>${money(x.monto)}</td><td>${esc(x.asis)}</td></tr>`).join('')}</tbody></table></div>${P.length > 30 ? `<p class="small muted">Se muestran 30 de ${P.length}.</p>` : ''}</details>`; })()}
           ${R.alertas.length ? `<h3 style="margin:10px 0 4px">Para revisar</h3>${[['dev', 'ventas que Evolta marca como DEVUELTAS (ya no salen en "A quién cobrar")'], ['desemb', 'clientes que Evolta ya muestra desembolsados, pero en el CRM falta la fecha de desembolso (regístrala en Finanzas)'], ['ini', 'clientes con cuota inicial pendiente distinta entre CRM y Evolta (no se cambia el avance de Cobranzas: confírmalo y corrígelo en la ficha)'], ['unidad', 'clientes cruzados por DNI con otra unidad (revisa que sea el mismo caso)'], ['dni', 'DNI con varios clientes en el CRM (no se actualizaron)'], ['dolar', 'ventas en dólares (los montos no se cargaron)']].map(([t, tx]) => { const L = R.alertas.filter(a => a.t === t); return L.length ? `<details class="fe-mas" style="margin:4px 0"><summary><b>${L.length}</b> ${tx}</summary><ul class="small" style="margin:6px 0 0 18px">${L.slice(0, 30).map(a => `<li>${esc(a.nombre || '')}${t === 'ini' || t === 'unidad' ? ': ' + esc(a.txt) : ''}</li>`).join('')}${L.length > 30 ? `<li class="muted">y ${L.length - 30} más</li>` : ''}</ul></details>` : ''; }).join('')}` : ''}
           ${filas.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Cliente</th><th>Cambios en los montos</th></tr></thead><tbody>${filas.map(x => `<tr><td>${esc(x.o.cliente)}<div class="small muted">${x.o.id}</div></td><td class="small">${x.cambios.filter(c => claves.includes(c.k) && !((c.antes == null || c.antes === '') && c.despues === 0 && /^(evDesembolsado|evBonoPagado|bonoVerde)$/.test(c.k))).map(c => `${esc(etq[c.k] || CRM.FIELD_LABEL[c.k] || c.k)}: ${c.antes == null || c.antes === '' ? '' : fm(c.k, c.antes) + ' → '}<b>${fm(c.k, c.despues)}</b>`).join('<br>')}</td></tr>`).join('')}</tbody></table></div>${sig.length > 60 ? `<p class="small muted">Se muestran 60; todos se actualizan al aplicar.</p>` : ''}` : '<div class="empty">No hay cambios en los montos con estas opciones.</div>'}
           ${L.dolares ? `<p class="small muted">${L.dolares} venta${L.dolares > 1 ? 's' : ''} en dólares: los montos no se cargan.</p>` : ''}` };
@@ -1010,6 +1023,34 @@
     return `${pageHead('Cliente de Evolta', `Proforma N° ${esc(id)}`, '', '')}<div class="card"><div class="card-b"><p><b>Este cliente todavía no está en el CRM.</b> No encontré ningún cliente con el número de proforma ${esc(id)}.</p>
       <p class="small muted">Puede pasar por dos motivos: el cliente aún no entró en la última actualización de Evolta, o está en el CRM pero sin su número de proforma (se completa al usar <b>Actualizar desde Evolta</b>).</p>
       <p>${can('a_import') ? '<a class="btn pri" href="#/operaciones">Ir a Resumen de operaciones</a> ' : ''}<a class="btn" href="#/clientes">Buscar en Clientes</a></p></div></div>`;
+  }
+  /* ---- Ingresos nuevos: lo que Evolta informó de más entre una carga y la siguiente ---- */
+  function ingresosDatos() {
+    const F = flt('ingresos', { f: '', a: '', t: '' }), todos = S.params.evPagos || [], fechas = [...new Set(todos.map(x => x.f))].sort().reverse(), f0 = F.f === 'todas' ? 'todas' : (F.f || fechas[0] || '');
+    const L = todos.filter(x => (f0 === 'todas' || x.f === f0) && (!F.a || x.asis === F.a) && (!F.t || x.tipo === F.t)).sort((a, b) => b.f.localeCompare(a.f) || b.monto - a.monto);
+    return { F, todos, fechas, f0, L };
+  }
+  function vIngresos() {
+    const id = 'rg-ing', F0 = flt('ingresos', { f: '', a: '', t: '' });
+    const build = () => {
+      const { L, todos, f0 } = ingresosDatos(), tot = L.reduce((t, x) => t + x.monto, 0), por = (t) => L.filter(x => x.tipo === t).reduce((a, x) => a + x.monto, 0);
+      if (!todos.length) return '<div class="card"><div class="empty">Aún no hay ingresos detectados.<br>Se detectan desde la <b>segunda</b> carga de Evolta, comparándola con la anterior.</div></div>';
+      return `<div class="card cob-sum"><span><b>${money(tot)}</b><small>${L.length} ${L.length === 1 ? 'ingreso' : 'ingresos'}${f0 === 'todas' ? ' en todas las cargas' : ' en la carga del ' + fdate(f0)}</small></span><span><b>${money(por('Cuota inicial'))}</b><small>cuota inicial</small></span><span><b>${money(por('Desembolso del banco'))}</b><small>desembolsos del banco</small></span><span><b>${money(por('Bono MiVivienda'))}</b><small>bono MiVivienda</small></span></div>
+        <div class="card"><div class="ops-tw">${tbl(id + '-t', [{ h: 'Carga', f: x => fdate(x.f), s: x => x.f }, { h: 'Cliente', f: x => { const o = getOp(x.id); return o ? opLink(o) : esc(x.cliente); }, s: x => x.cliente },
+          { h: 'Tipo', f: x => esc(x.tipo), s: x => x.tipo }, { h: 'Monto', cls: 'r', f: x => `<b>${money(x.monto)}</b>`, s: x => x.monto }, { h: 'Asistente de Cobranzas', f: x => esc(x.asis), s: x => x.asis }], L, 'No hay ingresos con ese filtro.')}</div></div>`;
+    };
+    const { fechas, todos } = ingresosDatos(), sel = (k, label, opts) => `<select data-f="ingresos" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F0[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    return `${pageHead('Ingresos nuevos', 'Pagos que Evolta informó entre una carga semanal y la siguiente.', `<button class="btn" data-act="ingresos-excel">Descargar Excel</button>`,
+      'Se detectan <b>comparando cada carga de Evolta con la anterior</b>: si la cuota inicial pendiente de un cliente bajó, o el banco desembolsó o pagó un bono, la diferencia es un ingreso nuevo. Se atribuye al asistente de Cobranzas del cliente. <b>Límite:</b> sale el monto y la fecha de la carga, no el N° de operación ni el día exacto del depósito (eso lo trae el reporte "Ingreso por depósito" de Evolta). Desde la segunda carga.')}
+      <div class="filters">${(() => { return `<select data-f="ingresos" data-k="f" data-r="${id}"><option value="">Última carga${fechas[0] ? ' (' + fdate(fechas[0]) + ')' : ''}</option>${fechas.slice(1).map(x => `<option value="${x}" ${F0.f === x ? 'selected' : ''}>${fdate(x)}</option>`).join('')}<option value="todas" ${F0.f === 'todas' ? 'selected' : ''}>Todas las cargas</option></select>`; })()}
+        ${sel('t', 'Todos los tipos', [['Cuota inicial', 'Cuota inicial'], ['Desembolso del banco', 'Desembolso del banco'], ['Bono MiVivienda', 'Bono MiVivienda']])}${sel('a', 'Todos los asistentes', [...new Set(todos.map(x => x.asis))].sort().map(n => [n, n]))}</div>
+      ${region(id, build)}`;
+  }
+  function ingresosExcel() {
+    const { L } = ingresosDatos(), d = L.map(x => ({ 'Fecha de carga': xlDate(x.f), Cliente: x.cliente, DNI: x.dni, Proyecto: x.proyecto, Unidad: x.unidad, Tipo: x.tipo, 'Monto (S/)': x.monto, 'Asistente de Cobranzas': x.asis }));
+    const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = [14, 36, 12, 16, 10, 22, 14, 24].map(w => ({ wch: w }));
+    const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: 6 })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
+    ws['!autofilter'] = { ref: ws['!ref'] }; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Ingresos nuevos'); XLSX.writeFile(wb, `Ingresos_nuevos_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${L.length} ingresos`);
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
@@ -3451,7 +3492,7 @@
     const etapas = primeraEtapa() ? grupo('etapas', 'Etapas', STAGES.filter(st => verEtapa(st.key)).map(st => { const n = all.filter(x => x.d.etapa === st.key).length, on = r.view === 'etapa' && r.arg === st.key; return { on, html: item('#/etapa/' + st.key, `${st.n}. ${st.name}`, `<span class="cnt">${n}</span>`, on, colVar(st.key)) }; }), true) : '';
     const reportes = grupo('rep', 'Reportes', [A(can('v_ops'), '#/operaciones', I.ops, 'Resumen de operaciones', '', r.view === 'operaciones'), A(can('v_tiempos'), '#/tiempos', ic('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>'), 'Tiempos y productividad', '', r.view === 'tiempos'),
       A(can('v_carga'), '#/carga', ic('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'), 'Carga del equipo', '', r.view === 'carga'), A(can('v_mi'), '#/labores', ic('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/>'), 'Resumen de labores', '', r.view === 'labores'),
-      A(can('v_actividad'), '#/actividad', I.act, 'Actividad', '', r.view === 'actividad'), A(can('v_config'), '#/campos', ic('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'), 'Uso de campos', '', r.view === 'campos')], false);
+      A(can('v_ops'), '#/ingresos', ic('<path d="M12 3v13m0 0-5-5m5 5 5-5M4 21h16"/>'), 'Ingresos nuevos', '', r.view === 'ingresos'), A(can('v_actividad'), '#/actividad', I.act, 'Actividad', '', r.view === 'actividad'), A(can('v_config'), '#/campos', ic('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'), 'Uso de campos', '', r.view === 'campos')], false);
     const tramites = grupo('tram', 'Trámites', [A(can('v_cartas'), '#/cartas', I.cf, 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), A(can('v_ins'), '#/inscripciones', I.ins, 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'),
       A(can('v_cargos'), '#/cargos', ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'), 'Actas y cargos', nCg ? `<span class="cnt">${nCg}</span>` : '', r.view === 'cargos'),
       A(can('v_dev'), '#/devoluciones', ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'), 'Devoluciones', nDev ? `<span class="cnt">${nDev}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion')], false, cfAlerta + insAlerta);
@@ -3485,7 +3526,7 @@
     if (!S.ops.length && r.view !== 'config') html = `${pageHead('Bienvenida', 'Todavía no hay datos cargados.')}<div class="card"><div class="card-b"><p>Importa tu Excel <b>SEGUIMIENTOS.xlsx</b> (hoja BASE_MAESTRA) o un respaldo desde <a href="#/config">Configuración</a>.</p></div></div>`;
     else {
       try {
-        html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'labores' ? vLabores() : r.view === 'evolta' ? vEvoltaIr(r.arg) : r.view === 'cobrar' ? vCobrar() : r.view === 'campos' ? vCampos() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
+        html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'labores' ? vLabores() : r.view === 'ingresos' ? vIngresos() : r.view === 'evolta' ? vEvoltaIr(r.arg) : r.view === 'cobrar' ? vCobrar() : r.view === 'campos' ? vCampos() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
           : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'cargos' ? vCargos() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
@@ -3852,6 +3893,7 @@
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'importar-excel') return importarExcel();
+    if (a === 'ingresos-excel') return ingresosExcel();
     if (a === 'evbtn-info') { e.preventDefault(); return toast('No lo toques aquí: arrástralo a la barra de favoritos y úsalo desde Evolta'); }
     if (a === 'evolta-sync') return evoltaSync();
     if (a === 'tp-pdf') return tpInforme();
