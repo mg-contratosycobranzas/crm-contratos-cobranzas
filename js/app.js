@@ -911,7 +911,9 @@
     });
     return { ventas: [...por.values()], depositos, leidas, dolares };
   }
-  function evoltaPlan(ventas, modo, crear) {
+  // nombre del proyecto en Evolta -> nombre en el CRM (ej.: Evolta "ALBORADA" = CRM "ALBORADA I"); lo elegido se recuerda en Configurar
+  const proyCrmDe = (n, alias) => { const k = hn(n); if (alias && alias[k]) return alias[k]; return uniq(o => o.proyecto).find(p => hn(p) === k) || n; };
+  function evoltaPlan(ventas, modo, crear, alias) {
     const dig = (x) => String(x || '').replace(/\D/g, ''), U = (x) => hn(x), res = { act: [], nuevos: [], sinCrear: 0, noCrm: 0, alertas: [], igual: 0, ignoradas: 0 };
     const porId = new Map(S.ops.filter(o => o.idProforma).map(o => [String(o.idProforma), o]));
     const usados = new Set();
@@ -919,7 +921,8 @@
       if (v.estado === 'Disponible' || !v.doc) { res.ignoradas++; return; }
       let o = porId.get(v.id), aviso = '';
       if (!o) { const cand = S.ops.filter(x => !usados.has(x.id) && (dig(x.dni) && dig(x.dni) === dig(v.doc) || (x.dni && String(x.dni).toUpperCase() === v.doc.toUpperCase())));
-        const c2 = cand.filter(x => x.unidad && v.unidades.some(u => U(u) === U(x.unidad)));
+        let c2 = cand.filter(x => x.unidad && v.unidades.some(u => U(u) === U(x.unidad)));
+        if (c2.length > 1) { const pv = U(proyCrmDe(v.proyecto, alias)), c3 = c2.filter(x => U(x.proyecto) === pv); if (c3.length) c2 = c3; } // misma unidad en dos proyectos: se decide por el proyecto
         if (c2.length === 1) o = c2[0]; else if (c2.length === 0 && cand.length === 1) { o = cand[0]; aviso = `Se cruzó por DNI pero la unidad es distinta (CRM ${o.unidad || '—'} / Evolta ${v.unidades.join(', ') || '—'}): revisa que sea el mismo caso`; } else if (cand.length > 1 && c2.length !== 1) { res.alertas.push({ t: 'dni', nombre: v.cliente, txt: `Hay ${cand.length} clientes del CRM con ese DNI y no se pudo elegir uno: no se actualizó` }); return; } }
       if (!o) { res.noCrm++;
         const pend = Math.max(0, (v.fin || 0) - (v.desemb || 0)) + Math.max(0, (v.bono || 0) - (v.bonoPag || 0)) + (v.ini || 0);
@@ -932,7 +935,7 @@
       else { put('precio', v.precio); put('montoBanco', v.fin); put('bono', v.bono); put('bonoVerde', v.bonoVerde); put('evDesembolsado', v.desemb); put('evBonoPagado', v.bonoPag); put('evIniPendiente', v.ini); }
       put('idProforma', v.id, true); put('evEstadoOC', v.estadoOC); put('evEstadoSF', v.estadoSF); put('evEntidad', v.entidad); put('evTipoFin', v.tipoFin); put('evSync', iso(today()));
       put('telefono', v.tel, true); put('email', v.email, true); put('vendedor', v.vendedor, true); put('banco', bancoEv(v.entidad), true);
-      put('cliente', v.cliente, true); put('proyecto', v.proyecto, true); put('unidad', v.unidades[0], true);
+      put('cliente', v.cliente, true); put('proyecto', proyCrmDe(v.proyecto, alias), true); put('unidad', v.unidades[0], true);
       const sig = cambios.filter(c => !['evSync'].includes(c.k));
       if (aviso) res.alertas.push({ t: 'unidad', o, nombre: o.cliente, txt: aviso });
       if (v.estadoOC === 'Devuelto') res.alertas.push({ t: 'dev', o, nombre: o.cliente, txt: 'Evolta marca esta venta como DEVUELTA: ya no saldrá en "A quién cobrar"' });
@@ -973,12 +976,12 @@
         if (c.k === 'evBonoPagado' && o.evSync && Number(c.despues) > Number(antes || 0)) add('Bono MiVivienda', Number(c.despues) - Number(antes || 0)); }); });
     return out;
   }
-  function depositosPlan(L, previos) {
+  function depositosPlan(L, previos, alias) {
     const vistos = new Set(previos.map(x => x.k)), dig = (x) => String(x || '').replace(/\D/g, ''), primera = previos.length === 0, hoy = iso(today());
     const nuevos = [], rep = new Set();
     L.depositos.forEach(d => { if (vistos.has(d.k) || rep.has(d.k)) return; rep.add(d.k);
-      const cand = S.ops.filter(o => dig(o.dni) && dig(o.dni) === dig(d.doc)), c2 = cand.filter(o => o.unidad && hn(o.unidad) === hn(d.unidad)), o = c2[0] || (cand.length === 1 ? cand[0] : null), dd = o && D.get(o.id);
-      nuevos.push({ f: hoy, fp: d.fp, id: o ? o.id : '', cliente: o ? o.cliente : d.cliente.slice(0, 40), dni: d.doc, proyecto: d.proyecto, unidad: d.unidad, tipo: d.tipo, monto: d.monto, asis: (dd && dd.owner.cob) || 'Sin asignar', medio: d.medio, nop: d.nop, ver: d.ver, k: d.k, ini: primera || undefined }); });
+      const cand = S.ops.filter(o => dig(o.dni) && dig(o.dni) === dig(d.doc)); let c2 = cand.filter(o => o.unidad && hn(o.unidad) === hn(d.unidad)); if (c2.length > 1) { const c3 = c2.filter(o => hn(o.proyecto) === hn(proyCrmDe(d.proyecto, alias))); if (c3.length) c2 = c3; } const o = c2[0] || (cand.length === 1 ? cand[0] : null), dd = o && D.get(o.id);
+      nuevos.push({ f: hoy, fp: d.fp, id: o ? o.id : '', cliente: o ? o.cliente : d.cliente.slice(0, 40), dni: d.doc, proyecto: o ? o.proyecto : proyCrmDe(d.proyecto, alias), unidad: d.unidad, tipo: d.tipo, monto: d.monto, asis: (dd && dd.owner.cob) || 'Sin asignar', medio: d.medio, nop: d.nop, ver: d.ver, k: d.k, ini: primera || undefined }); });
     return { nuevos, repetidos: L.depositos.length - nuevos.length, primera };
   }
   function evoltaAplicar(plan, deps) {
@@ -989,7 +992,7 @@
         o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
         if (c.k !== 'evSync') S.log.push({ ts: hoy, usuario: S.actor, opId: o.id, etapa: 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); if (!soloFecha) nAct++; });
     const nuevos = [];
-    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), cob_fInicio: iso(today()), fechaVenta: v.fechaVenta || undefined, cliente: v.cliente, dni: v.doc, proyecto: v.proyecto, unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
+    plan.nuevos.forEach(v => { max++; const op = { id: 'OP-' + String(max).padStart(4, '0') + sufOff(), fechaInicio: iso(today()), cob_fInicio: iso(today()), fechaVenta: v.fechaVenta || undefined, cliente: v.cliente, dni: v.doc, proyecto: proyCrmDe(v.proyecto, S.params.aliasProy), unidad: v.unidades[0] || undefined, vendedor: v.vendedor || undefined, banco: bancoEv(v.entidad) || undefined,
         telefono: v.tel || undefined, email: v.email || undefined, precio: v.precio ?? undefined, montoBanco: v.fin ?? undefined, bono: v.bono ?? undefined, bonoVerde: v.bonoVerde ?? undefined, evDesembolsado: v.desemb ?? undefined, evBonoPagado: v.bonoPag ?? undefined, evIniPendiente: v.ini ?? undefined,
         cob_porRecibir: v.ini ?? undefined, idProforma: v.id, evEstadoOC: v.estadoOC, evEstadoSF: v.estadoSF, evEntidad: v.entidad, evTipoFin: v.tipoFin, evSync: iso(today()) };
       Object.keys(op).forEach(k => op[k] === undefined && delete op[k]); marcaIngreso(op); S.ops.push(CRM.normalize(op)); nuevos.push(op.id); S.log.push({ ts: hoy, usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'cliente', antes: '', despues: op.cliente }); nNue++; });
@@ -1013,9 +1016,9 @@
       let L; try { L = evoltaLeer(await Promise.all(files.map(async f => ({ nombre: f.name, texto: new TextDecoder('utf-8').decode(await f.arrayBuffer()).replace(/^﻿/, '') })))); } catch (e) { console.error(e); return toast('No se pudo leer: ' + e.message); }
       if (!L.ventas.length && !L.depositos.length) return toast('Los archivos no tienen ventas ni depósitos');
       const previos = await ingCargar().catch(() => []);
-      const O = { modo: 'evolta', crear: true, resp: true };
+      const O = { modo: 'evolta', crear: true, resp: true, alias: { ...(S.params.aliasProy || {}) } };
       const pintar = () => {
-        const R = evoltaPlan(L.ventas, O.modo, O.crear), DP = depositosPlan(L, previos); R.sinDelta = L.depositos.length > 0; R.deps = DP.nuevos; const sig = R.act.filter(x => !x.soloFecha), fm = (k, v) => /^(precio|montoBanco|bono|bonoVerde|evDesembolsado|evBonoPagado|evIniPendiente)$/.test(k) ? money(v) : esc(String(v ?? ''));
+        const R = evoltaPlan(L.ventas, O.modo, O.crear, O.alias), DP = depositosPlan(L, previos, O.alias); R.sinDelta = L.depositos.length > 0; R.deps = DP.nuevos; const sig = R.act.filter(x => !x.soloFecha), fm = (k, v) => /^(precio|montoBanco|bono|bonoVerde|evDesembolsado|evBonoPagado|evIniPendiente)$/.test(k) ? money(v) : esc(String(v ?? ''));
         const hayBase = sig.some(x => x.cambios.some(y => y.k === 'evIniPendiente' && y.antes != null)), cobrado = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evIniPendiente'); return t + (c && c.antes != null && Number(c.antes) > Number(c.despues) ? Number(c.antes) - Number(c.despues) : 0); }, 0);
         const desemb = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evDesembolsado'); return t + (c && Number(c.despues) > Number(c.antes || 0) ? Number(c.despues) - Number(c.antes || 0) : 0); }, 0);
         const claves = ['precio', 'montoBanco', 'bono', 'bonoVerde', 'evDesembolsado', 'evBonoPagado', 'evIniPendiente'], etq = { evDesembolsado: 'Desembolsado', evBonoPagado: 'Bono pagado', evIniPendiente: 'Inicial pendiente' };
@@ -1026,6 +1029,11 @@
             <label class="small"><input type="radio" name="e-modo" value="vacios" ${O.modo === 'vacios' ? 'checked' : ''}> Solo completar lo que está vacío</label>
             <label class="small"><input type="checkbox" id="e-crear" ${O.crear ? 'checked' : ''}> <span><b>Sumar al CRM las ventas que están en seguimiento de cobranza</b> y aún no están (${O.crear ? R.nuevos.length : R.sinCrear}): ventas activas con minuta, con banco y con algo por cobrar. Se reparten entre los asistentes de Cobranzas por proyecto.</span></label>
             <label class="small"><input type="checkbox" id="e-resp" ${O.resp ? 'checked' : ''}> Descargar un respaldo antes de aplicar</label></div>
+          ${(() => { const nomEv = [...new Set([...L.ventas.map(v => v.proyecto), ...L.depositos.map(d => d.proyecto)].filter(Boolean))].sort(), crm = uniq(o => o.proyecto).sort();
+            const filas = nomEv.map(n => { const k = hn(n), act = proyCrmDe(n, O.alias), existe = crm.some(p => hn(p) === hn(act)), parecidos = crm.filter(p => hn(p) !== k && hn(p).startsWith(k)).length, dudoso = !O.alias[k] && (!existe || parecidos > 0); return { n, act, existe, dudoso, nv: L.ventas.filter(v => v.proyecto === n).length + L.depositos.filter(d => d.proyecto === n).length }; });
+            const dud = filas.filter(f => f.dudoso).length; if (!filas.length) return '';
+            return `<details class="fe-mas" style="margin:6px 0" ${dud ? 'open' : ''}><summary><b>Nombres de proyecto</b>: Evolta → CRM ${dud ? `<span class="badge amar plain">${dud} por confirmar</span>` : '<span class="muted small">· todo confirmado</span>'}</summary><p class="small muted" style="margin:6px 0">Si en Evolta un proyecto se llama distinto que en el CRM (por ejemplo "ALBORADA" en Evolta y "ALBORADA I" en el CRM), elige a cuál corresponde. Los clientes que ya están en el CRM <b>no cambian de proyecto ni pierden su avance</b>: se cruzan por DNI y unidad. Esto solo decide cómo se llamarán los clientes nuevos. Lo que elijas se recuerda.</p>
+              <div class="ev-tw"><table class="ev-t"><thead><tr><th>Proyecto en Evolta</th><th>Registros</th><th>Proyecto en el CRM</th></tr></thead><tbody>${filas.map(f => `<tr class="${f.dudoso ? 'falta' : ''}"><td><b>${esc(f.n)}</b></td><td>${f.nv}</td><td><select data-alias="${esc(f.n)}">${f.existe ? '' : `<option value="__nuevo" selected>(proyecto nuevo) ${esc(f.n)}</option>`}${crm.map(p => `<option value="${esc(p)}" ${hn(p) === hn(f.act) ? 'selected' : ''}>${esc(p)}</option>`).join('')}${f.existe ? `<option value="__nuevo">(proyecto nuevo) ${esc(f.n)}</option>` : ''}</select></td></tr>`).join('')}</tbody></table></div></details>`; })()}
           <div class="cob-sum card"><span><b>${hayBase ? money(cobrado) : '—'}</b><small>${hayBase ? 'de inicial cobrada desde la última vez' : 'primera carga: desde la próxima verás cuánto se cobró'}</small></span><span><b>${money(desemb)}</b><small>de desembolsos nuevos</small></span><span class="${R.alertas.length ? 'txt-amar' : ''}"><b>${R.alertas.length}</b><small>alertas para revisar</small></span></div>
           ${(() => { const dep = L.depositos.length > 0, P = dep ? DP.nuevos : evoltaPagosDe(R); if (!P.length && !dep) return ''; const tot = P.reduce((t, x) => t + x.monto, 0);
             return `<details class="fe-mas" style="margin:4px 0" open><summary><b>${P.length}</b> ingresos nuevos${dep ? ' (reporte de depósitos)' : ' detectados por diferencia'} por <b>${money(tot)}</b>${dep && DP.repetidos ? ` · ${DP.repetidos} ya estaban registrados` : ''}${DP.primera && dep ? ' · carga inicial' : ''}</summary>${P.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>${dep ? 'Fecha de pago' : 'Carga'}</th><th>Cliente</th><th>Tipo</th><th>Monto</th>${dep ? '<th>Medio</th><th>N° operación</th>' : ''}<th>Asistente</th></tr></thead><tbody>${P.slice(0, 30).map(x => `<tr><td>${fdate(dep ? x.fp : x.f)}</td><td>${esc(x.cliente)}</td><td>${esc(x.tipo)}</td><td>${money(x.monto)}</td>${dep ? `<td>${esc(x.medio || '')}</td><td>${esc(x.nop || '')}</td>` : ''}<td>${esc(x.asis)}</td></tr>`).join('')}</tbody></table></div>${P.length > 30 ? `<p class="small muted">Se muestran 30 de ${P.length}; todos se guardan.</p>` : ''}` : '<p class="small muted" style="margin:6px 0 0">No hay depósitos nuevos desde la última carga.</p>'}</details>`; })()}
@@ -1037,10 +1045,11 @@
       modal({ title: 'Actualizar desde Evolta (ventas y depósitos)', ok: 'Aplicar cambios', wide: true, body: '<div id="ev-box"></div>',
         onOk: () => { if (!ult || !ult.nCamb) { toast('No hay cambios para aplicar'); return false; }
           if (O.resp) { try { const R = respaldoArmar(); download(`Respaldo_antes_de_Evolta_${R.f}.json`, R.json, 'application/json'); } catch (e) { console.error(e); } }
+          S.params.aliasProy = { ...(S.params.aliasProy || {}), ...O.alias };
           const r = evoltaAplicar(ult.R, ult.R.deps); toast(`✓ Evolta al día: ${r.nAct} clientes actualizados${r.nNue ? ' y ' + r.nNue + ' nuevos' : ''}`); render(true); } });
       const dlg = $('#dlg'), box = dlg.querySelector('#ev-box');
       const draw = () => { ult = pintar(); box.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.nCamb ? `Aplicar (${ult.nCamb} cambios)` : 'Aplicar cambios'; };
-      box.onchange = (e) => { if (e.target.name === 'e-modo') O.modo = e.target.value; if (e.target.id === 'e-crear') O.crear = e.target.checked; if (e.target.id === 'e-resp') { O.resp = e.target.checked; return; } draw(); };
+      box.onchange = (e) => { if (e.target.dataset.alias !== undefined) O.alias[hn(e.target.dataset.alias)] = e.target.value === '__nuevo' ? e.target.dataset.alias : e.target.value; if (e.target.name === 'e-modo') O.modo = e.target.value; if (e.target.id === 'e-crear') O.crear = e.target.checked; if (e.target.id === 'e-resp') { O.resp = e.target.checked; return; } draw(); };
       draw();
     };
     inp.click();
