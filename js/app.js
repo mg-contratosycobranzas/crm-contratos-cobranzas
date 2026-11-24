@@ -887,9 +887,18 @@
   const BANCO_EV = [[/cr[eé]dito del per/i, 'BCP'], [/interbank/i, 'INTERBANK'], [/bbva/i, 'BBVA'], [/pichincha/i, 'PICHINCHA'], [/banbif|interamericano/i, 'BANBIF'], [/scotia/i, 'SCOTIABANK'], [/gnb/i, 'GNB']];
   const bancoEv = (x) => { const e = String(x || '').trim(); const m = BANCO_EV.find(([re]) => re.test(e)); return m ? m[1] : e; };
   function evoltaLeer(textos) {
-    const por = new Map(); let leidas = 0, dolares = 0;
+    const por = new Map(), depositos = []; let leidas = 0, dolares = 0;
     textos.forEach(({ nombre, texto }) => {
       const M = parseCsv(texto); const H = (M[0] || []).map(x => String(x).trim()), ix = (k) => H.indexOf(k);
+      if (ix('Tipo_Cuota') >= 0 && ix('Monto_Pagado_Real') >= 0) { // reporte "Ingreso por depósito": un renglón por pago
+        const cl = (x) => String(x ?? '').trim().replace(/^=/, '').replace(/^"|"$/g, '').trim(), g = (k, r) => ix(k) < 0 ? '' : cl(r[ix(k)]);
+        M.slice(1).forEach(r => { if (!r.length) return; const monto = Number(g('Monto_Pagado_Real', r)); if (!(monto > 0)) return;
+          const fp = /^(\d{4})\/(\d{2})\/(\d{2})/.exec(g('Fecha_Pago', r)), tc = g('Tipo_Cuota', r), ent = g('Entidad_Financiera_SF', r);
+          const tipo = tc === 'CUOTA INICIAL' ? 'Cuota inicial' : tc === 'SEPARACION' ? 'Separación' : tc === 'SALDO FINANCIAR' ? (/inmobiliaria/i.test(ent) ? 'Cuota de crédito directo' : 'Desembolso del banco') : tc === 'BONO MIVIVIENDA' ? 'Bono MiVivienda' : tc === 'BONO VERDE' ? 'Bono verde' : tc === 'BONO INTEGRADOR' ? 'Bono integrador' : tc.charAt(0) + tc.slice(1).toLowerCase();
+          const d = { doc: g('Nro_Documento_Identidad', r), cliente: g('Nombres_Titular', r), proyecto: g('Proyecto', r), unidad: g('NroInmueble_1', r), tipo, monto: Math.round(monto), fp: fp ? `${fp[1]}-${fp[2]}-${fp[3]}` : '', medio: g('Medio_Pago', r), nop: g('Nro_Operacion', r), ver: g('Verificado', r) };
+          d.k = hash53([d.doc, d.unidad, tc, g('Nro_Cuota', r), d.fp, d.nop, d.monto].join('|')); depositos.push(d); });
+        return;
+      }
       ['IdProforma', 'NroDocumentoTitular', 'MontoFinanciamiento_OC', 'EstadoOC'].forEach(k => { if (ix(k) < 0) throw new Error(`"${nombre}" no parece el Reporte de Venta de Evolta (falta la columna ${k})`); });
       M.slice(1).forEach(r => { if (!r.length || !String(r[ix('IdProforma')] || '').trim()) return; leidas++;
         const g = (k) => ix(k) < 0 ? '' : String(r[ix(k)] ?? '').trim(), n = (k) => { const t = g(k).replace(/,/g, ''); return t === '' || isNaN(Number(t)) ? null : Number(t); };
@@ -900,7 +909,7 @@
           precio: n('PrecioVenta_OC'), fin: n('MontoFinanciamiento_OC'), desemb: n('MontoDesembolsado_OC'), bono: n('MontoBono_OC'), bonoPag: n('MontoPagadoBono_OC'), bonoVerde: n('BonoVerde_OC'), ini: ci == null ? null : Math.max(0, ci - (pci || 0)),
           estadoSF: g('EstadoSF'), tipoFin: g('TipoFinanciamiento'), entidad: g('EntidadFinanciamiento'), vendedor: g('Vendedor'), fechaVenta: fv ? `${fv[3]}-${fv[2]}-${fv[1]}` : '', dolar: /d[oó]lar/i.test(g('Moneda_OC')) }); });
     });
-    return { ventas: [...por.values()], leidas, dolares };
+    return { ventas: [...por.values()], depositos, leidas, dolares };
   }
   function evoltaPlan(ventas, modo, crear) {
     const dig = (x) => String(x || '').replace(/\D/g, ''), U = (x) => hn(x), res = { act: [], nuevos: [], sinCrear: 0, noCrm: 0, alertas: [], igual: 0, ignoradas: 0 };
@@ -939,6 +948,20 @@
       const n = r.d.owner.cob || 'Sin asignar', a = m.get(n) || { casos: 0, total: 0 }; a.casos++; a.total += pc.total; m.set(n, a); });
     return m;
   }
+  /* Los ingresos se guardan por mes en documentos aparte (meta/ing-AAAA-MM): así no engordan la configuración del CRM */
+  const hash53 = (str) => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); };
+  const mesesAtras = (n) => { const out = []; const d = new Date(today()); d.setDate(1); for (let i = 0; i < n; i++) { out.push(iso(d).slice(0, 7)); d.setMonth(d.getMonth() - 1); } return out; };
+  async function ingCargar() {
+    if (!CL.enabled) return S.params.evPagos || [];
+    const docs = await Promise.all(mesesAtras(3).map(m => CL.getDoc('meta', 'ing-' + m).catch(() => null)));
+    return docs.flatMap(d => (d && d.items) || []);
+  }
+  async function ingGuardar(items) {
+    if (!items.length) return;
+    if (!CL.enabled) { S.params.evPagos = [...(S.params.evPagos || []), ...items].slice(-3000); save(); return; }
+    const id = 'ing-' + iso(today()).slice(0, 7), prev = await CL.getDoc('meta', id).catch(() => null);
+    await CL.setDoc('meta', id, { items: [...((prev && prev.items) || []), ...items] });
+  }
   // ingresos nuevos: diferencia entre esta carga de Evolta y la anterior, por cliente
   function evoltaPagosDe(plan) {
     const out = [];
@@ -950,10 +973,18 @@
         if (c.k === 'evBonoPagado' && o.evSync && Number(c.despues) > Number(antes || 0)) add('Bono MiVivienda', Number(c.despues) - Number(antes || 0)); }); });
     return out;
   }
-  function evoltaAplicar(plan) {
-    const hoy = Date.now(), asis = {}, pagos = evoltaPagosDe(plan); // se calculan antes de pisar los montos anteriores
+  function depositosPlan(L, previos) {
+    const vistos = new Set(previos.map(x => x.k)), dig = (x) => String(x || '').replace(/\D/g, ''), primera = previos.length === 0, hoy = iso(today());
+    const nuevos = [], rep = new Set();
+    L.depositos.forEach(d => { if (vistos.has(d.k) || rep.has(d.k)) return; rep.add(d.k);
+      const cand = S.ops.filter(o => dig(o.dni) && dig(o.dni) === dig(d.doc)), c2 = cand.filter(o => o.unidad && hn(o.unidad) === hn(d.unidad)), o = c2[0] || (cand.length === 1 ? cand[0] : null), dd = o && D.get(o.id);
+      nuevos.push({ f: hoy, fp: d.fp, id: o ? o.id : '', cliente: o ? o.cliente : d.cliente.slice(0, 40), dni: d.doc, proyecto: d.proyecto, unidad: d.unidad, tipo: d.tipo, monto: d.monto, asis: (dd && dd.owner.cob) || 'Sin asignar', medio: d.medio, nop: d.nop, ver: d.ver, k: d.k, ini: primera || undefined }); });
+    return { nuevos, repetidos: L.depositos.length - nuevos.length, primera };
+  }
+  function evoltaAplicar(plan, deps) {
+    const hoy = Date.now(), asis = {}, pagos = deps && deps.length ? deps : (plan.sinDelta ? [] : evoltaPagosDe(plan)); // se calculan antes de pisar los montos anteriores
     let max = Math.max(0, ...S.ops.map(o => +String(o.id).replace(/\D/g, '') || 0)), nAct = 0, nNue = 0, totIni = 0, totDes = 0;
-    pagos.forEach(p => { const a = (asis[p.asis] = asis[p.asis] || { ini: 0, des: 0 }); if (p.tipo === 'Cuota inicial') { a.ini += p.monto; totIni += p.monto; } else { a.des += p.monto; totDes += p.monto; } });
+    pagos.forEach(p => { const a = (asis[p.asis] = asis[p.asis] || { ini: 0, des: 0 }); if (/^(Cuota inicial|Separación)$/.test(p.tipo)) { a.ini += p.monto; totIni += p.monto; } else if (/^(Desembolso|Bono)/.test(p.tipo)) { a.des += p.monto; totDes += p.monto; } });
     plan.act.forEach(({ o, cambios, soloFecha }) => { cambios.forEach(c => { const antes = o[c.k];
         o[c.k] = c.despues; (pendingOps[o.id] = pendingOps[o.id] || {})[c.k] = c.despues;
         if (c.k !== 'evSync') S.log.push({ ts: hoy, usuario: S.actor, opId: o.id, etapa: 'gen', campo: c.k, antes: antes ?? '', despues: c.despues }); }); if (!soloFecha) nAct++; });
@@ -968,7 +999,8 @@
     recompute(); const car = carteraPorAsistente(), carteraAsis = {}; let cartera = 0; car.forEach((a, n) => { carteraAsis[n] = Math.round(a.total); cartera += a.total; });
     const hist = (S.params.evHist || []).filter(h => h.f !== iso(today())); hist.push({ f: iso(today()), por: S.actor || '', nuevos: nNue, ini: Math.round(totIni), des: Math.round(totDes), cartera: Math.round(cartera), asis: Object.fromEntries(Object.entries(asis).map(([n, a]) => [n, { ini: Math.round(a.ini), des: Math.round(a.des) }])), carteraAsis });
     S.params.evHist = hist.slice(-30);
-    S.params.evPagos = [...(S.params.evPagos || []), ...pagos].slice(-2500); // historial de ingresos detectados
+    const cid = String(Date.now()); pagos.forEach(p => { p.c = cid; });
+    ingGuardar(pagos).then(() => { ui.ingItems = undefined; }).catch(e => toast('No se pudo guardar el historial de ingresos: ' + (e.code === 'permission-denied' ? 'solo la administradora puede' : e.message)));
     S.params.ultimaEvolta = { fecha: iso(today()), por: S.actor || '', actualizados: nAct, nuevos: nNue };
     S.log.push({ ts: hoy, usuario: S.actor, opId: '—', etapa: 'gen', campo: 'sync_evolta', antes: '', despues: `${nAct} clientes actualizados, ${nNue} nuevos` });
     commit(); return { nAct, nNue };
@@ -979,34 +1011,35 @@
     inp.onchange = async () => {
       const files = [...inp.files]; inp.value = ''; if (!files.length) return;
       let L; try { L = evoltaLeer(await Promise.all(files.map(async f => ({ nombre: f.name, texto: new TextDecoder('utf-8').decode(await f.arrayBuffer()).replace(/^﻿/, '') })))); } catch (e) { console.error(e); return toast('No se pudo leer: ' + e.message); }
-      if (!L.ventas.length) return toast('Los archivos no tienen ventas');
+      if (!L.ventas.length && !L.depositos.length) return toast('Los archivos no tienen ventas ni depósitos');
+      const previos = await ingCargar().catch(() => []);
       const O = { modo: 'evolta', crear: true, resp: true };
       const pintar = () => {
-        const R = evoltaPlan(L.ventas, O.modo, O.crear), sig = R.act.filter(x => !x.soloFecha), fm = (k, v) => /^(precio|montoBanco|bono|bonoVerde|evDesembolsado|evBonoPagado|evIniPendiente)$/.test(k) ? money(v) : esc(String(v ?? ''));
+        const R = evoltaPlan(L.ventas, O.modo, O.crear), DP = depositosPlan(L, previos); R.sinDelta = L.depositos.length > 0; R.deps = DP.nuevos; const sig = R.act.filter(x => !x.soloFecha), fm = (k, v) => /^(precio|montoBanco|bono|bonoVerde|evDesembolsado|evBonoPagado|evIniPendiente)$/.test(k) ? money(v) : esc(String(v ?? ''));
         const hayBase = sig.some(x => x.cambios.some(y => y.k === 'evIniPendiente' && y.antes != null)), cobrado = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evIniPendiente'); return t + (c && c.antes != null && Number(c.antes) > Number(c.despues) ? Number(c.antes) - Number(c.despues) : 0); }, 0);
         const desemb = sig.reduce((t, x) => { const c = x.cambios.find(y => y.k === 'evDesembolsado'); return t + (c && Number(c.despues) > Number(c.antes || 0) ? Number(c.despues) - Number(c.antes || 0) : 0); }, 0);
         const claves = ['precio', 'montoBanco', 'bono', 'bonoVerde', 'evDesembolsado', 'evBonoPagado', 'evIniPendiente'], etq = { evDesembolsado: 'Desembolsado', evBonoPagado: 'Bono pagado', evIniPendiente: 'Inicial pendiente' };
         const filas = sig.filter(x => x.cambios.some(c => claves.includes(c.k))).slice(0, 60), nuevoFin = R.nuevos.length;
-        return { R, nCamb: sig.length + R.nuevos.length, html: `<p class="small" style="margin-top:0">Se leyeron <b>${L.leidas}</b> filas (<b>${L.ventas.length}</b> ventas distintas). <b>${sig.length}</b> clientes del CRM se actualizan, <b>${R.igual}</b> ya estaban al día y <b>${R.nuevos.length}</b> ventas nuevas se suman al seguimiento. Aún no se guardó nada.</p>
+        return { R, nCamb: sig.length + R.nuevos.length + DP.nuevos.length, html: `<p class="small" style="margin-top:0">Se leyeron <b>${L.leidas}</b> filas (<b>${L.ventas.length}</b> ventas distintas). <b>${sig.length}</b> clientes del CRM se actualizan, <b>${R.igual}</b> ya estaban al día y <b>${R.nuevos.length}</b> ventas nuevas se suman al seguimiento. Aún no se guardó nada.</p>
           <div class="carga-op"><b class="small">Qué se actualiza y qué no</b><span class="small">Se actualizan los <b>montos</b> (precio, financiamiento, bonos, desembolsado e inicial pendiente) y se completan datos vacíos (teléfono, correo, vendedor, banco). <b>No se toca el avance</b>: fechas, firmas, notaría, abogado, kardex, cláusulas, seguimientos ni etapas.</span>
             <label class="small"><input type="radio" name="e-modo" value="evolta" ${O.modo === 'evolta' ? 'checked' : ''}> <b>Evolta manda en los montos</b> (recomendado)</label>
             <label class="small"><input type="radio" name="e-modo" value="vacios" ${O.modo === 'vacios' ? 'checked' : ''}> Solo completar lo que está vacío</label>
             <label class="small"><input type="checkbox" id="e-crear" ${O.crear ? 'checked' : ''}> <span><b>Sumar al CRM las ventas que están en seguimiento de cobranza</b> y aún no están (${O.crear ? R.nuevos.length : R.sinCrear}): ventas activas con minuta, con banco y con algo por cobrar. Se reparten entre los asistentes de Cobranzas por proyecto.</span></label>
             <label class="small"><input type="checkbox" id="e-resp" ${O.resp ? 'checked' : ''}> Descargar un respaldo antes de aplicar</label></div>
           <div class="cob-sum card"><span><b>${hayBase ? money(cobrado) : '—'}</b><small>${hayBase ? 'de inicial cobrada desde la última vez' : 'primera carga: desde la próxima verás cuánto se cobró'}</small></span><span><b>${money(desemb)}</b><small>de desembolsos nuevos</small></span><span class="${R.alertas.length ? 'txt-amar' : ''}"><b>${R.alertas.length}</b><small>alertas para revisar</small></span></div>
-          ${(() => { const P = evoltaPagosDe(R); if (!P.length) return ''; const tot = P.reduce((t, x) => t + x.monto, 0);
-            return `<details class="fe-mas" style="margin:4px 0" open><summary><b>${P.length}</b> ingresos nuevos detectados por <b>${money(tot)}</b> (se guardan en "Ingresos nuevos")</summary><div class="ev-tw"><table class="ev-t"><thead><tr><th>Cliente</th><th>Tipo</th><th>Monto</th><th>Asistente</th></tr></thead><tbody>${P.slice(0, 30).map(x => `<tr><td>${esc(x.cliente)}</td><td>${esc(x.tipo)}</td><td>${money(x.monto)}</td><td>${esc(x.asis)}</td></tr>`).join('')}</tbody></table></div>${P.length > 30 ? `<p class="small muted">Se muestran 30 de ${P.length}.</p>` : ''}</details>`; })()}
+          ${(() => { const dep = L.depositos.length > 0, P = dep ? DP.nuevos : evoltaPagosDe(R); if (!P.length && !dep) return ''; const tot = P.reduce((t, x) => t + x.monto, 0);
+            return `<details class="fe-mas" style="margin:4px 0" open><summary><b>${P.length}</b> ingresos nuevos${dep ? ' (reporte de depósitos)' : ' detectados por diferencia'} por <b>${money(tot)}</b>${dep && DP.repetidos ? ` · ${DP.repetidos} ya estaban registrados` : ''}${DP.primera && dep ? ' · carga inicial' : ''}</summary>${P.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>${dep ? 'Fecha de pago' : 'Carga'}</th><th>Cliente</th><th>Tipo</th><th>Monto</th>${dep ? '<th>Medio</th><th>N° operación</th>' : ''}<th>Asistente</th></tr></thead><tbody>${P.slice(0, 30).map(x => `<tr><td>${fdate(dep ? x.fp : x.f)}</td><td>${esc(x.cliente)}</td><td>${esc(x.tipo)}</td><td>${money(x.monto)}</td>${dep ? `<td>${esc(x.medio || '')}</td><td>${esc(x.nop || '')}</td>` : ''}<td>${esc(x.asis)}</td></tr>`).join('')}</tbody></table></div>${P.length > 30 ? `<p class="small muted">Se muestran 30 de ${P.length}; todos se guardan.</p>` : ''}` : '<p class="small muted" style="margin:6px 0 0">No hay depósitos nuevos desde la última carga.</p>'}</details>`; })()}
           ${R.alertas.length ? `<h3 style="margin:10px 0 4px">Para revisar</h3>${[['dev', 'ventas que Evolta marca como DEVUELTAS (ya no salen en "A quién cobrar")'], ['desemb', 'clientes que Evolta ya muestra desembolsados, pero en el CRM falta la fecha de desembolso (regístrala en Finanzas)'], ['ini', 'clientes con cuota inicial pendiente distinta entre CRM y Evolta (no se cambia el avance de Cobranzas: confírmalo y corrígelo en la ficha)'], ['unidad', 'clientes cruzados por DNI con otra unidad (revisa que sea el mismo caso)'], ['dni', 'DNI con varios clientes en el CRM (no se actualizaron)'], ['dolar', 'ventas en dólares (los montos no se cargaron)']].map(([t, tx]) => { const L = R.alertas.filter(a => a.t === t); return L.length ? `<details class="fe-mas" style="margin:4px 0"><summary><b>${L.length}</b> ${tx}</summary><ul class="small" style="margin:6px 0 0 18px">${L.slice(0, 30).map(a => `<li>${esc(a.nombre || '')}${t === 'ini' || t === 'unidad' ? ': ' + esc(a.txt) : ''}</li>`).join('')}${L.length > 30 ? `<li class="muted">y ${L.length - 30} más</li>` : ''}</ul></details>` : ''; }).join('')}` : ''}
           ${filas.length ? `<div class="ev-tw"><table class="ev-t"><thead><tr><th>Cliente</th><th>Cambios en los montos</th></tr></thead><tbody>${filas.map(x => `<tr><td>${esc(x.o.cliente)}<div class="small muted">${x.o.id}</div></td><td class="small">${x.cambios.filter(c => claves.includes(c.k) && !((c.antes == null || c.antes === '') && c.despues === 0 && /^(evDesembolsado|evBonoPagado|bonoVerde)$/.test(c.k))).map(c => `${esc(etq[c.k] || CRM.FIELD_LABEL[c.k] || c.k)}: ${c.antes == null || c.antes === '' ? '' : fm(c.k, c.antes) + ' → '}<b>${fm(c.k, c.despues)}</b>`).join('<br>')}</td></tr>`).join('')}</tbody></table></div>${sig.length > 60 ? `<p class="small muted">Se muestran 60; todos se actualizan al aplicar.</p>` : ''}` : '<div class="empty">No hay cambios en los montos con estas opciones.</div>'}
           ${L.dolares ? `<p class="small muted">${L.dolares} venta${L.dolares > 1 ? 's' : ''} en dólares: los montos no se cargan.</p>` : ''}` };
       };
       let ult = null;
-      modal({ title: 'Actualizar desde Evolta (Reporte de Venta)', ok: 'Aplicar cambios', wide: true, body: '<div id="ev-box"></div>',
+      modal({ title: 'Actualizar desde Evolta (ventas y depósitos)', ok: 'Aplicar cambios', wide: true, body: '<div id="ev-box"></div>',
         onOk: () => { if (!ult || !ult.nCamb) { toast('No hay cambios para aplicar'); return false; }
           if (O.resp) { try { const R = respaldoArmar(); download(`Respaldo_antes_de_Evolta_${R.f}.json`, R.json, 'application/json'); } catch (e) { console.error(e); } }
-          const r = evoltaAplicar(ult.R); toast(`✓ Evolta al día: ${r.nAct} clientes actualizados${r.nNue ? ' y ' + r.nNue + ' nuevos' : ''}`); render(true); } });
+          const r = evoltaAplicar(ult.R, ult.R.deps); toast(`✓ Evolta al día: ${r.nAct} clientes actualizados${r.nNue ? ' y ' + r.nNue + ' nuevos' : ''}`); render(true); } });
       const dlg = $('#dlg'), box = dlg.querySelector('#ev-box');
-      const draw = () => { ult = pintar(); box.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.nCamb ? `Aplicar (${ult.nCamb} clientes)` : 'Aplicar cambios'; };
+      const draw = () => { ult = pintar(); box.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.nCamb ? `Aplicar (${ult.nCamb} cambios)` : 'Aplicar cambios'; };
       box.onchange = (e) => { if (e.target.name === 'e-modo') O.modo = e.target.value; if (e.target.id === 'e-crear') O.crear = e.target.checked; if (e.target.id === 'e-resp') { O.resp = e.target.checked; return; } draw(); };
       draw();
     };
@@ -1026,30 +1059,35 @@
   }
   /* ---- Ingresos nuevos: lo que Evolta informó de más entre una carga y la siguiente ---- */
   function ingresosDatos() {
-    const F = flt('ingresos', { f: '', a: '', t: '' }), todos = S.params.evPagos || [], fechas = [...new Set(todos.map(x => x.f))].sort().reverse(), f0 = F.f === 'todas' ? 'todas' : (F.f || fechas[0] || '');
-    const L = todos.filter(x => (f0 === 'todas' || x.f === f0) && (!F.a || x.asis === F.a) && (!F.t || x.tipo === F.t)).sort((a, b) => b.f.localeCompare(a.f) || b.monto - a.monto);
+    const F = flt('ingresos', { f: '', a: '', t: '' }), todos = ui.ingItems || [], kc = (x) => x.c || x.f, fechas = [...new Set(todos.map(kc))].sort().reverse(), f0 = F.f === 'todas' ? 'todas' : (F.f || fechas[0] || '');
+    const L = todos.filter(x => (f0 === 'todas' || kc(x) === f0) && (!F.a || x.asis === F.a) && (!F.t || x.tipo === F.t)).sort((a, b) => (b.fp || b.f).localeCompare(a.fp || a.f) || b.monto - a.monto);
     return { F, todos, fechas, f0, L };
   }
+  const cargaTxt = (c) => { if (!c) return ''; if (/^\d{10,}$/.test(c)) { const d = new Date(+c); return `${fdate(iso(d))} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; } return fdate(c); };
   function vIngresos() {
     const id = 'rg-ing', F0 = flt('ingresos', { f: '', a: '', t: '' });
+    if (ui.ingItems === undefined) { ui.ingItems = null; ingCargar().then(it => { ui.ingItems = it; if (route().view === 'ingresos') render(true); }).catch(e => { ui.ingItems = []; if (route().view === 'ingresos') render(true); }); }
+    if (ui.ingItems === null) return `${pageHead('Ingresos nuevos', 'Pagos informados por Evolta.', '', '')}<div class="empty">Cargando los ingresos…</div>`;
     const build = () => {
-      const { L, todos, f0 } = ingresosDatos(), tot = L.reduce((t, x) => t + x.monto, 0), por = (t) => L.filter(x => x.tipo === t).reduce((a, x) => a + x.monto, 0);
-      if (!todos.length) return '<div class="card"><div class="empty">Aún no hay ingresos detectados.<br>Se detectan desde la <b>segunda</b> carga de Evolta, comparándola con la anterior.</div></div>';
-      return `<div class="card cob-sum"><span><b>${money(tot)}</b><small>${L.length} ${L.length === 1 ? 'ingreso' : 'ingresos'}${f0 === 'todas' ? ' en todas las cargas' : ' en la carga del ' + fdate(f0)}</small></span><span><b>${money(por('Cuota inicial'))}</b><small>cuota inicial</small></span><span><b>${money(por('Desembolso del banco'))}</b><small>desembolsos del banco</small></span><span><b>${money(por('Bono MiVivienda'))}</b><small>bono MiVivienda</small></span></div>
-        <div class="card"><div class="ops-tw">${tbl(id + '-t', [{ h: 'Carga', f: x => fdate(x.f), s: x => x.f }, { h: 'Cliente', f: x => { const o = getOp(x.id); return o ? opLink(o) : esc(x.cliente); }, s: x => x.cliente },
-          { h: 'Tipo', f: x => esc(x.tipo), s: x => x.tipo }, { h: 'Monto', cls: 'r', f: x => `<b>${money(x.monto)}</b>`, s: x => x.monto }, { h: 'Asistente de Cobranzas', f: x => esc(x.asis), s: x => x.asis }], L, 'No hay ingresos con ese filtro.')}</div></div>`;
+      const { L, todos, f0 } = ingresosDatos(), tot = L.reduce((t, x) => t + x.monto, 0), por = (re) => L.filter(x => re.test(x.tipo)).reduce((a, x) => a + x.monto, 0);
+      if (!todos.length) return '<div class="card"><div class="empty">Aún no hay ingresos registrados.<br>Sube el reporte <b>"Ingreso por depósito"</b> de Evolta en <b>Actualizar desde Evolta</b>: cada pago queda con su fecha, medio y número de operación.</div></div>';
+      const esIni = L.some(x => x.ini);
+      return `<div class="card cob-sum"><span><b>${money(tot)}</b><small>${L.length} ${L.length === 1 ? 'ingreso' : 'ingresos'}${f0 === 'todas' ? ' en todas las cargas' : ' en la carga del ' + cargaTxt(f0)}${esIni && f0 !== 'todas' ? ' (carga inicial)' : ''}</small></span><span><b>${money(por(/^(Cuota inicial|Separación)$/))}</b><small>cuota inicial y separación</small></span><span><b>${money(por(/^Desembolso/))}</b><small>desembolsos del banco</small></span><span><b>${money(por(/^Bono/))}</b><small>bonos</small></span><span><b>${money(por(/crédito directo/))}</b><small>crédito directo</small></span></div>
+        <div class="card"><div class="ops-tw">${tbl(id + '-t', [{ h: 'Fecha de pago', f: x => x.fp ? fdate(x.fp) : `<span class="muted">${fdate(x.f)} (carga)</span>`, s: x => x.fp || x.f }, { h: 'Cliente', f: x => { const o = x.id && getOp(x.id); return o ? opLink(o) : esc(x.cliente); }, s: x => x.cliente },
+          { h: 'Tipo', f: x => esc(x.tipo), s: x => x.tipo }, { h: 'Monto', cls: 'r', f: x => `<b>${money(x.monto)}</b>`, s: x => x.monto }, { h: 'Medio de pago', f: x => esc(x.medio || '—'), s: x => x.medio || '' }, { h: 'N° operación', f: x => esc(x.nop || '—'), s: x => x.nop || '' },
+          { h: 'Asistente de Cobranzas', f: x => esc(x.asis), s: x => x.asis }, { h: 'Verificado', f: x => x.ver ? esc(x.ver) : '—', s: x => x.ver || '' }], L, 'No hay ingresos con ese filtro.')}</div></div>`;
     };
     const { fechas, todos } = ingresosDatos(), sel = (k, label, opts) => `<select data-f="ingresos" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F0[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
-    return `${pageHead('Ingresos nuevos', 'Pagos que Evolta informó entre una carga semanal y la siguiente.', `<button class="btn" data-act="ingresos-excel">Descargar Excel</button>`,
-      'Se detectan <b>comparando cada carga de Evolta con la anterior</b>: si la cuota inicial pendiente de un cliente bajó, o el banco desembolsó o pagó un bono, la diferencia es un ingreso nuevo. Se atribuye al asistente de Cobranzas del cliente. <b>Límite:</b> sale el monto y la fecha de la carga, no el N° de operación ni el día exacto del depósito (eso lo trae el reporte "Ingreso por depósito" de Evolta). Desde la segunda carga.')}
-      <div class="filters">${(() => { return `<select data-f="ingresos" data-k="f" data-r="${id}"><option value="">Última carga${fechas[0] ? ' (' + fdate(fechas[0]) + ')' : ''}</option>${fechas.slice(1).map(x => `<option value="${x}" ${F0.f === x ? 'selected' : ''}>${fdate(x)}</option>`).join('')}<option value="todas" ${F0.f === 'todas' ? 'selected' : ''}>Todas las cargas</option></select>`; })()}
-        ${sel('t', 'Todos los tipos', [['Cuota inicial', 'Cuota inicial'], ['Desembolso del banco', 'Desembolso del banco'], ['Bono MiVivienda', 'Bono MiVivienda']])}${sel('a', 'Todos los asistentes', [...new Set(todos.map(x => x.asis))].sort().map(n => [n, n]))}</div>
+    return `${pageHead('Ingresos nuevos', 'Cada pago que Evolta informó, con su fecha, medio y número de operación.', `<button class="btn" data-act="ingresos-excel">Descargar Excel</button>`,
+      'Se llena con el reporte <b>"Ingreso por depósito"</b> de Evolta (súbelo junto con el Reporte de Venta en <b>Actualizar desde Evolta</b>): el CRM reconoce los pagos que ya registró y muestra solo los <b>nuevos</b> de cada carga. Cada pago se atribuye al asistente de Cobranzas del cliente. Si no subes ese reporte, el CRM detecta los ingresos por diferencia entre cargas (solo el monto). <b>Verificado</b> es la marca de Evolta: si dice NO, el pago aún no lo confirma Contabilidad.')}
+      <div class="filters"><select data-f="ingresos" data-k="f" data-r="${id}"><option value="">Última carga${fechas[0] ? ' (' + cargaTxt(fechas[0]) + ')' : ''}</option>${fechas.slice(1).map(x => `<option value="${x}" ${F0.f === x ? 'selected' : ''}>${cargaTxt(x)}</option>`).join('')}<option value="todas" ${F0.f === 'todas' ? 'selected' : ''}>Todas las cargas</option></select>
+        ${sel('t', 'Todos los tipos', [...new Set(todos.map(x => x.tipo))].sort().map(t => [t, t]))}${sel('a', 'Todos los asistentes', [...new Set(todos.map(x => x.asis))].sort().map(n => [n, n]))}</div>
       ${region(id, build)}`;
   }
   function ingresosExcel() {
-    const { L } = ingresosDatos(), d = L.map(x => ({ 'Fecha de carga': xlDate(x.f), Cliente: x.cliente, DNI: x.dni, Proyecto: x.proyecto, Unidad: x.unidad, Tipo: x.tipo, 'Monto (S/)': x.monto, 'Asistente de Cobranzas': x.asis }));
-    const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = [14, 36, 12, 16, 10, 22, 14, 24].map(w => ({ wch: w }));
-    const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: 6 })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
+    const { L } = ingresosDatos(), d = L.map(x => ({ 'Fecha de carga': xlDate(x.f), 'Fecha de pago': x.fp ? xlDate(x.fp) : '', Cliente: x.cliente, DNI: x.dni || '', Proyecto: x.proyecto || '', Unidad: x.unidad || '', Tipo: x.tipo, 'Monto (S/)': x.monto, 'Medio de pago': x.medio || '', 'N° de operación': x.nop || '', Verificado: x.ver || '', 'Asistente de Cobranzas': x.asis }));
+    const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = [14, 14, 36, 12, 16, 10, 24, 14, 22, 16, 11, 24].map(w => ({ wch: w }));
+    const ref = XLSX.utils.decode_range(ws['!ref']); for (let r = 1; r <= ref.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c: 7 })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; }
     ws['!autofilter'] = { ref: ws['!ref'] }; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Ingresos nuevos'); XLSX.writeFile(wb, `Ingresos_nuevos_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${L.length} ingresos`);
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
@@ -1995,7 +2033,7 @@
     const sel = (k, label, opts, noAll) => `<select data-f="operaciones" data-k="${k}" data-r="${id}">${noAll ? '' : `<option value="">${label}</option>`}${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
     const meses = (fn) => [...new Set(S.ops.map(fn).filter(Boolean))].sort().reverse().map(m => [m, mesTxt(m)]);
     const tip = diasTipicos();
-    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja el <i>Reporte de Venta</i> de Evolta (en CSV) y súbelo; se actualizan los montos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
+    return `${pageHead('Resumen de operaciones', 'Cada venta con su financiamiento, equipo, banco, firmas y cuándo se recibe el desembolso.', `<button class="btn pri" data-act="export-cobro" title="Las columnas de tu formato de cobranza, con lo que tengas filtrado">Excel: formato de cobranza</button> <button class="btn" data-act="export-ops" title="Todas las columnas">Excel completo</button>${can('a_import') ? ' <button class="btn pri" data-act="evolta-sync" title="Sube el Reporte de Venta que bajas de Evolta: actualiza montos sin mover el avance">Actualizar desde Evolta</button> <button class="btn" data-act="importar-excel" title="Subir tu Excel con el formato de cobranza para llenar o actualizar clientes">Cargar desde Excel</button>' : ''}`, '<b>Total por cobrar</b> = saldo a financiar + bonos MiVivienda y bono verde (mientras el banco no desembolse) + cuota inicial pendiente. Usa los filtros (vendedor, jefe de ventas, ejecutivo de banco, abogado, firma, mes) y el total se recalcula. <b>Excel: formato de cobranza</b> baja tus 14 columnas más el total, con lo filtrado. <b>Actualizar desde Evolta</b>: cada lunes baja de Evolta el <i>Reporte de Venta</i> y el de <i>Ingreso por depósito</i> (en CSV) y súbelos juntos; se actualizan los montos, se registran los pagos nuevos y no se mueve el avance. <b>Cargar desde Excel</b> sube ese mismo formato (descárgalo, llénalo y súbelo): el CRM cruza por DNI, te muestra qué cambiaría y recién ahí guarda. Filtra por <b>mes de ingreso</b> (fecha en que se creó el cliente o empezó la cobranza) y por <b>mes en que se recibe</b> el desembolso. La vista simple muestra lo principal; la completa y el Excel traen todas las columnas. Se recibe: la fecha real de desembolso; si no hay, la programada (cláusula o Evolta); si no, la fecha de ingreso + ' + tip.dias + ' días.')}
       ${(() => { const ep = empresaProy(), emps = [...new Set(S.ops.map(o => empresaDe(o) || ep[o.proyecto]).filter(Boolean))].sort();
           // al elegir empresa, la lista de proyectos muestra solo los de esa empresa
           const proys = uniq(o => o.proyecto).filter(p => !F.emp || S.ops.some(o => o.proyecto === p && (empresaDe(o) || ep[o.proyecto]) === F.emp));
