@@ -711,3 +711,6 @@ i:empty,.av-ic:empty,.bz-ic:empty,.bf-ic:empty,.cg-ph:empty{display:none}
 .ins>i{display:none}
 .top .bell svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .hn:empty{display:none}
+/* Resoluciones y cartas */
+.rs-card{margin:0 0 12px}.rs-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.rs-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rs-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line2);margin-top:8px}.rs-acts{display:flex;gap:6px;flex-wrap:wrap}

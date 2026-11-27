@@ -3,7 +3,7 @@
    nueva) y, si no hay internet, usa la copia guardada. Los datos los guarda Firebase por su cuenta. */
 const CACHE = 'crm-mg-v1';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'css/styles.css', 'js/firebase-config.js', 'js/cloud.js', 'data/operaciones.js', 'js/model.js',
-  'js/evolta.js', 'js/clausula.js', 'js/constancia.js', 'js/devolucion.js', 'js/app.js', 'vendor/xlsx.full.min.js'];
+  'js/evolta.js', 'js/clausula.js', 'js/constancia.js', 'js/devolucion.js', 'js/resolucion.js', 'js/app.js', 'vendor/xlsx.full.min.js'];
 // solo se guardan copias de estos sitios (archivos del CRM y librerías); nunca de los datos ni del inicio de sesión
 const GUARDA = (u) => u.origin === self.location.origin || /^(www\.gstatic\.com|cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.(googleapis|gstatic)\.com)$/.test(u.hostname);
 

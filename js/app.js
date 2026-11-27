@@ -3,7 +3,7 @@
   'use strict';
   const { STAGES, STAGE, FIELDS, JEFATURA, derive, milestones, fdate, pd, iso, today, diff, num } = CRM;
   const LS = 'crm-mg-v1';
-  const FIELD_LABEL = { ...CRM.FIELD_LABEL, usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', unir_proyectos: 'Unión de proyectos', carga_excel: 'Carga masiva desde Excel', sync_evolta: 'Actualización desde Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
+  const FIELD_LABEL = { ...CRM.FIELD_LABEL, resolucion: 'Resolución o carta', usuario_alta: 'Alta de usuario', usuario_baja: 'Baja de usuario', permiso: 'Permiso', evolta: 'Estado de cuenta Evolta', unir_proyectos: 'Unión de proyectos', carga_excel: 'Carga masiva desde Excel', sync_evolta: 'Actualización desde Evolta', cliente_baja: 'Cliente eliminado', devolucion: 'Devolución', minuta: 'Minuta Evolta', clausula: 'Cláusula adicional', nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_nkb: 'Cotejo Notaría y Kardex/Banco', cotejo_cf: 'Cotejo Carta Fianza', paso_manual: 'Paso marcado a mano (excepción)', constancia: 'Constancia de cierre', cierre: 'Cierre de etapa', ingreso: 'V°B° de ingreso del cliente', acta: 'Acta de entrega', cargo: 'Cargo de entrega de documentos', carta_notarial: 'Carta notarial de resolución', usuario_nombre: 'Cambio de nombre de usuario', for_bfPor: 'Bien futuro: registrado por' };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -94,8 +94,8 @@
   ];
   const motivaHoy = () => { const T = new Date(), d = Math.floor((Date.UTC(T.getFullYear(), T.getMonth(), T.getDate()) - Date.UTC(T.getFullYear(), 0, 1)) / 864e5); return MOTIVA[(d + T.getFullYear()) % MOTIVA.length]; };
   const primeraEtapa = (n) => (STAGES.find(s => verEtapa(s.key, n)) || {}).key;
-  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', ingresos: 'v_ops', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
-  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'proy-unir': 'a_params', 'ingresos-excel': 'v_ops', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
+  const VIEW_PERM = { cargos: 'v_cargos', tiempos: 'v_tiempos', carga: 'v_carga', operaciones: 'v_ops', cartas: 'v_cartas', inscripciones: 'v_ins', devoluciones: 'v_dev', resoluciones: 'v_clientes', devolucion: 'v_dev', mi: 'v_mi', labores: 'v_mi', ingresos: 'v_ops', evolta: 'v_clientes', campos: 'v_config', cobrar: 'v_clientes', clientes: 'v_clientes', cliente: 'v_clientes', usuarios: 'v_equipo', usuario: 'v_equipo', actividad: 'v_actividad', agenda: 'v_agenda', config: 'v_config' };
+  const ACT_PERM = { 'respaldo-completo': 'a_import', 'respaldo-drive': 'a_import', 'export-xlsx': 'a_export', 'export-json': 'a_import', 'export-js': 'a_import', import: 'a_import', reset: 'a_import', 'user-add': 'a_users', 'user-edit': 'a_users', 'user-del': 'a_users', newop: 'a_newop', tomar: 'a_tomar', autoassign: 'a_tomar', 'seg-done': 'a_seg', quickseg: 'a_seg', step: 'a_edit', evolta: 'a_edit', 'op-del': 'a_delop', clausula: 'a_edit', 'clausula-manual': 'a_edit', 'campos-excel': 'v_config', 'cobrar-excel': 'v_clientes', evtab: 'a_edit', 'export-ops': 'v_ops', 'export-cobro': 'v_ops', 'importar-excel': 'a_import', 'rs-nueva': 'a_edit', 'rs-estado': 'a_edit', 'rs-word': 'a_edit', 'rs-excel': 'v_clientes', 'proy-unir': 'a_params', 'ingresos-excel': 'v_ops', 'evolta-sync': 'a_import', 'ops-limpiar': 'v_ops', 'cf-renovar': 'a_edit', 'bf-pausar': 'a_edit', carta: 'a_edit', 'bf-editar': 'a_edit', 'bf-reabrir': 'a_edit', 'cf-devolver': 'a_edit', 'export-cf': 'v_cartas', 'export-ins': 'v_ins' };
   const NOPERM = 'Tu usuario no tiene permiso para esto. Pídeselo al administrador.';
   const isAdmin = (n) => { const u = user(n || S.actor); return !!(u && u.admin); };
   function can(k, n) { n = n || S.actor; const u = user(n); if (!u) return false; if (u.admin) return true; const p = S.perms && S.perms[n]; if (p && k in p) return !!p[k]; return !PERM_OFF.has(k); }
@@ -1135,6 +1135,147 @@
     const draw = () => { ult = calc(); res.innerHTML = ult.html; const ok = dlg.querySelector('[data-m=ok]'); if (ok) ok.textContent = ult.ok ? `Unir ${ult.src.length} clientes` : 'Unir proyectos'; };
     dlg.querySelector('.dlg-b').onchange = (e) => { if (e.target.id === 'pu-src') O.src = e.target.value; if (e.target.id === 'pu-dst') O.dst = e.target.value; if (e.target.id === 'pu-resp') { O.resp = e.target.checked; return; } draw(); };
     draw();
+  }
+  /* ---- Resoluciones y cartas notariales: se preparan desde la ficha del cliente y se siguen hasta que el cliente firma o recibe ---- */
+  const RS_K = 'crm-mg-resol';
+  const rsLista = (o) => Array.isArray(o.resoluciones) ? o.resoluciones : [];
+  const rsFin = (r) => r.t === 'carta' ? r.fEntrega : r.fFirma;
+  const rsEstado = (r) => r.t === 'carta' ? (r.fEntrega ? 'Entregada al cliente' : r.fEnv ? 'Enviada a notaría' : 'Preparada') : (r.fPago ? 'Reembolsada' : r.fFirma ? 'Firmada por el cliente' : r.fEnv ? 'Enviada al cliente' : 'Preparada');
+  const rsTipoL = (r) => r.t === 'carta' ? 'Carta notarial de resolución' : r.mod === 'tras' ? 'Resolución por mutuo acuerdo (traslado a otro departamento)' : 'Resolución por mutuo acuerdo (con devolución)';
+  const rsCerrada = (r) => r.t === 'carta' ? !!r.fEntrega : r.mod === 'tras' ? !!r.fFirma : !!r.fPago;
+  // tiempos: 1) preparar y lograr la firma o entrega · 2) solo en devoluciones: pagar el reembolso (plazo del contrato, por defecto 60 días hábiles)
+  function rsFases(r) {
+    const mk = (ini, fin, meta, l) => { const a = pd(ini), b = fin ? pd(fin) : today(); if (!a) return null; const dias = diasEntre(a, b < a ? a : b), enCurso = !fin; return { l, dias, meta, enCurso, sem: !meta ? '' : dias > meta ? 'rojo' : enCurso && dias >= meta * 0.8 ? 'amarillo' : 'verde' }; };
+    const out = [mk(r.fGen, rsFin(r), +S.params.metaRes || 5, r.t === 'carta' ? 'De preparada a entregada' : 'De preparada a firmada')];
+    if (r.t === 'mutuo' && r.mod === 'dev' && r.fFirma) out.push(mk(r.fFirma, r.fPago, +S.params.metaReem || 60, 'Reembolso al cliente'));
+    return out.filter(Boolean);
+  }
+  const rsActual = (r) => { const f = rsFases(r); return f.length ? f[f.length - 1] : null; };
+  const rsCasos = () => S.ops.flatMap(o => rsLista(o).map(r => ({ o, r })));
+  const rsProd = (L) => prodDe(L.flatMap(r => rsFases(r)).map(f => ({ cerrado: !f.enCurso, dias: f.dias, meta: f.meta, vencido: f.sem === 'rojo' })));
+  const rsMail = (o, r) => { const asunto = `${r.t === 'carta' ? 'Carta notarial de resolución' : 'Resolución de contrato por mutuo acuerdo'} · ${o.proyecto || ''} ${o.unidad ? 'Dpto. ' + o.unidad : ''}`.trim();
+    const cuerpo = `Estimado(a) ${o.cliente || 'cliente'}:\n\nAdjuntamos ${r.t === 'carta' ? 'la carta notarial de resolución' : 'la resolución de contrato por mutuo acuerdo'} correspondiente a su ${o.unidad ? 'departamento ' + o.unidad : 'inmueble'}${o.proyecto ? ' del proyecto ' + o.proyecto : ''}, para su revisión${r.t === 'carta' ? '' : ' y firma'}.\n\nQuedamos atentos a cualquier consulta.\n\nÁrea de Contratos y Cobranzas`;
+    return `mailto:${encodeURIComponent(o.email || '')}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`; };
+  function rsFila(o, r) {
+    const f = rsActual(r), est = rsEstado(r);
+    return `<div class="rs-row"><div><b>${esc(rsTipoL(r))}</b> <span class="small muted">· preparada el ${fdate(r.fGen)}${r.por ? ' por ' + esc(r.por) : ''}</span>
+      <div class="small">${esc(est)}${f ? ` · ${semDot(f.sem)} <b>${f.dias}</b> / ${f.meta} ${unidadDias()}${f.enCurso ? '' : ' (cerrado)'}${r.t === 'mutuo' && r.mod === 'dev' && r.fFirma && !r.fPago ? ' · falta pagar el reembolso' : ''}` : ''}${r.importe ? ` · ${money(r.importe)}` : ''}${r.solicita ? ` · pedida por ${esc(r.solicita)}` : ''}</div></div>
+      <div class="rs-acts"><button class="btn sm" data-act="rs-estado" data-op="${o.id}" data-id="${r.id}">Actualizar avance</button>${r.d ? ` <button class="btn sm" data-act="rs-word" data-op="${o.id}" data-id="${r.id}">Descargar Word</button>` : ''} <a class="btn sm" href="${esc(rsMail(o, r))}" title="Abre tu correo con el mensaje listo; adjunta el Word descargado">Enviar por correo</a></div></div>`;
+  }
+  const resBar = (o) => { const L = rsLista(o);
+    return `<div class="card rs-card"><div class="card-b"><div class="rs-top"><b>Resoluciones y cartas notariales</b><span class="rs-btns"><button class="btn sm" data-act="rs-nueva" data-op="${o.id}">Resolución por mutuo acuerdo</button> <button class="btn sm" data-act="carta" data-op="${o.id}">Carta notarial de resolución${o.minuta ? '' : ' (subir minuta)'}</button></span></div>
+      ${L.length ? L.map(r => rsFila(o, r)).join('') : '<p class="small muted" style="margin:6px 0 0">Todavía no se preparó ninguna para este cliente.</p>'}
+      <details class="fe" style="margin-top:6px"><summary>¿Cómo usar esto?</summary><ol class="small" style="margin:6px 0 0 18px"><li><b>Resolución por mutuo acuerdo:</b> cuando el cliente y la empresa acuerdan terminar el contrato (por ejemplo, tras un correo de gerencia). Pega el correo y el CRM llena el importe y la cuenta; tú revisas y descargas el Word.</li><li><b>Carta notarial de resolución:</b> cuando el cliente incumplió y la empresa resuelve el contrato (cláusula sexta). Funciona en cualquier etapa; si falta la minuta, el CRM te la pide.</li><li>Después de descargar, usa <b>Enviar por correo</b> y adjunta el Word, o llévalo a la notaría. Cada vez que avance (enviada, firmada, reembolsada), toca <b>Actualizar avance</b>: así el tiempo y el semáforo quedan correctos.</li><li>En una devolución, el CRM avisa cuando se acerca el plazo de reembolso del contrato.</li></ol></details></div></div>`; };
+  function rsAgregar(op, r) {
+    op.resoluciones = [...rsLista(op), r]; (pendingOps[op.id] = pendingOps[op.id] || {}).resoluciones = op.resoluciones;
+    S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'resolucion', antes: '', despues: `${rsTipoL(r)} preparada` }); commit(); rerenderOp(op.id);
+  }
+  const dnisDe = (op) => [op.dni, ...((op.minuta && op.minuta.compradores) || []).map(c => c.dni)].filter(Boolean).map(x => String(x).replace(/\D/g, '')).join(' ');
+  const rsNum = (x) => Number(String(x || '').replace(/,/g, '')) || 0;
+  function rsNueva(op) {
+    const m = op.minuta || {}, mc = (m.compradores || []).filter(c => c.nombre), nomOrden = (x) => /,/.test(x || '') ? x.split(',').reverse().map(t => t.trim()).join(' ') : (x || ''), base = mc.length ? mc.slice(0, 2) : [{ trat: '', nombre: nomOrden(op.cliente), dni: op.dni || '', ec: '', domicilio: '' }];
+    let prev = {}; try { prev = JSON.parse(localStorage.getItem(RS_K) || '{}'); } catch (e) { }
+    const proy = (S.params.resolProy || {})[op.proyecto] || (prev.proy || {})[op.proyecto] || {}, emp = CLAUSULA.empresaDe(op);
+    const v = (id) => ($('#' + id) || {}).value || '', val = (x) => esc(x == null ? '' : x);
+    const comp = (c, i) => `<div class="cn-g3"><label>Nombre completo<input id="rs-n${i}" value="${val(c.nombre)}"></label><label>DNI<input id="rs-d${i}" value="${val(c.dni)}" inputmode="numeric"></label><label>Trato<select id="rs-t${i}"><option value="Sr.">Sr.</option><option value="Sra." ${c.trat === 'Sra.' ? 'selected' : ''}>Sra.</option></select></label></div><div class="cn-g2" style="margin-bottom:8px"><label>Estado civil<input id="rs-e${i}" value="${val(c.ec)}" placeholder="soltero, casado…"></label><label>Domicilio<input id="rs-m${i}" value="${val(c.domicilio)}"></label></div>`;
+    const sec = (t, b) => `<div class="cn-sec"><h4>${t}</h4>${b}</div>`;
+    modal({ title: `Resolución por mutuo acuerdo · ${op.cliente}`, ok: 'Descargar Word', wide: true,
+      body: `<div class="form cn-form">
+        ${sec('Pega el correo de gerencia (opcional)', `<textarea id="rs-mail" rows="4" style="width:100%" placeholder="Pega aquí el correo que pidió la resolución: el CRM busca el importe a reembolsar, la cuenta, el CCI y el banco."></textarea><p style="margin:6px 0 0"><button type="button" class="btn sm" id="rs-leer">Leer el correo</button> <span class="small muted" id="rs-leido"></span></p>`)}
+        ${sec('1. Tipo', `<label>¿Qué se acordó con el cliente?<select id="rs-mod"><option value="dev">Devolverle dinero (con o sin penalidad)</option><option value="tras">Pasar lo pagado a otro departamento</option></select></label>`)}
+        ${sec('2. Partes', `<label>Empresa vendedora<select id="rs-emp">${emp ? '' : '<option value="">— elige la empresa —</option>'}${CLAUSULA.EMPRESAS.map(e => `<option value="${esc(e.razon)}" ${emp && emp.razon === e.razon ? 'selected' : ''}>${esc(e.razon)}</option>`).join('')}</select></label>
+          <p class="small muted" style="margin:4px 0 8px">El RUC, la partida y el representante se completan solos según la empresa.</p>${base.map(comp).join('')}`)}
+        ${sec('3. Contrato firmado', `<div class="cn-g2"><label>Fecha del contrato<input type="date" id="rs-fc" value="${val(m.fechaMinuta || op.fechaVenta || '')}"></label><label>Departamento<input id="rs-in" value="${val(op.unidad ? 'Departamento N° ' + op.unidad : '')}"></label><label>Proyecto<input id="rs-py" value="${val(op.proyecto)}"></label><label>Tipo de contrato<select id="rs-tc"><option value="futuro">Bien futuro</option><option value="inmueble" ${emp && emp.tipo === 'inmueble' ? 'selected' : ''}>Bien inmueble</option></select></label></div>
+          <label style="margin-top:8px">Ubicación del inmueble <span class="cn-src">· se recuerda para este proyecto</span><textarea id="rs-ub" rows="2" placeholder="Ej.: a edificarse en Av. … N° …, Distrito de …, Provincia y Departamento de Lima">${val(proy.ubic || (m.dirLote ? 'ubicado en ' + m.dirLote : ''))}</textarea></label>
+          <label style="margin-top:8px">Partidas electrónicas <span class="cn-src">· se recuerda para este proyecto</span><input id="rs-pa" value="${val(proy.partidas)}" placeholder="Ej.: la Partida Electrónica Nº 15910766"></label>`)}
+        ${sec('4. Importes', `<div class="cn-g2"><label>Importe abonado por el cliente (S/)<input id="rs-ab" inputmode="decimal"></label><label class="rs-dev">Importe a reembolsar (S/)<input id="rs-re" inputmode="decimal"></label></div><p class="small muted rs-dev" id="rs-pen" style="margin:4px 0 8px"></p>
+          <div class="rs-dev"><div class="cn-g2"><label>Banco<input id="rs-bn" placeholder="Ej.: Banco Pichincha"></label><label>N° de cuenta<input id="rs-cu" inputmode="numeric"></label><label>CCI (20 dígitos, opcional)<input id="rs-ci" inputmode="numeric"></label><label>Titular de la cuenta<input id="rs-ti" placeholder="Debe ser el mismo cliente"></label></div></div>
+          <div class="rs-tras" style="display:none"><div class="cn-g2"><label>Nuevo departamento<input id="rs-nd" placeholder="Ej.: Departamento N° A2002"></label><label>Nuevo proyecto<input id="rs-np"></label></div></div>`)}
+        ${sec('5. Documento', `<div class="cn-g3"><label>Fecha del documento<input type="date" id="rs-f" value="${iso(today())}"></label><label>Ciudad<input id="rs-ci2" value="Lima"></label><label>Plazo de reembolso (días hábiles)<input id="rs-pl" type="number" min="1" value="60"></label></div><label style="margin-top:8px">Quién lo pidió (para el registro)<input id="rs-so" value="${val(prev.solicita)}" placeholder="Ej.: nombre de gerencia"></label>`)}
+        <p class="small muted" style="margin:0">El texto sigue el modelo firmado por el área. Revísalo en Word antes de enviarlo al cliente.</p></div>`,
+      onOk: () => {
+        const mod = v('rs-mod'), ab = rsNum(v('rs-ab')), re = rsNum(v('rs-re')), rz = v('rs-emp'), E = CLAUSULA.EMPRESAS.find(e => e.razon === rz);
+        const cs = base.map((c, i) => ({ trat: v('rs-t' + i), nombre: v('rs-n' + i).trim(), dni: v('rs-d' + i).trim(), ec: v('rs-e' + i).trim(), domicilio: v('rs-m' + i).trim() }));
+        const d = { mod, empresaRazon: rz, compradores: cs, fechaContrato: v('rs-fc'), inmueble: v('rs-in').trim(), proyecto: v('rs-py').trim(), tipoContrato: v('rs-tc'), ubicacion: v('rs-ub').trim(), partidas: v('rs-pa').trim(), abonado: ab, reembolso: mod === 'dev' ? re : 0,
+          banco: v('rs-bn').trim(), cuenta: v('rs-cu').replace(/\s/g, ''), cci: v('rs-ci').replace(/\D/g, ''), titular: v('rs-ti').trim(), nuevoDpto: v('rs-nd').trim(), nuevoProy: v('rs-np').trim(), fecha: v('rs-f'), ciudad: v('rs-ci2').trim() || 'Lima', plazo: Number(v('rs-pl')) || 60 };
+        d.empresa = E; const falta = RESOL.faltas(d); if (falta.length) { toast('Falta: ' + falta.join(', ')); return false; }
+        if (d.cci && d.cci.length !== 20) { toast('El CCI debe tener 20 dígitos (o déjalo vacío)'); return false; }
+        const norm = (x) => String(x || '').toUpperCase().normalize('NFD').replace(/[^A-Z ]/g, '').split(/\s+/).filter(Boolean).sort().join(' ');
+        if (mod === 'dev' && d.titular && !cs.some(c => norm(c.nombre) === norm(d.titular)) && !confirm('La cuenta figura a nombre de "' + d.titular + '", que no coincide con el cliente. La resolución dice que la cuenta es del cliente. ¿Generar de todos modos?')) return false;
+        if (rsLista(op).some(x => x.t === 'mutuo' && !rsCerrada(x)) && !confirm('Este cliente ya tiene una resolución por mutuo acuerdo en trámite. ¿Preparar otra?')) return false;
+        try { prev.solicita = v('rs-so').trim(); prev.proy = { ...(prev.proy || {}), [op.proyecto]: { ubic: d.ubicacion, partidas: d.partidas } }; localStorage.setItem(RS_K, JSON.stringify(prev)); } catch (e) { }
+        if (can('a_params')) { S.params.resolProy = { ...(S.params.resolProy || {}), [op.proyecto]: { ubic: d.ubicacion, partidas: d.partidas } }; }
+        const dd = JSON.parse(JSON.stringify({ ...d, empresa: undefined }));
+        toast('Generando el documento…');
+        RESOL.docx(d).then(blob => {
+          download(RESOL.nombreArchivo(d), blob);
+          rsAgregar(op, JSON.parse(JSON.stringify({ id: 'R' + Date.now().toString(36), t: 'mutuo', mod, fGen: iso(today()), ts: Date.now(), por: S.actor, importe: mod === 'dev' ? re : ab, abonado: ab, solicita: v('rs-so').trim(), d: dd })));
+          toast('✓ Resolución descargada: revísala en Word antes de enviarla al cliente');
+        }).catch(e => { console.error(e); toast('No se pudo generar el documento: ' + e.message); });
+      } });
+    const dev = () => v('rs-mod') === 'dev';
+    const ref = () => { const ab = rsNum(v('rs-ab')), re = rsNum(v('rs-re')); document.querySelectorAll('.rs-dev').forEach(x => x.style.display = dev() ? '' : 'none'); document.querySelectorAll('.rs-tras').forEach(x => x.style.display = dev() ? 'none' : ''); $('#rs-pen').textContent = ab && re ? (ab > re ? `Penalidad retenida: ${RESOL.money(ab - re)}.` : ab === re ? 'Se devuelve todo lo abonado (sin penalidad).' : 'El reembolso no puede ser mayor a lo abonado.') : ''; };
+    ['rs-mod', 'rs-ab', 'rs-re'].forEach(id => { $('#' + id).addEventListener('input', ref); $('#' + id).addEventListener('change', ref); }); ref();
+    $('#rs-leer').onclick = () => { const r = DEVOLUCION.leerCorreo(v('rs-mail')), set = (id, x) => { if (x) $('#' + id).value = x; }, ok = [];
+      if (r.importe) { set('rs-re', r.importe.toFixed(2)); ok.push('importe a reembolsar'); } if (r.penalidad && r.importe && !v('rs-ab')) { set('rs-ab', (r.importe + r.penalidad).toFixed(2)); ok.push('importe abonado'); }
+      if (r.cuenta) { set('rs-cu', r.cuenta); ok.push('cuenta'); } if (r.cci) { set('rs-ci', r.cci); ok.push('CCI'); } if (r.banco) { set('rs-bn', r.banco); ok.push('banco'); } if (r.titularCuenta) { set('rs-ti', r.titularCuenta); ok.push('titular'); }
+      const dniOtro = r.dni && !dnisDe(op).includes(r.dni);
+      $('#rs-leido').textContent = ok.length ? `Leído: ${ok.join(', ')}. Revísalo.${dniOtro ? ' Ojo: el DNI del correo no coincide con el del cliente.' : ''}` : 'No encontré datos en ese texto: complétalos a mano.'; ref(); };
+  }
+  function rsWord(op, r) {
+    if (!r.d) return toast('Esta carta se genera desde la minuta: usa “Carta notarial de resolución”');
+    const d = { ...r.d, empresa: CLAUSULA.EMPRESAS.find(e => e.razon === r.d.empresaRazon) }; if (!d.empresa) return toast('No encuentro la empresa de esta resolución');
+    RESOL.docx(d).then(b => { download(RESOL.nombreArchivo(d), b); toast('Word descargado'); }).catch(e => toast('No se pudo generar: ' + e.message));
+  }
+  function rsEstadoModal(op, r) {
+    const carta = r.t === 'carta', dev = !carta && r.mod === 'dev', hoy = iso(today()), val = (x) => esc(x || '');
+    const campos = carta ? [['fEnv', 'Enviada a la notaría', 'rs-a'], ['fEntrega', 'Entregada al cliente (cargo de la notaría)', 'rs-b']] : [['fEnv', 'Enviada al cliente', 'rs-a'], ['fFirma', 'Firmada por el cliente', 'rs-b'], ...(dev ? [['fPago', 'Reembolso pagado', 'rs-c']] : [])];
+    const sig = campos.find(([k]) => !r[k]);
+    modal({ title: `${rsTipoL(r)} · ${op.cliente}`, ok: 'Guardar avance',
+      body: `<div class="form"><p class="small muted" style="margin-top:0">Escribe la fecha en que ocurrió cada paso. Lo que dejes vacío sigue pendiente.${sig ? ` El siguiente paso es: <b>${esc(sig[1])}</b> (ya viene con la fecha de hoy).` : ''}</p>
+        ${campos.map(([k, l, id]) => `<label>${l}<input type="date" id="${id}" max="${hoy}" value="${val(r[k] || (sig && sig[0] === k ? hoy : ''))}"></label>`).join('')}<label>Observación (opcional)<input id="rs-ob" value="${val(r.obs)}"></label>
+        ${isAdmin() ? '<p style="margin:8px 0 0"><button type="button" class="btn sm" id="rs-del">Eliminar este registro</button></p>' : ''}</div>`,
+      onOk: () => {
+        const v = (id) => ($('#' + id) || {}).value || '', nv = { obs: v('rs-ob').trim() }; campos.forEach(([k, , id]) => { nv[k] = v(id); });
+        const orden = (carta ? ['fGen', 'fEnv', 'fEntrega'] : ['fGen', 'fEnv', 'fFirma', 'fPago']), fechas = { ...r, ...nv };
+        for (const k of campos.map(c => c[0])) { const x = fechas[k]; if (x && (pd(x) > today() || !(pd(x).getTime() === pd(x).getTime()))) { toast('Hay una fecha que no es válida o es futura'); return false; } }
+        let ult = ''; for (const k of orden) { const x = fechas[k]; if (!x) continue; if (ult && x < ult) { toast('Las fechas deben ir en orden: preparada, enviada, firmada, reembolsada'); return false; } ult = x; }
+        const antes = rsEstado(r); Object.assign(r, nv); if (!r.fPago) delete r.fPago; Object.keys(r).forEach(k => { if (r[k] === '' || r[k] == null) delete r[k]; });
+        (pendingOps[op.id] = pendingOps[op.id] || {}).resoluciones = op.resoluciones;
+        S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'resolucion', antes, despues: rsEstado(r) }); commit(); rerenderOp(op.id); toast('Avance guardado: ' + rsEstado(r));
+      } });
+    const del = $('#rs-del'); if (del) del.onclick = () => { if (!confirm('¿Eliminar este registro? No se puede deshacer.')) return; op.resoluciones = rsLista(op).filter(x => x.id !== r.id); (pendingOps[op.id] = pendingOps[op.id] || {}).resoluciones = op.resoluciones; S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'gen', campo: 'resolucion', antes: rsTipoL(r), despues: 'Eliminada' }); commit(); $('#dlg').close(); rerenderOp(op.id); };
+  }
+  /* ---- Pantalla Resoluciones y cartas: todos los trámites, con tiempos y semáforo ---- */
+  function rsRows() {
+    const F = flt('resoluciones', { t: '', e: '', m: '' });
+    return rsCasos().filter(({ o, r }) => (!F.t || (F.t === 'carta' ? r.t === 'carta' : F.t === 'dev' ? r.t === 'mutuo' && r.mod === 'dev' : r.t === 'mutuo' && r.mod === 'tras')) && (!F.e || (F.e === 'curso' ? !rsCerrada(r) : F.e === 'venc' ? rsFases(r).some(f => f.enCurso && f.sem === 'rojo') : rsCerrada(r))) && (!F.m || String(r.fGen).slice(0, 7) === F.m))
+      .sort((a, b) => (rsCerrada(a.r) - rsCerrada(b.r)) || String(b.r.fGen).localeCompare(String(a.r.fGen)));
+  }
+  function vResoluciones() {
+    const id = 'rg-rs', F0 = flt('resoluciones', { t: '', e: '', m: '' }), todos = rsCasos(), U = unidadDias(), mP = metaProd();
+    const build = () => {
+      const L = rsRows(), curso = todos.filter(x => !rsCerrada(x.r)), venc = todos.filter(x => rsFases(x.r).some(f => f.enCurso && f.sem === 'rojo')), porPagar = todos.filter(x => x.r.t === 'mutuo' && x.r.mod === 'dev' && x.r.fFirma && !x.r.fPago);
+      const P = rsProd(todos.map(x => x.r)), kpi = (n, l, c) => `<div class="kpi card ${c || ''}"><div><div class="n">${n}</div><div class="l">${l}</div></div></div>`;
+      const cols = [{ h: 'Cliente', s: x => x.o.cliente, f: x => opLink(x.o) }, { h: 'Trámite', s: x => rsTipoL(x.r), f: x => esc(rsTipoL(x.r)) }, { h: 'Preparada', s: x => x.r.fGen, f: x => fdate(x.r.fGen) + (x.r.por ? `<div class="small muted">${esc(x.r.por)}</div>` : '') },
+        { h: 'Avance', s: x => rsEstado(x.r), f: x => `${esc(rsEstado(x.r))}${x.r.obs ? `<div class="small muted">${esc(x.r.obs)}</div>` : ''}` },
+        { h: 'Tiempo', cls: 'r', s: x => { const f = rsActual(x.r); return f ? f.dias : -1; }, f: x => { const f = rsActual(x.r); return f ? `<span class="nowrap">${semDot(f.sem)} <b>${f.dias}</b> / ${f.meta} d</span><div class="small muted">${esc(f.l)}${f.enCurso ? ' · en curso' : ''}</div>` : '<span class="muted">—</span>'; } },
+        { h: 'Importe', cls: 'r', s: x => Number(x.r.importe) || 0, f: x => x.r.importe ? `<b>${money(x.r.importe)}</b>` : '<span class="muted">—</span>' },
+        { h: '', cls: 'nowrap', f: x => `<button class="btn sm" data-act="rs-estado" data-op="${x.o.id}" data-id="${x.r.id}">Actualizar</button> <a class="btn sm" href="${esc(rsMail(x.o, x.r))}">Correo</a>` }];
+      return `<div class="kpis ops-kpis">${kpi(curso.length, 'Trámites en curso', curso.length ? 'warn' : '')}${kpi(venc.length, `Pasaron su meta de tiempo`, venc.length ? 'warn' : '')}${kpi(porPagar.length, `Firmadas con reembolso por pagar · ${money(porPagar.reduce((t, x) => t + (Number(x.r.importe) || 0), 0))}`)}${kpi(P.productividad == null ? '—' : P.productividad + '%', `Productividad · eficacia ${P.eficacia ?? '—'}% × eficiencia ${P.eficiencia ?? '—'}% (meta ${mP}%)`)}</div>
+        ${can('a_params') ? `<p class="small muted" style="margin:0 0 10px">Metas: preparar y lograr la firma o entrega en <input type="number" min="1" value="${+S.params.metaRes || 5}" data-pk="metaRes" style="width:60px"> ${U} · pagar el reembolso en <input type="number" min="1" value="${+S.params.metaReem || 60}" data-pk="metaReem" style="width:60px"> ${U} (plazo del contrato).</p>` : ''}
+        <div class="ops-tw">${tbl(id + '-t', cols, L, todos.length ? 'No hay trámites con ese filtro.' : 'Aún no hay resoluciones ni cartas. Se preparan desde la ficha de cada cliente.')}</div>`;
+    };
+    const sel = (k, label, opts) => `<select data-f="resoluciones" data-k="${k}" data-r="${id}"><option value="">${label}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(F0[k]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+    return `${pageHead('Resoluciones y cartas', 'Resoluciones por mutuo acuerdo y cartas notariales que se envían a los clientes.', `<button class="btn" data-act="rs-excel">Descargar Excel</button>`,
+      'Aquí ves <b>todos los trámites</b> de resolución de contrato. Cada uno se prepara desde la ficha del cliente (botones “Resolución por mutuo acuerdo” y “Carta notarial de resolución”). <b>Tiempo:</b> corre desde que se prepara hasta que el cliente firma o recibe; en las devoluciones corre un segundo plazo hasta pagar el reembolso. El semáforo se pone amarillo al llegar al 80 % de la meta y rojo al pasarla. Productividad = eficacia × eficiencia, igual que en todo el CRM. <b>Para avanzar un trámite</b> toca “Actualizar” y pon la fecha del paso.')}
+      <div class="filters">${sel('t', 'Todos los trámites', [['dev', 'Mutuo acuerdo con devolución'], ['tras', 'Mutuo acuerdo con traslado'], ['carta', 'Carta notarial']])}${sel('e', 'Todos los estados', [['curso', 'En curso'], ['venc', 'Pasaron la meta'], ['cerr', 'Cerrados']])}${sel('m', 'Todos los meses', [...new Set(todos.map(x => String(x.r.fGen).slice(0, 7)))].sort().reverse().map(m => [m, mesLargo(m)]))}</div>
+      ${region(id, build)}`;
+  }
+  function rsExcel() {
+    const L = rsRows(), d = L.map(({ o, r }) => { const f = rsActual(r), f1 = rsFases(r)[0]; return { Cliente: o.cliente, DNI: o.dni || '', Proyecto: o.proyecto || '', Unidad: o.unidad || '', Trámite: rsTipoL(r), Preparada: r.fGen ? xlDate(r.fGen) : '', Enviada: r.fEnv ? xlDate(r.fEnv) : '', [r.t === 'carta' ? 'Entregada' : 'Firmada']: rsFin(r) ? xlDate(rsFin(r)) : '', Reembolsada: r.fPago ? xlDate(r.fPago) : '', Avance: rsEstado(r), 'Días (trámite actual)': f ? f.dias : '', Meta: f ? f.meta : '', Semáforo: f ? (f.sem === 'verde' ? 'Verde' : f.sem === 'amarillo' ? 'Amarillo' : 'Rojo') : '', 'Días hasta firma/entrega': f1 ? f1.dias : '', 'Importe abonado (S/)': r.abonado || '', 'Importe a reembolsar (S/)': r.t === 'mutuo' && r.mod === 'dev' ? r.importe || '' : '', 'Preparó': r.por || '', 'Pedido por': r.solicita || '', Observación: r.obs || '' }; });
+    const ws = XLSX.utils.json_to_sheet(d.length ? d : [{ 'Sin datos': '' }], { cellDates: true, dateNF: 'dd/mm/yyyy' }); ws['!cols'] = [34, 12, 18, 10, 40, 12, 12, 12, 12, 24, 10, 8, 10, 12, 16, 16, 18, 20, 30].map(w => ({ wch: w })); ws['!autofilter'] = { ref: ws['!ref'] };
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Resoluciones y cartas'); XLSX.writeFile(wb, `Resoluciones_y_cartas_${iso(today())}.xlsx`, { cellDates: true }); toast(`Excel con ${L.length} trámites`);
   }
   function vSinAcceso() { return `<div class="card"><div class="empty">Tu usuario no tiene acceso a esta pantalla.<br>Pídele al administrador que la active.<br><br><a class="btn pri" href="#/resumen">Ir al inicio</a></div></div>`; }
 
@@ -2574,6 +2715,7 @@
         CARTA.docx(d).then(blob => {
           download(CARTA.nombreArchivo(d), blob);
           op.carta = { ts: Date.now(), por: S.actor, causales: d.marcadas.map(i => 'ABCD'[i]).join(', ') }; (pendingOps[op.id] = pendingOps[op.id] || {}).carta = op.carta;
+          op.resoluciones = [...rsLista(op), { id: 'R' + Date.now().toString(36), t: 'carta', fGen: iso(today()), ts: Date.now(), por: S.actor, solicita: '' }]; pendingOps[op.id].resoluciones = op.resoluciones;
           S.log.push({ ts: Date.now(), usuario: S.actor, opId: op.id, etapa: 'con', campo: 'carta_notarial', antes: '', despues: `Word generado · causales ${op.carta.causales}` }); commit();
           toast('✓ Carta notarial descargada: revísala antes de llevarla a la notaría'); rerenderOp(op.id);
         }).catch(e => { console.error(e); toast('No se pudo generar la carta: ' + e.message); });
@@ -2809,6 +2951,7 @@
     return `<div class="crumb muted" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span><a href="#/clientes">Clientes</a> / ${o.id}</span><details class="mas-acc"><summary class="btn sm" aria-label="Más acciones" title="Más acciones">⋯</summary><div class="menu"><button class="btn danger" data-act="op-del" data-op="${o.id}">Eliminar cliente</button></div></details></div>
     ${ingresoBar(o)}<div class="card ficha-h"><div id="f-head">${headHtml(o, d)}</div><div class="stepper" id="f-step">${stepperHtml(o, d)}</div></div>
     <div id="f-ciclo">${cicloHtml(o)}</div>
+    <div id="rs-box">${resBar(o)}</div>
     <div class="ficha-grid"><div>
       ${STAGES.filter(s => verEtapa(s.key)).map(s => `<details class="sc" id="sc-${s.key}" style="--sc:${colVar(s.key)}" ${d.etapa === s.key ? 'open' : ''}><summary>${sbadge(s.key)}<span id="sh-${s.key}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${stageHead(s.key, d, o)}</span><span class="grow"></span><span class="muted small">editar ▾</span></summary>
         <div class="sc-body"><div id="g-${s.key}">${guiaHtml(o, d, s.key)}</div><div id="sk-${s.key}">${checkHtml(s.key, d, o)}</div><div id="cb-${s.key}">${stickerBar(o, d, s.key)}</div>${s.key === 'cob' ? `<div id="ev-box">${evoltaHtml(o)}</div>` : ''}${s.key === 'con' ? clauseBar(o) + cartaBar(o) : ''}${(s.key === 'con' || s.key === 'for') && can('v_cargos') ? `<div class="ev-bar"><button class="btn sm" data-act="cargo-op" data-op="${o.id}">Cargo de entrega de documentos</button></div>` : ''}${s.key === 'for' ? `<div id="bf-${o.id}">${bfBar(o, d)}</div>` : ''}${s.key === 'pos' ? actaBar(o) : ''}${Object.keys(CRM.EV_TABS).filter(tk => CRM.EV_TABS[tk].stage === s.key && !(tk === 'cf' && (o.fin_tipo === 'No aplica' || o.fin_tipoSolicitud === 'MINUTA DE LEVANTAMIENTO'))).map(tk => tabHtml(o, tk)).join('')}<details class="fe" ${s.key === 'cob' && o.evolta ? 'open' : ''}><summary>Editar datos a mano</summary>${s.key === 'cob' && o.evolta ? '<p class="small muted ev-leg"><span class="sw-falta"></span> Falta completar · <em class="pdf">PDF</em> vino del estado de cuenta: corrobóralo</p>' : ''}${camposFicha(o, s.key, d, s.key === 'cob')}</details><div class="save-bar"><button class="btn pri" data-act="guardar-ficha" data-op="${o.id}">Guardar</button><span class="small muted">Tranquila/o: cada dato también se guarda solo al salir del campo. Este botón te confirma y te dice cuánto te falta.</span></div></div></details>`).join('')}
@@ -2852,7 +2995,7 @@
   }
   function refreshFicha(id) {
     const o = getOp(id), d = D.get(id); if (!o || !$('#f-head')) return;
-    $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); $('#tl').innerHTML = timelineHtml(o);
+    $('#f-head').innerHTML = headHtml(o, d); $('#f-step').innerHTML = stepperHtml(o, d); if ($('#f-ciclo')) $('#f-ciclo').innerHTML = cicloHtml(o); if ($('#rs-box')) $('#rs-box').innerHTML = resBar(o); $('#tl').innerHTML = timelineHtml(o);
     if ($('#ev-box')) $('#ev-box').innerHTML = evoltaHtml(o);
     Object.keys(CRM.EV_TABS).forEach(tk => { const el = $('#st-' + tk); if (el) el.outerHTML = tabStatus(o, tk); });
     const bfb = $('#bf-' + id); if (bfb) bfb.innerHTML = bfBar(o, d);
@@ -3566,6 +3709,7 @@
     const nvS = (() => { try { return JSON.parse(localStorage.getItem('crm-mg-nav') || '{}'); } catch (e) { return {}; } })();
     const abierto = (k, def, on) => on || (nvS[k] === undefined ? def : !!nvS[k]);
     const ic = (d) => `<svg viewBox="0 0 24 24">${d}</svg>`;
+    const rsAct = rsCasos().filter(x => !rsCerrada(x.r)), nRs = rsAct.length, nRsRojo = rsAct.some(x => rsFases(x.r).some(f => f.enCurso && f.sem === 'rojo'));
     const nDev = DV.filter(x => x.estado === 'Pendiente' || x.estado === 'Programada').length, nCg = CG.filter(x => !x.firmado).length;
     const A = (cond, href, icon, label, extra, on) => cond ? { on, html: item(href, icon + label, extra, on) } : null;
     const grupo = (k, titulo, L, def, badge) => { L = L.filter(Boolean); if (!L.length) return ''; const on = L.some(x => x.on);
@@ -3580,7 +3724,7 @@
       A(can('v_ops'), '#/ingresos', ic('<path d="M12 3v13m0 0-5-5m5 5 5-5M4 21h16"/>'), 'Ingresos nuevos', '', r.view === 'ingresos'), A(can('v_actividad'), '#/actividad', I.act, 'Actividad', '', r.view === 'actividad'), A(can('v_config'), '#/campos', ic('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'), 'Uso de campos', '', r.view === 'campos')], false);
     const tramites = grupo('tram', 'Trámites', [A(can('v_cartas'), '#/cartas', I.cf, 'Cartas fianza', cfAlerta ? `<span class="cnt hot">${cfAlerta}</span>` : '', r.view === 'cartas'), A(can('v_ins'), '#/inscripciones', I.ins, 'Inscripciones', insAlerta ? `<span class="cnt hot">${insAlerta}</span>` : '', r.view === 'inscripciones'),
       A(can('v_cargos'), '#/cargos', ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'), 'Actas y cargos', nCg ? `<span class="cnt">${nCg}</span>` : '', r.view === 'cargos'),
-      A(can('v_dev'), '#/devoluciones', ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'), 'Devoluciones', nDev ? `<span class="cnt">${nDev}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion')], false, cfAlerta + insAlerta);
+      A(can('v_clientes'), '#/resoluciones', ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 14l2 2 4-4"/>'), 'Resoluciones y cartas', nRs ? `<span class="cnt${nRsRojo ? ' hot' : ''}">${nRs}</span>` : '', r.view === 'resoluciones'), A(can('v_dev'), '#/devoluciones', ic('<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>'), 'Devoluciones', nDev ? `<span class="cnt">${nDev}</span>` : '', r.view === 'devoluciones' || r.view === 'devolucion')], false, cfAlerta + insAlerta);
     const ajustes = grupo('adm', 'Equipo y ajustes', [A(can('v_equipo'), '#/usuarios', I.users, 'Equipo', '', r.view === 'usuarios' || r.view === 'usuario'),
       A(true, '#/buzon', ic('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'), 'Buzón', isJefe() && bzNuevos() ? `<span class="cnt hot">${bzNuevos()}</span>` : '', r.view === 'buzon'),
       A(true, '#/ayuda', I.help, 'Ayuda', '', r.view === 'ayuda'), A(can('v_config'), '#/config', I.cfg, 'Configurar', '', r.view === 'config')], false, isJefe() ? bzNuevos() || 0 : 0);
@@ -3612,7 +3756,7 @@
     else {
       try {
         html = (VIEW_PERM[r.view] && !can(VIEW_PERM[r.view])) ? vSinAcceso() : r.view === 'mi' ? vMiDia() : r.view === 'labores' ? vLabores() : r.view === 'ingresos' ? vIngresos() : r.view === 'evolta' ? vEvoltaIr(r.arg) : r.view === 'cobrar' ? vCobrar() : r.view === 'campos' ? vCampos() : r.view === 'etapa' && STAGE[r.arg] ? vEtapa(r.arg) : r.view === 'usuarios' ? vUsuarios() : r.view === 'usuario' ? vUsuario(r.arg) : r.view === 'clientes' ? vClientes()
-          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'cargos' ? vCargos() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
+          : r.view === 'cliente' ? vCliente(r.arg) : r.view === 'agenda' ? vAgenda() : r.view === 'operaciones' ? vOperaciones() : r.view === 'tiempos' ? vTiempos() : r.view === 'carga' ? vCarga() : r.view === 'cartas' ? vCartas() : r.view === 'inscripciones' ? vInscripciones() : r.view === 'actividad' ? vActividad() : r.view === 'buzon' ? vBuzon() : r.view === 'devoluciones' ? vDevoluciones() : r.view === 'resoluciones' ? vResoluciones() : r.view === 'cargos' ? vCargos() : r.view === 'devolucion' ? vDevolucion(r.arg) : r.view === 'ayuda' ? vAyuda() : r.view === 'config' ? vConfig() : vResumen();
       } catch (e) { console.error(e); html = `<div class="empty">Error al mostrar la vista: ${esc(e.message)}</div>`; }
     }
     $('#view').innerHTML = html;
@@ -3655,6 +3799,9 @@
     // devoluciones
     const dv = (typeof DV !== 'undefined' ? DV : []).filter(x => (jefe || dvGestor(x) === n)).map(dvTiempo).filter(t => t && t.enCurso && t.sem === 'rojo').length;
     add('rojo', '↩', `${pl(dv, 'devolución pasó', 'devoluciones pasaron')} su meta de atención`, '#/devoluciones', dv);
+    // resoluciones y cartas
+    const rv = rsCasos().filter(x => (jefe || x.r.por === n) && rsFases(x.r).some(f => f.enCurso && f.sem === 'rojo')).length;
+    add('rojo', '', `${pl(rv, 'resolución o carta pasó', 'resoluciones o cartas pasaron')} su meta de tiempo`, '#/resoluciones', rv);
     // cierres
     const obs = S.ops.filter(o => Object.values(o.cierres || {}).some(c => c.estado === 'observado' && c.firma && c.firma.por === n)).length;
     add('rojo', '↩', `${pl(obs, 'cierre observado', 'cierres observados')} por jefatura`, '#/mi', obs);
@@ -3978,6 +4125,9 @@
     if (a === 'completar') return irAlDato(el.dataset.op, el.dataset.k);
     if (a === 'guardar-ficha') return guardarFicha(el.dataset.op);
     if (a === 'importar-excel') return importarExcel();
+    if (a === 'rs-nueva') { const op = getOp(el.dataset.op); return op && rsNueva(op); }
+    if (a === 'rs-estado' || a === 'rs-word') { const op = getOp(el.dataset.op), r = op && rsLista(op).find(x => x.id === el.dataset.id); if (!r) return; return a === 'rs-word' ? rsWord(op, r) : rsEstadoModal(op, r); }
+    if (a === 'rs-excel') return rsExcel();
     if (a === 'proy-unir') return unirProyectos();
     if (a === 'ingresos-excel') return ingresosExcel();
     if (a === 'evbtn-info') { e.preventDefault(); return toast('No lo toques aquí: arrástralo a la barra de favoritos y úsalo desde Evolta'); }

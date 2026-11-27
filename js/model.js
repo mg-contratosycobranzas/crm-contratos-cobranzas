@@ -160,7 +160,7 @@
   const NUM_KEYS = new Set();
   Object.values(FIELDS).forEach(a => a.forEach(f => { if (f.t === 'number') NUM_KEYS.add(f.k); }));
 
-  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, metaVal: 3, metaBan: 15, metaNot: 10, metaAbo: 10, metaRl: 3, metaDes: 15, metaDev: 5, metaCob: 5, metaClCom: 5, metaClBan: 10, metaDnot: 3, ultimoRespaldo: '', diasHabiles: 1, feriadosExtra: '', topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
+  const DEFAULT_PARAMS = { plazo: 5, anticipo: 2, slaCF: 5, slaMin: 10, slaNot: 20, metaEficacia: 80, metaEficiencia: 80, metaSemana: 20, metaDia: 8, diasDesemb: 90, metaVal: 3, metaBan: 15, metaNot: 10, metaAbo: 10, metaRl: 3, metaDes: 15, metaDev: 5, metaRes: 5, metaReem: 60, metaCob: 5, metaClCom: 5, metaClBan: 10, metaDnot: 3, ultimoRespaldo: '', diasHabiles: 1, feriadosExtra: '', topeCarga: 5, autoAsignar: 1, minInactivo: 15 };
   const DEFAULT_USERS = [
     { name: 'Milagros Valles', stage: JEFATURA, rol: 'Jefa de Administración de Contratos y Cobranzas', admin: true },
     { name: 'Jonathan', stage: 'cob', rol: 'Asistente de Cobranza' },
